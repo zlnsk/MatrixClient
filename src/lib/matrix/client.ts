@@ -47,27 +47,72 @@ async function enableKeyBackup(client: sdk.MatrixClient): Promise<void> {
   }
 }
 
-export async function restoreFromRecoveryKey(recoveryKey: string): Promise<{ total: number; imported: number }> {
+export async function restoreFromRecoveryKey(input: string): Promise<{ total: number; imported: number }> {
   if (!matrixClient) throw new Error('Not connected')
   const crypto = matrixClient.getCrypto()
   if (!crypto) throw new Error('Crypto not initialized')
 
-  // Decode the recovery key
-  const { decodeRecoveryKey } = await import('matrix-js-sdk/lib/crypto-api/recovery-key')
-  const keyBytes = decodeRecoveryKey(recoveryKey.trim())
+  const trimmed = input.trim()
 
-  // Get the backup info
+  // Get the backup info from server
   const backupInfo = await crypto.getKeyBackupInfo()
   if (!backupInfo) throw new Error('No key backup found on server')
 
-  // Store the decryption key and restore
-  await crypto.storeSessionBackupPrivateKey(keyBytes, backupInfo.version!)
-  const result = await crypto.restoreKeyBackup({
-    progressCallback: (progress: any) => {
-      console.log('Key restore progress:', progress)
-    },
-  })
-  return result
+  // Try decoding as a recovery key first (space-separated base58 groups)
+  // If that fails, try as a passphrase
+  let keyBytes: Uint8Array | null = null
+
+  try {
+    const { decodeRecoveryKey } = await import('matrix-js-sdk/lib/crypto-api/recovery-key')
+    keyBytes = decodeRecoveryKey(trimmed)
+  } catch {
+    // Not a valid recovery key format — will try as passphrase below
+    console.log('Not a recovery key format, trying as passphrase...')
+  }
+
+  if (keyBytes) {
+    // Store the decoded key and attempt restore
+    await crypto.storeSessionBackupPrivateKey(keyBytes, backupInfo.version!)
+
+    try {
+      const result = await crypto.restoreKeyBackup({
+        progressCallback: (progress: any) => {
+          console.log('Key restore progress:', progress)
+        },
+      })
+      return result
+    } catch (err) {
+      // If the key doesn't match, provide a clear error
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('does not match')) {
+        throw new Error(
+          'Recovery key does not match the backup on the server. ' +
+          'Make sure you are using the correct security key for this account. ' +
+          'You can find it in another Matrix client under Settings > Security.'
+        )
+      }
+      throw err
+    }
+  }
+
+  // Fall back to passphrase-based restore
+  try {
+    const result = await crypto.restoreKeyBackupWithPassphrase(trimmed, {
+      progressCallback: (progress: any) => {
+        console.log('Key restore progress:', progress)
+      },
+    })
+    return result
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('does not match')) {
+      throw new Error(
+        'The passphrase or recovery key does not match the backup on the server. ' +
+        'Please check and try again.'
+      )
+    }
+    throw err
+  }
 }
 
 export async function loginWithPassword(

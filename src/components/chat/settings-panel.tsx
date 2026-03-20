@@ -194,12 +194,13 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Key Backup Recovery</h4>
                 </div>
                 <p className="text-xs text-gray-500 mb-3">
-                  Enter your security key to decrypt messages sent before this device logged in.
+                  Enter your security key or passphrase to decrypt messages sent before this device logged in.
+                  You can find it in another Matrix client (e.g. Element) under Settings &gt; Security &gt; Encryption.
                 </p>
                 <textarea
                   value={recoveryKey}
                   onChange={e => { setRecoveryKey(e.target.value); setRestoreError(null); setRestoreResult(null) }}
-                  placeholder="Enter recovery key (e.g. EsTC j9gP noRq ...)..."
+                  placeholder="Security key (EsTC j9gP noRq ...) or passphrase..."
                   rows={2}
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                 />
