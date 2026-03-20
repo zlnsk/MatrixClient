@@ -86,7 +86,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   }
 
   return (
-    <div className="border-t border-gray-800 bg-gray-900/50 p-4">
+    <div className="border-t border-gray-200 bg-white/80 p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/50 dark:shadow-[0_-2px_10px_rgba(0,0,0,0.3)]">
       {/* Reply preview */}
       {replyTo && (
         <div className="mb-3 flex items-center gap-2 rounded-lg border-l-2 border-indigo-500 bg-gray-800 px-3 py-2 animate-slide-in">
@@ -147,7 +147,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             rows={1}
-            className="max-h-32 min-h-[44px] w-full resize-none rounded-full border border-gray-700 bg-gray-800 px-5 py-3 text-sm text-white placeholder-gray-500 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="max-h-32 min-h-[44px] w-full resize-none rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-sm text-gray-900 shadow-inner placeholder-gray-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
           />
         </div>
 

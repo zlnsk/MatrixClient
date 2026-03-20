@@ -8,7 +8,7 @@ import * as sdk from 'matrix-js-sdk'
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
-  const { loadRooms, refreshRoom, activeRoom, loadMessages } = useChatStore()
+  const { loadRooms, activeRoom, loadMessages } = useChatStore()
 
   useEffect(() => {
     if (!user) return
@@ -23,11 +23,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     ) => {
       if (!room) return
 
-      // Refresh the room in the sidebar
+      // Refresh the room list
       loadRooms()
 
       // If this is the active room, reload messages
-      if (activeRoom?.roomId === room.roomId) {
+      const currentActiveRoom = useChatStore.getState().activeRoom
+      if (currentActiveRoom?.roomId === room.roomId) {
         loadMessages(room.roomId)
       }
 
@@ -40,7 +41,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       ) {
         if ('Notification' in window && Notification.permission === 'granted') {
           const senderName = room.getMember(event.getSender()!)?.name || event.getSender()
-          const body = event.getContent()?.body || 'New message'
+          const clearContent = (event as any).getClearContent?.()
+          const content = clearContent || event.getContent()
+          const body = content?.body || 'New message'
           new Notification(`${senderName} in ${room.name}`, {
             body: body.substring(0, 100),
             icon: '/favicon.ico',
@@ -49,18 +52,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Listen for typing events
-    const onTyping = (event: sdk.MatrixEvent, member: sdk.RoomMember) => {
-      if (activeRoom && member.roomId === activeRoom.roomId) {
-        const typingMembers = client.getRoom(activeRoom.roomId)
-          ?.getMembers()
-          .filter((m) => {
-            const typingEvent = client.getRoom(activeRoom.roomId)?.currentState
-              .getStateEvents('m.typing', '')
-            return false // typing handled below
-          })
-        // Use the room's typing members directly
+    // When an encrypted event gets decrypted, reload messages
+    const onEventDecrypted = (event: sdk.MatrixEvent) => {
+      const currentActiveRoom = useChatStore.getState().activeRoom
+      if (currentActiveRoom && event.getRoomId() === currentActiveRoom.roomId) {
+        loadMessages(currentActiveRoom.roomId)
       }
+      // Also refresh sidebar for last message preview
+      loadRooms()
     }
 
     // Listen for room membership changes
@@ -69,22 +68,29 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     }
 
     // Listen for typing notifications
-    const onRoomTyping = (event: sdk.MatrixEvent, room: sdk.Room) => {
-      if (activeRoom?.roomId === room.roomId) {
-        const typingUserIds = (event.getContent()?.user_ids || []) as string[]
-        const typingNames = typingUserIds
-          .filter((id: string) => id !== user.userId)
-          .map((id: string) => room.getMember(id)?.name || id)
-
+    const onRoomTyping = (_event: sdk.MatrixEvent, room: sdk.Room) => {
+      const currentActiveRoom = useChatStore.getState().activeRoom
+      if (currentActiveRoom?.roomId === room.roomId) {
+        const typingMembers = (room as any).getTypingMembers?.() || []
+        const typingNames = typingMembers
+          .filter((m: any) => m.userId !== user.userId)
+          .map((m: any) => m.name || m.userId)
         useChatStore.setState({ typingUsers: typingNames })
+      }
+    }
+
+    // Listen for read receipts
+    const onReceipt = (_event: sdk.MatrixEvent, room: sdk.Room) => {
+      const currentActiveRoom = useChatStore.getState().activeRoom
+      if (currentActiveRoom?.roomId === room.roomId) {
+        loadMessages(room.roomId)
       }
     }
 
     client.on(sdk.RoomEvent.Timeline, onTimelineEvent)
     client.on(sdk.RoomEvent.MyMembership, onRoomMembership)
-    client.on(sdk.RoomMemberEvent.Typing, onTyping)
-
-    // For typing, listen on the raw event
+    client.on(sdk.RoomEvent.Receipt, onReceipt)
+    client.on(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
     client.on('RoomMember.typing' as any, onRoomTyping)
 
     // Request notification permission
@@ -95,10 +101,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     return () => {
       client.removeListener(sdk.RoomEvent.Timeline, onTimelineEvent)
       client.removeListener(sdk.RoomEvent.MyMembership, onRoomMembership)
-      client.removeListener(sdk.RoomMemberEvent.Typing, onTyping)
+      client.removeListener(sdk.RoomEvent.Receipt, onReceipt)
+      client.removeListener(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
       client.removeListener('RoomMember.typing' as any, onRoomTyping)
     }
-  }, [user, activeRoom, loadRooms, refreshRoom, loadMessages])
+  }, [user, activeRoom, loadRooms, loadMessages])
 
   return <>{children}</>
 }

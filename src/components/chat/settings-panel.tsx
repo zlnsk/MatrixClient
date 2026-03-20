@@ -45,10 +45,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex h-[500px] w-full max-w-2xl animate-slide-in overflow-hidden rounded-2xl border border-gray-800 bg-gray-900 shadow-2xl">
+      <div className="flex h-[500px] w-full max-w-2xl animate-slide-in overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
         {/* Left nav */}
-        <div className="w-48 flex-shrink-0 border-r border-gray-800 bg-gray-900 p-4">
-          <h2 className="mb-4 text-lg font-bold text-white">Settings</h2>
+        <div className="w-48 flex-shrink-0 border-r border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
+          <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Settings</h2>
           <nav className="space-y-1">
             {sections.map(s => (
               <button
@@ -56,8 +56,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 onClick={() => setActiveSection(s.id)}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                   activeSection === s.id
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-400 hover:bg-gray-800/60 hover:text-gray-300'
+                    ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-300'
                 }`}
               >
                 <s.icon className="h-4 w-4" />
@@ -70,7 +70,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             <button
               onClick={handleSignOut}
               disabled={isLoggingOut}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-red-400 transition-colors hover:bg-red-900/20"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
             >
               {isLoggingOut ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -85,10 +85,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-white capitalize">{activeSection}</h3>
+            <h3 className="text-lg font-bold text-gray-900 capitalize dark:text-white">{activeSection}</h3>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             >
               <X className="h-5 w-5" />
             </button>
@@ -103,23 +103,23 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                   size="lg"
                 />
                 <div>
-                  <p className="text-sm font-medium text-white">{user?.displayName}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.displayName}</p>
                   <p className="text-xs text-gray-500">{user?.userId}</p>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-800 bg-gray-800/50 p-4">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
                 <div className="flex items-center gap-3">
                   <Server className="h-5 w-5 text-gray-400" />
                   <div>
-                    <p className="text-sm font-medium text-gray-300">Homeserver</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Homeserver</p>
                     <p className="text-xs text-gray-500">{homeserverDomain}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-800 bg-gray-800/50 p-4">
-                <h4 className="text-sm font-medium text-gray-300">Matrix User ID</h4>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Matrix User ID</h4>
                 <p className="mt-1 font-mono text-xs text-indigo-400">{user?.userId}</p>
               </div>
             </div>
@@ -128,29 +128,29 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           {activeSection === 'appearance' && (
             <div className="space-y-6">
               <div>
-                <label className="mb-3 block text-sm font-medium text-gray-300">Theme</label>
+                <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">Theme</label>
                 <div className="flex gap-3">
                   <button
                     onClick={() => { if (theme !== 'dark') toggleTheme() }}
-                    className={`flex flex-1 flex-col items-center gap-3 rounded-xl border p-4 transition-colors ${
+                    className={`flex flex-1 flex-col items-center gap-3 rounded-xl border p-4 shadow-sm transition-colors ${
                       theme === 'dark'
-                        ? 'border-indigo-500 bg-indigo-900/20'
-                        : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'border-gray-200 bg-gray-50 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
                     }`}
                   >
-                    <Moon className={`h-6 w-6 ${theme === 'dark' ? 'text-indigo-400' : 'text-gray-400'}`} />
-                    <span className={`text-sm ${theme === 'dark' ? 'text-indigo-300' : 'text-gray-400'}`}>Dark</span>
+                    <Moon className={`h-6 w-6 ${theme === 'dark' ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400'}`} />
+                    <span className={`text-sm ${theme === 'dark' ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-400'}`}>Dark</span>
                   </button>
                   <button
                     onClick={() => { if (theme !== 'light') toggleTheme() }}
-                    className={`flex flex-1 flex-col items-center gap-3 rounded-xl border p-4 transition-colors ${
+                    className={`flex flex-1 flex-col items-center gap-3 rounded-xl border p-4 shadow-sm transition-colors ${
                       theme === 'light'
-                        ? 'border-indigo-500 bg-indigo-900/20'
-                        : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'border-gray-200 bg-gray-50 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
                     }`}
                   >
-                    <Sun className={`h-6 w-6 ${theme === 'light' ? 'text-indigo-400' : 'text-gray-400'}`} />
-                    <span className={`text-sm ${theme === 'light' ? 'text-indigo-300' : 'text-gray-400'}`}>Light</span>
+                    <Sun className={`h-6 w-6 ${theme === 'light' ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400'}`} />
+                    <span className={`text-sm ${theme === 'light' ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-400'}`}>Light</span>
                   </button>
                 </div>
               </div>
@@ -159,25 +159,25 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
           {activeSection === 'security' && (
             <div className="space-y-6">
-              <div className="rounded-xl border border-green-800/50 bg-green-900/20 p-4">
+              <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm dark:border-green-800/50 dark:bg-green-900/20">
                 <div className="flex items-center gap-3">
-                  <Shield className="h-5 w-5 text-green-400" />
+                  <Shield className="h-5 w-5 text-green-600 dark:text-green-400" />
                   <div>
-                    <p className="text-sm font-medium text-green-300">Matrix Protocol</p>
-                    <p className="mt-1 text-xs text-green-400/70">
+                    <p className="text-sm font-medium text-green-700 dark:text-green-300">Matrix Protocol</p>
+                    <p className="mt-1 text-xs text-green-600/70 dark:text-green-400/70">
                       Connected via the Matrix Client-Server API. Rooms with encryption enabled use Megolm (m.megolm.v1.aes-sha2).
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-800 bg-gray-800/50 p-4">
-                <h4 className="text-sm font-medium text-gray-300">Homeserver URL</h4>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Homeserver URL</h4>
                 <p className="mt-1 font-mono text-xs text-gray-500">{HOMESERVER_URL}</p>
               </div>
 
-              <div className="rounded-xl border border-gray-800 bg-gray-800/50 p-4">
-                <h4 className="text-sm font-medium text-gray-300">User ID</h4>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">User ID</h4>
                 <p className="mt-1 font-mono text-xs text-gray-500">{user?.userId}</p>
               </div>
             </div>

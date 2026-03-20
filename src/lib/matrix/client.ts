@@ -10,20 +10,23 @@ export function getMatrixClient(): sdk.MatrixClient | null {
   return matrixClient
 }
 
-function createMatrixClient(opts: {
-  baseUrl: string
-  accessToken: string
-  userId: string
-  deviceId: string
-}): sdk.MatrixClient {
-  return sdk.createClient({
-    baseUrl: opts.baseUrl,
-    accessToken: opts.accessToken,
-    userId: opts.userId,
-    deviceId: opts.deviceId,
-    // Enable crypto support if available
-    cryptoCallbacks: {} as any,
-  })
+async function initCrypto(client: sdk.MatrixClient): Promise<void> {
+  try {
+    // Use Rust crypto with IndexedDB for persistent key storage
+    await client.initRustCrypto({
+      useIndexedDB: true,
+    })
+
+    // Set the global policy to auto-accept room key requests and
+    // trust devices for faster decryption experience
+    const crypto = client.getCrypto()
+    if (crypto) {
+      // Auto-verify own device cross-signing
+      await crypto.setDeviceVerified(client.getUserId()!, client.getDeviceId()!)
+    }
+  } catch (err) {
+    console.warn('Crypto initialization failed, encrypted messages will not be decrypted:', err)
+  }
 }
 
 export async function loginWithPassword(
@@ -38,19 +41,14 @@ export async function loginWithPassword(
     initial_device_display_name: 'Matrix Client Web',
   })
 
-  matrixClient = createMatrixClient({
+  matrixClient = sdk.createClient({
     baseUrl: HOMESERVER_URL,
     accessToken: response.access_token,
     userId: response.user_id,
     deviceId: response.device_id,
   })
 
-  // Try to initialize crypto
-  try {
-    await (matrixClient as any).initCrypto?.()
-  } catch {
-    // Crypto not available — encrypted messages will show as locked
-  }
+  await initCrypto(matrixClient)
 
   // Persist session
   localStorage.setItem(
@@ -72,7 +70,7 @@ export function restoreSession(): sdk.MatrixClient | null {
 
   try {
     const session = JSON.parse(stored)
-    matrixClient = createMatrixClient({
+    matrixClient = sdk.createClient({
       baseUrl: session.homeserverUrl,
       accessToken: session.accessToken,
       userId: session.userId,
@@ -88,12 +86,8 @@ export function restoreSession(): sdk.MatrixClient | null {
 export async function startSync(): Promise<void> {
   if (!matrixClient) return
 
-  // Try to initialize crypto before starting sync
-  try {
-    await (matrixClient as any).initCrypto?.()
-  } catch {
-    // Crypto not available
-  }
+  // Init crypto before starting sync so decryption works
+  await initCrypto(matrixClient)
 
   await matrixClient.startClient({
     initialSyncLimit: 20,

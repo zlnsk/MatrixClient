@@ -77,13 +77,13 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col min-h-0 bg-gray-950">
+    <div className="flex flex-1 flex-col min-h-0 bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 bg-gray-900/80 px-4 py-3 backdrop-blur-sm">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white/80 px-4 py-3 shadow-sm backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/80 dark:shadow-none">
         <div className="flex items-center gap-3">
           <button
             onClick={onBackClick}
-            className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white md:hidden"
+            className="rounded-lg p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white md:hidden"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -95,7 +95,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           />
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-white">{roomDisplayName}</h2>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{roomDisplayName}</h2>
               {!activeRoom.isDirect && <Hash className="h-4 w-4 text-gray-500" />}
             </div>
             <div className="flex items-center gap-2">
@@ -119,17 +119,17 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowSearch(!showSearch)}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
           >
             <Search className="h-5 w-5" />
           </button>
-          <button className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white">
+          <button className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white">
             <Phone className="h-5 w-5" />
           </button>
-          <button className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white">
+          <button className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white">
             <Video className="h-5 w-5" />
           </button>
-          <button className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white">
+          <button className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white">
             <MoreVertical className="h-5 w-5" />
           </button>
         </div>
@@ -137,7 +137,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
       {/* Search bar */}
       {showSearch && (
-        <div className="animate-slide-in border-b border-gray-800 bg-gray-900/50 px-4 py-2">
+        <div className="animate-slide-in border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/50">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
@@ -171,7 +171,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {groupedMessages.map(group => (
               <div key={group.date}>
                 <div className="flex items-center justify-center py-4">
-                  <span className="rounded-full bg-gray-800 px-3 py-1 text-xs text-gray-400">
+                  <span className="rounded-full bg-gray-200 px-3 py-1 text-xs text-gray-500 shadow-sm dark:bg-gray-800 dark:text-gray-400">
                     {group.date}
                   </span>
                 </div>

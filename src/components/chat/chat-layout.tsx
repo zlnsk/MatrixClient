@@ -12,11 +12,11 @@ export function ChatLayout() {
   const activeRoom = useChatStore(s => s.activeRoom)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-950 dark:bg-gray-950">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
       {/* Sidebar - always visible on desktop, conditional on mobile */}
       <div className={`${
         showMobileSidebar ? 'flex' : 'hidden'
-      } md:flex w-full md:w-80 flex-shrink-0 flex-col border-r border-gray-800 bg-gray-900`}>
+      } md:flex w-full md:w-80 flex-shrink-0 flex-col border-r border-gray-200 bg-white shadow-lg shadow-gray-200/50 dark:border-gray-800 dark:bg-gray-900 dark:shadow-black/30`}>
         <Sidebar
           onSettingsClick={() => setShowSettings(true)}
           onChatSelect={() => setShowMobileSidebar(false)}
@@ -44,8 +44,8 @@ export function ChatLayout() {
 
 function EmptyState() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-gray-950 p-8">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-900">
+    <div className="flex flex-1 flex-col items-center justify-center bg-gray-50 p-8 dark:bg-gray-950">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-100 shadow-lg dark:bg-gray-900">
         <svg
           className="h-10 w-10 text-gray-700"
           fill="none"
@@ -60,7 +60,7 @@ function EmptyState() {
           />
         </svg>
       </div>
-      <h3 className="mt-6 text-lg font-medium text-gray-300">
+      <h3 className="mt-6 text-lg font-medium text-gray-700 dark:text-gray-300">
         Welcome to Matrix Client
       </h3>
       <p className="mt-2 max-w-sm text-center text-sm text-gray-500">

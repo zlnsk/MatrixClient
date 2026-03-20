@@ -24,6 +24,13 @@ export interface MatrixRoomMember {
   presence: 'online' | 'offline' | 'unavailable' | null
 }
 
+export interface ReadReceipt {
+  userId: string
+  displayName: string
+  avatarUrl: string | null
+  ts: number
+}
+
 export interface MatrixMessage {
   eventId: string
   roomId: string
@@ -45,6 +52,8 @@ export interface MatrixMessage {
   reactions: Map<string, { count: number; users: string[]; includesMe: boolean }>
   mediaUrl: string | null
   mediaInfo: { w?: number; h?: number; mimetype?: string; size?: number } | null
+  readBy: ReadReceipt[]
+  status: 'sending' | 'sent' | 'delivered' | 'read'
 }
 
 interface ChatState {
@@ -229,6 +238,34 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     }
   }
 
+  // Read receipts
+  const readBy: ReadReceipt[] = []
+  const roomReceipts = room.getReceiptsForEvent(event)
+  if (roomReceipts) {
+    for (const receipt of roomReceipts) {
+      if (receipt.userId === sender) continue // skip own read receipt
+      const receiptMember = room.getMember(receipt.userId)
+      readBy.push({
+        userId: receipt.userId,
+        displayName: receiptMember?.name || receipt.userId,
+        avatarUrl: getAvatarUrl(receiptMember?.getMxcAvatarUrl()),
+        ts: receipt.data?.ts || 0,
+      })
+    }
+  }
+
+  // Message status for own messages
+  let status: MatrixMessage['status'] = 'sent'
+  if (sender === userId) {
+    if (readBy.length > 0) {
+      status = 'read'
+    } else {
+      // Check if event has been sent to server
+      const isSent = event.getId() && !event.getId()!.startsWith('~')
+      status = isSent ? 'delivered' : 'sending'
+    }
+  }
+
   return {
     eventId: event.getId()!,
     roomId: room.roomId,
@@ -245,6 +282,8 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     reactions,
     mediaUrl,
     mediaInfo,
+    readBy,
+    status,
   }
 }
 

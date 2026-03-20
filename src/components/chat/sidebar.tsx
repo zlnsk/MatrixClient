@@ -63,7 +63,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 p-4">
+      <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
         <div className="flex items-center gap-3">
           <Avatar
             src={user?.avatarUrl}
@@ -72,21 +72,21 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             status="online"
           />
           <div>
-            <h1 className="text-lg font-bold text-white">Matrix</h1>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white">Matrix</h1>
             <p className="text-xs text-gray-500">{user?.userId}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowNewChat(true)}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             title="New chat"
           >
             <Plus className="h-5 w-5" />
           </button>
           <button
             onClick={onSettingsClick}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             title="Settings"
           >
             <Settings className="h-5 w-5" />
@@ -103,12 +103,12 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             placeholder="Search rooms..."
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
           />
           {searchFilter && (
             <button
               onClick={() => setSearchFilter('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
             >
               <X className="h-4 w-4" />
             </button>
@@ -117,16 +117,16 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
       </div>
 
       {/* Encryption badge */}
-      <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg bg-green-900/30 px-3 py-2">
-        <Lock className="h-3.5 w-3.5 text-green-400" />
-        <span className="text-xs font-medium text-green-400">End-to-end encrypted</span>
+      <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 shadow-sm dark:bg-green-900/30">
+        <Lock className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+        <span className="text-xs font-medium text-green-600 dark:text-green-400">End-to-end encrypted</span>
       </div>
 
       {/* Room list */}
       <div className="flex-1 overflow-y-auto px-2">
         {filteredRooms.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <MessageSquare className="h-10 w-10 text-gray-700" />
+            <MessageSquare className="h-10 w-10 text-gray-300 dark:text-gray-700" />
             <p className="mt-3 text-sm text-gray-500">
               {searchFilter ? 'No rooms found' : 'No rooms yet'}
             </p>
@@ -190,7 +190,7 @@ function RoomListItem({
     <button
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors ${
-        isActive ? 'bg-gray-800' : 'hover:bg-gray-800/60'
+        isActive ? 'bg-gray-100 shadow-sm dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'
       }`}
     >
       <Avatar
@@ -201,7 +201,7 @@ function RoomListItem({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className="truncate text-sm font-medium text-white">
+          <span className="truncate text-sm font-medium text-gray-900 dark:text-white">
             {room.name}
           </span>
           {room.lastMessageTs > 0 && (

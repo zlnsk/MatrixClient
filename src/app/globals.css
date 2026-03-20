@@ -10,26 +10,31 @@
 
 :root {
   --surface-primary: #f8fafc;
-  --surface-secondary: #f1f5f9;
-  --surface-tertiary: #e2e8f0;
+  --surface-secondary: #ffffff;
+  --surface-tertiary: #f1f5f9;
+  color-scheme: light;
 }
 
 .dark {
   --surface-primary: #030712;
   --surface-secondary: #111827;
   --surface-tertiary: #1f2937;
+  color-scheme: dark;
 }
 
 * {
   scrollbar-width: thin;
+}
+
+.dark * {
   scrollbar-color: #374151 transparent;
 }
 
-.dark *::-webkit-scrollbar {
+*::-webkit-scrollbar {
   width: 6px;
 }
 
-.dark *::-webkit-scrollbar-track {
+*::-webkit-scrollbar-track {
   background: transparent;
 }
 
@@ -38,10 +43,17 @@
   border-radius: 3px;
 }
 
-body {
-  background-color: var(--surface-primary);
+:root *::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
 }
 
+body {
+  background-color: var(--surface-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ---- Animations ---- */
 @keyframes slideIn {
   from {
     opacity: 0;

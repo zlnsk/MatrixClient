@@ -77,26 +77,26 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md animate-slide-in rounded-2xl border border-gray-800 bg-gray-900 shadow-2xl">
+      <div className="w-full max-w-md animate-slide-in rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-800 p-4">
-          <h2 className="text-lg font-bold text-white">New Conversation</h2>
+        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Conversation</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-800">
+        <div className="flex border-b border-gray-200 dark:border-gray-800">
           <button
             onClick={() => setTab('direct')}
             className={`flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
               tab === 'direct'
-                ? 'border-b-2 border-indigo-500 text-indigo-400'
-                : 'text-gray-400 hover:text-gray-300'
+                ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
             }`}
           >
             <MessageSquare className="h-4 w-4" />
@@ -106,8 +106,8 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
             onClick={() => setTab('group')}
             className={`flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
               tab === 'group'
-                ? 'border-b-2 border-indigo-500 text-indigo-400'
-                : 'text-gray-400 hover:text-gray-300'
+                ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
             }`}
           >
             <Users className="h-4 w-4" />
@@ -117,7 +117,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
 
         <div className="p-4">
           {error && (
-            <div className="mb-3 rounded-lg border border-red-900/50 bg-red-900/20 px-4 py-3 text-sm text-red-400">
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
               {error}
             </div>
           )}
@@ -125,7 +125,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
           {tab === 'direct' ? (
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-400">
+                <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
                   Matrix User ID
                 </label>
                 <div className="relative">
@@ -136,7 +136,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                     value={userId}
                     onChange={e => setUserId(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleDirectChat()}
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                   />
                 </div>
                 <p className="mt-1 text-xs text-gray-600">
@@ -156,18 +156,18 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
           ) : (
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-400">Group name</label>
+                <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Group name</label>
                 <input
                   type="text"
                   placeholder="My Group"
                   value={groupName}
                   onChange={e => setGroupName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-400">
+                <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
                   Members (comma-separated Matrix IDs)
                 </label>
                 <textarea
@@ -175,7 +175,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                   value={groupMembers}
                   onChange={e => setGroupMembers(e.target.value)}
                   rows={3}
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                 />
               </div>
 
