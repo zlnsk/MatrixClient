@@ -23,6 +23,7 @@ interface AuthState {
   initialize: () => Promise<void>
   signIn: (username: string, password: string) => Promise<void>
   signOut: () => Promise<void>
+  updateProfile: (updates: { displayName?: string; avatarUrl?: string }) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -75,5 +76,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     await logout()
     set({ user: null, isAuthenticated: false })
+  },
+
+  updateProfile: (updates) => {
+    set((state) => ({
+      user: state.user
+        ? {
+            ...state.user,
+            ...(updates.displayName !== undefined && { displayName: updates.displayName }),
+            ...(updates.avatarUrl !== undefined && { avatarUrl: updates.avatarUrl }),
+          }
+        : null,
+    }))
   },
 }))

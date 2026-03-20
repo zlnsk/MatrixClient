@@ -4,8 +4,8 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { HOMESERVER_URL, restoreFromRecoveryKey } from '@/lib/matrix/client'
+import { useState, useRef } from 'react'
+import { HOMESERVER_URL, restoreFromRecoveryKey, getMatrixClient } from '@/lib/matrix/client'
 import {
   X,
   Sun,
@@ -18,6 +18,8 @@ import {
   Server,
   Key,
   CheckCircle,
+  Pencil,
+  Camera,
 } from 'lucide-react'
 
 interface SettingsPanelProps {
@@ -25,7 +27,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
-  const { user, signOut } = useAuthStore()
+  const { user, signOut, updateProfile } = useAuthStore()
   const { theme, toggleTheme } = useTheme()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -34,6 +36,56 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [isRestoring, setIsRestoring] = useState(false)
   const [restoreResult, setRestoreResult] = useState<string | null>(null)
   const [restoreError, setRestoreError] = useState<string | null>(null)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [newDisplayName, setNewDisplayName] = useState(user?.displayName || '')
+  const [isSavingName, setIsSavingName] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  const handleSaveDisplayName = async () => {
+    if (!newDisplayName.trim() || newDisplayName.trim() === user?.displayName) {
+      setIsEditingName(false)
+      return
+    }
+    setIsSavingName(true)
+    setProfileError(null)
+    try {
+      const client = getMatrixClient()
+      if (!client) throw new Error('Not connected')
+      await client.setDisplayName(newDisplayName.trim())
+      updateProfile({ displayName: newDisplayName.trim() })
+      setIsEditingName(false)
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'Failed to update display name')
+    } finally {
+      setIsSavingName(false)
+    }
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploadingAvatar(true)
+    setProfileError(null)
+    try {
+      const client = getMatrixClient()
+      if (!client) throw new Error('Not connected')
+      const uploadResponse = await client.uploadContent(file, {
+        name: file.name,
+        type: file.type,
+      })
+      const mxcUrl = uploadResponse.content_uri
+      await client.setAvatarUrl(mxcUrl)
+      const httpUrl = client.mxcUrlToHttp(mxcUrl) || undefined
+      updateProfile({ avatarUrl: httpUrl })
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'Failed to upload avatar')
+    } finally {
+      setIsUploadingAvatar(false)
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
+    }
+  }
 
   const handleSignOut = async () => {
     setIsLoggingOut(true)
@@ -103,16 +155,81 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           {activeSection === 'profile' && (
             <div className="space-y-6">
               <div className="flex items-center gap-4">
-                <Avatar
-                  src={user?.avatarUrl}
-                  name={user?.displayName || 'U'}
-                  size="lg"
-                />
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.displayName}</p>
+                <div className="relative">
+                  <Avatar
+                    src={user?.avatarUrl}
+                    name={user?.displayName || 'U'}
+                    size="lg"
+                  />
+                  <button
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="absolute -bottom-1 -right-1 rounded-full border-2 border-white bg-indigo-600 p-1 text-white transition-colors hover:bg-indigo-500 dark:border-gray-900"
+                    title="Change avatar"
+                  >
+                    {isUploadingAvatar ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Camera className="h-3 w-3" />
+                    )}
+                  </button>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
+                </div>
+                <div className="flex-1">
+                  {isEditingName ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newDisplayName}
+                        onChange={e => setNewDisplayName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleSaveDisplayName()
+                          if (e.key === 'Escape') setIsEditingName(false)
+                        }}
+                        autoFocus
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-900 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      />
+                      <button
+                        onClick={handleSaveDisplayName}
+                        disabled={isSavingName}
+                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                      >
+                        {isSavingName ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+                      </button>
+                      <button
+                        onClick={() => { setIsEditingName(false); setNewDisplayName(user?.displayName || '') }}
+                        className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.displayName}</p>
+                      <button
+                        onClick={() => { setNewDisplayName(user?.displayName || ''); setIsEditingName(true) }}
+                        className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                        title="Change display name"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                   <p className="text-xs text-gray-500">{user?.userId}</p>
                 </div>
               </div>
+
+              {profileError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
+                  {profileError}
+                </div>
+              )}
 
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
                 <div className="flex items-center gap-3">

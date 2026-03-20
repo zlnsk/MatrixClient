@@ -8,6 +8,8 @@ import {
   Users,
   Loader2,
   AtSign,
+  Lock,
+  Globe,
 } from 'lucide-react'
 
 interface NewChatModalProps {
@@ -21,6 +23,9 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
   const [userId, setUserId] = useState('')
   const [groupName, setGroupName] = useState('')
   const [groupMembers, setGroupMembers] = useState('')
+  const [groupTopic, setGroupTopic] = useState('')
+  const [enableEncryption, setEnableEncryption] = useState(true)
+  const [isPublic, setIsPublic] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
 
@@ -72,7 +77,11 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
         })
         .filter(Boolean)
 
-      const roomId = await createGroupChat(groupName.trim(), memberIds)
+      const roomId = await createGroupChat(groupName.trim(), memberIds, {
+        encrypted: enableEncryption,
+        isPublic,
+        topic: groupTopic.trim() || undefined,
+      })
       loadRooms()
       onRoomCreated(roomId)
       onClose()
@@ -185,6 +194,59 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                   rows={3}
                   className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                 />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Topic (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="What is this room about?"
+                  value={groupTopic}
+                  onChange={e => setGroupTopic(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Enable encryption</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEnableEncryption(!enableEncryption)}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                    enableEncryption ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
+                      enableEncryption ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Public room</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPublic(!isPublic)}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                    isPublic ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
+                      isPublic ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
 
               <button
