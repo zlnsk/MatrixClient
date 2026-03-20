@@ -97,6 +97,7 @@ interface ChatState {
   pinMessage: (roomId: string, eventId: string) => Promise<void>
   unpinMessage: (roomId: string, eventId: string) => Promise<void>
   forwardMessage: (fromRoomId: string, eventId: string, toRoomId: string) => Promise<void>
+  searchMessages: (query: string) => Promise<{roomId: string, roomName: string, eventId: string, sender: string, body: string, timestamp: number}[]>
 }
 
 function roomToMatrixRoom(room: Room): MatrixRoom {
@@ -770,6 +771,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch (err) {
       console.error('Failed to unpin message:', err)
       throw err
+    }
+  },
+
+  searchMessages: async (query: string) => {
+    const client = getMatrixClient()
+    if (!client) return []
+
+    try {
+      const response = await (client as any).searchRoomEvents({ term: query })
+      return (response?.results || []).map((r: any) => ({
+        roomId: r.result?.room_id || '',
+        roomName: client.getRoom(r.result?.room_id)?.name || r.result?.room_id,
+        eventId: r.result?.event_id || '',
+        sender: r.result?.sender || '',
+        body: r.result?.content?.body || '',
+        timestamp: r.result?.origin_server_ts || 0,
+      })).slice(0, 20)
+    } catch (err) {
+      console.error('Search failed:', err)
+      return []
     }
   },
 

@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
 import { NewChatModal } from './new-chat-modal'
+import { RoomDirectory } from './room-directory'
 import { formatDistanceToNow } from 'date-fns'
 import {
   Search,
@@ -19,6 +20,9 @@ import {
   ArchiveRestore,
   Check,
   Mail,
+  Globe,
+  Loader2,
+  MessageSquareDashed,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -28,16 +32,45 @@ interface SidebarProps {
 
 export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   const user = useAuthStore(s => s.user)
-  const { rooms, pendingInvites, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom, acceptInvite, rejectInvite } = useChatStore()
+  const { rooms, pendingInvites, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom, acceptInvite, rejectInvite, searchMessages } = useChatStore()
   const [searchFilter, setSearchFilter] = useState('')
   const [showNewChat, setShowNewChat] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [showInvites, setShowInvites] = useState(true)
   const [inviteError, setInviteError] = useState<string | null>(null)
+  const [showDirectory, setShowDirectory] = useState(false)
+  const [messageResults, setMessageResults] = useState<{roomId: string, roomName: string, eventId: string, sender: string, body: string, timestamp: number}[]>([])
+  const [isSearchingMessages, setIsSearchingMessages] = useState(false)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (user) loadRooms()
   }, [user, loadRooms])
+
+  // Debounced message search when query has 3+ characters
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+    }
+
+    if (searchFilter.trim().length >= 3) {
+      setIsSearchingMessages(true)
+      searchDebounceRef.current = setTimeout(async () => {
+        const results = await searchMessages(searchFilter.trim())
+        setMessageResults(results)
+        setIsSearchingMessages(false)
+      }, 400)
+    } else {
+      setMessageResults([])
+      setIsSearchingMessages(false)
+    }
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current)
+      }
+    }
+  }, [searchFilter, searchMessages])
 
   const handleSelectRoom = useCallback(async (room: MatrixRoom) => {
     setActiveRoom(room)
@@ -105,6 +138,13 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             title="New chat"
           >
             <Plus className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => setShowDirectory(true)}
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            title="Browse rooms"
+          >
+            <Globe className="h-5 w-5" />
           </button>
           <button
             onClick={onSettingsClick}
@@ -268,6 +308,50 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             )}
           </div>
         )}
+
+        {/* Message search results */}
+        {searchFilter.trim().length >= 3 && (
+          <div className="mt-2">
+            <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500">
+              <MessageSquareDashed className="h-3.5 w-3.5" />
+              Message Results
+              {isSearchingMessages && <Loader2 className="h-3 w-3 animate-spin" />}
+            </div>
+            {messageResults.length === 0 && !isSearchingMessages ? (
+              <p className="px-3 py-2 text-xs text-gray-400">No messages found</p>
+            ) : (
+              <div className="space-y-0.5 py-1">
+                {messageResults.map(result => (
+                  <button
+                    key={result.eventId}
+                    onClick={() => {
+                      const room = rooms.find(r => r.roomId === result.roomId)
+                      if (room) {
+                        handleSelectRoom(room)
+                      }
+                    }}
+                    className="flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="truncate text-xs font-semibold text-indigo-500">{result.roomName}</span>
+                        {result.timestamp > 0 && (
+                          <span className="ml-2 flex-shrink-0 text-xs text-gray-400">
+                            {formatDistanceToNow(new Date(result.timestamp), { addSuffix: false })}
+                          </span>
+                        )}
+                      </div>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                        <span className="text-gray-400 dark:text-gray-500">{result.sender}: </span>
+                        {result.body}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* New Chat Modal */}
@@ -275,6 +359,17 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
         <NewChatModal
           onClose={() => setShowNewChat(false)}
           onRoomCreated={(roomId) => {
+            const room = rooms.find(r => r.roomId === roomId)
+            if (room) handleSelectRoom(room)
+          }}
+        />
+      )}
+
+      {/* Room Directory Modal */}
+      {showDirectory && (
+        <RoomDirectory
+          onClose={() => setShowDirectory(false)}
+          onRoomJoined={(roomId) => {
             const room = rooms.find(r => r.roomId === roomId)
             if (room) handleSelectRoom(room)
           }}

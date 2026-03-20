@@ -27,6 +27,8 @@ import {
   BellOff,
   Check,
   Pin,
+  Image as ImageIcon,
+  FileText,
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
 
@@ -632,6 +634,63 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Media Gallery */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <ImageIcon className="h-4 w-4 text-gray-500" />
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Shared Media</h4>
+              </div>
+              <div className="grid grid-cols-3 gap-1 max-h-64 overflow-y-auto rounded-lg">
+                {messages
+                  .filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video'))
+                  .slice(-30)
+                  .reverse()
+                  .map(m => (
+                    <a
+                      key={m.eventId}
+                      href={m.mediaUrl!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+                    >
+                      {m.type === 'm.image' ? (
+                        <img src={m.mediaUrl!} alt="" className="h-full w-full object-cover transition-transform hover:scale-110" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Video className="h-6 w-6 text-gray-400" />
+                        </div>
+                      )}
+                    </a>
+                  ))}
+                {messages.filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video')).length === 0 && (
+                  <p className="col-span-3 py-4 text-center text-xs text-gray-400">No shared media yet</p>
+                )}
+              </div>
+
+              {/* Shared files */}
+              {messages.filter(m => m.mediaUrl && m.type === 'm.file').length > 0 && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Files</p>
+                  {messages
+                    .filter(m => m.mediaUrl && m.type === 'm.file')
+                    .slice(-10)
+                    .reverse()
+                    .map(m => (
+                      <a
+                        key={m.eventId}
+                        href={m.mediaUrl!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-lg p-2 text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        <FileText className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                        <span className="truncate text-gray-700 dark:text-gray-300">{m.content}</span>
+                      </a>
+                    ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

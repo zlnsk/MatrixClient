@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { HOMESERVER_URL, restoreFromRecoveryKey, getMatrixClient } from '@/lib/matrix/client'
 import {
   X,
@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Pencil,
   Camera,
+  Monitor,
 } from 'lucide-react'
 
 interface SettingsPanelProps {
@@ -42,6 +43,34 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [devices, setDevices] = useState<{deviceId: string, displayName: string | null, lastSeenIp: string | null, lastSeenTs: number}[]>([])
+  const [loadingDevices, setLoadingDevices] = useState(false)
+  const [deletingDevice, setDeletingDevice] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (activeSection === 'security') {
+      loadDevices()
+    }
+  }, [activeSection])
+
+  const loadDevices = async () => {
+    const client = getMatrixClient()
+    if (!client) return
+    setLoadingDevices(true)
+    try {
+      const response = await client.getDevices()
+      setDevices((response.devices || []).map((d: any) => ({
+        deviceId: d.device_id,
+        displayName: d.display_name || null,
+        lastSeenIp: d.last_seen_ip || null,
+        lastSeenTs: d.last_seen_ts || 0,
+      })))
+    } catch (err) {
+      console.error('Failed to load devices:', err)
+    } finally {
+      setLoadingDevices(false)
+    }
+  }
 
   const handleSaveDisplayName = async () => {
     if (!newDisplayName.trim() || newDisplayName.trim() === user?.displayName) {
@@ -352,6 +381,40 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                   {isRestoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Key className="h-3.5 w-3.5" />}
                   {isRestoring ? 'Restoring keys...' : 'Restore from Recovery Key'}
                 </button>
+              </div>
+
+              {/* Active Sessions */}
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <Monitor className="h-4 w-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Sessions</h4>
+                </div>
+                {loadingDevices ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {devices.map(device => {
+                      const isCurrent = device.deviceId === getMatrixClient()?.getDeviceId()
+                      return (
+                        <div key={device.deviceId} className={`flex items-center gap-3 rounded-lg p-2 ${isCurrent ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
+                          <Monitor className={`h-4 w-4 flex-shrink-0 ${isCurrent ? 'text-green-500' : 'text-gray-400'}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              {device.displayName || device.deviceId}
+                              {isCurrent && <span className="ml-1.5 text-xs text-green-600 dark:text-green-400">(this device)</span>}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {device.deviceId}
+                              {device.lastSeenTs ? ` · Last seen ${new Date(device.lastSeenTs).toLocaleDateString()}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
