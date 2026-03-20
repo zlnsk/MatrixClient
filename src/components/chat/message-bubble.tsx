@@ -21,6 +21,7 @@ import {
   Pin,
   Forward,
 } from 'lucide-react'
+import { LinkPreview } from './link-preview'
 
 /**
  * Render rich text from Matrix formatted_body (HTML) or parse markdown from plain text.
@@ -60,6 +61,11 @@ function renderRichContent(content: string, formattedContent: string | null): st
     ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 'del', 's', 'code', 'pre', 'br', 'a', 'blockquote', 'span'],
     ALLOWED_ATTR: ['href', 'target', 'rel'],
   })
+}
+
+function extractFirstUrl(text: string): string | null {
+  const match = text.match(/https?:\/\/[^\s<]+/)
+  return match ? match[0] : null
 }
 
 function escapeHtml(text: string): string {
@@ -302,6 +308,11 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isP
                 }}
               />
             )}
+
+            {(() => {
+              const url = extractFirstUrl(message.content)
+              return url ? <LinkPreview url={url} /> : null
+            })()}
 
             {/* Timestamp + status */}
             <div className={`mt-1 flex items-center gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
