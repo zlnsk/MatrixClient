@@ -29,11 +29,41 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { data: { user: authUser } } = await supabase.auth.getUser()
 
     if (authUser) {
-      const { data: profile } = await supabase
+      // First try matching by auth ID
+      let { data: profile } = await supabase
         .from('users')
         .select('*')
         .eq('id', authUser.id)
         .single()
+
+      // If no match by ID, try matching by email (links existing users from other apps)
+      if (!profile && authUser.email) {
+        const { data: emailProfile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', authUser.email)
+          .single()
+
+        if (emailProfile) {
+          // Update the existing user's ID to match the new auth ID
+          // so all their chats, messages, memberships carry over
+          await supabase
+            .from('users')
+            .update({ id: authUser.id })
+            .eq('id', emailProfile.id)
+
+          // Update all foreign key references
+          await supabase.from('chat_members').update({ user_id: authUser.id }).eq('user_id', emailProfile.id)
+          await supabase.from('messages').update({ sender_id: authUser.id }).eq('sender_id', emailProfile.id)
+          await supabase.from('contacts').update({ user_id: authUser.id }).eq('user_id', emailProfile.id)
+          await supabase.from('contacts').update({ contact_user_id: authUser.id }).eq('contact_user_id', emailProfile.id)
+          await supabase.from('message_reactions').update({ user_id: authUser.id }).eq('user_id', emailProfile.id)
+          await supabase.from('preferences').update({ user_id: authUser.id }).eq('user_id', emailProfile.id)
+          await supabase.from('chats').update({ created_by: authUser.id }).eq('created_by', emailProfile.id)
+
+          profile = { ...emailProfile, id: authUser.id }
+        }
+      }
 
       const { data: prefs } = await supabase
         .from('preferences')
@@ -54,7 +84,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
         })
       } else {
-        // Create profile for new OAuth users
+        // Create profile for new users
         const newProfile = {
           id: authUser.id,
           email: authUser.email!,
