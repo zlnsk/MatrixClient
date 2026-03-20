@@ -51,6 +51,9 @@
 body {
   background-color: var(--surface-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ---- Animations ---- */

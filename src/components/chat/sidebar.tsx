@@ -15,6 +15,8 @@ import {
   MessageSquare,
   X,
   Hash,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -24,9 +26,10 @@ interface SidebarProps {
 
 export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   const user = useAuthStore(s => s.user)
-  const { rooms, loadRooms, setActiveRoom, activeRoom, markAsRead } = useChatStore()
+  const { rooms, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom } = useChatStore()
   const [searchFilter, setSearchFilter] = useState('')
   const [showNewChat, setShowNewChat] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
 
   useEffect(() => {
     if (user) loadRooms()
@@ -38,8 +41,11 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
     onChatSelect()
   }, [setActiveRoom, markAsRead, onChatSelect])
 
-  const filteredRooms = rooms.filter(room =>
-    room.name.toLowerCase().includes(searchFilter.toLowerCase())
+  const activeRooms = rooms.filter(room =>
+    !room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
+  )
+  const archivedRooms = rooms.filter(room =>
+    room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
   )
 
   const getOtherMemberAvatar = (room: MatrixRoom) => {
@@ -58,6 +64,18 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
       if (other?.presence === 'offline') return 'offline'
     }
     return null
+  }
+
+  const handleArchive = async (e: React.MouseEvent, room: MatrixRoom) => {
+    e.stopPropagation()
+    if (room.isArchived) {
+      await unarchiveRoom(room.roomId)
+    } else {
+      await archiveRoom(room.roomId)
+      if (activeRoom?.roomId === room.roomId) {
+        setActiveRoom(null)
+      }
+    }
   }
 
   return (
@@ -116,15 +134,9 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
         </div>
       </div>
 
-      {/* Encryption badge */}
-      <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 shadow-sm dark:bg-green-900/30">
-        <Lock className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-        <span className="text-xs font-medium text-green-600 dark:text-green-400">End-to-end encrypted</span>
-      </div>
-
       {/* Room list */}
       <div className="flex-1 overflow-y-auto px-2">
-        {filteredRooms.length === 0 ? (
+        {activeRooms.length === 0 && !showArchived ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <MessageSquare className="h-10 w-10 text-gray-300 dark:text-gray-700" />
             <p className="mt-3 text-sm text-gray-500">
@@ -141,16 +153,46 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
           </div>
         ) : (
           <div className="space-y-0.5 py-1">
-            {filteredRooms.map(room => (
+            {activeRooms.map(room => (
               <RoomListItem
                 key={room.roomId}
                 room={room}
                 isActive={activeRoom?.roomId === room.roomId}
                 onClick={() => handleSelectRoom(room)}
+                onArchive={(e) => handleArchive(e, room)}
                 avatarUrl={getOtherMemberAvatar(room)}
                 presence={getOtherMemberPresence(room)}
               />
             ))}
+          </div>
+        )}
+
+        {/* Archived section */}
+        {archivedRooms.length > 0 && (
+          <div className="mt-2">
+            <button
+              onClick={() => setShowArchived(!showArchived)}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Archived ({archivedRooms.length})
+              <span className="ml-auto text-gray-400">{showArchived ? '▲' : '▼'}</span>
+            </button>
+            {showArchived && (
+              <div className="space-y-0.5 py-1">
+                {archivedRooms.map(room => (
+                  <RoomListItem
+                    key={room.roomId}
+                    room={room}
+                    isActive={activeRoom?.roomId === room.roomId}
+                    onClick={() => handleSelectRoom(room)}
+                    onArchive={(e) => handleArchive(e, room)}
+                    avatarUrl={getOtherMemberAvatar(room)}
+                    presence={getOtherMemberPresence(room)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -173,12 +215,14 @@ function RoomListItem({
   room,
   isActive,
   onClick,
+  onArchive,
   avatarUrl,
   presence,
 }: {
   room: MatrixRoom
   isActive: boolean
   onClick: () => void
+  onArchive: (e: React.MouseEvent) => void
   avatarUrl: string | null
   presence: 'online' | 'offline' | 'away' | null
 }) {
@@ -189,8 +233,10 @@ function RoomListItem({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors ${
-        isActive ? 'bg-gray-100 shadow-sm dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'
+      className={`group flex w-full items-center gap-3 rounded-xl p-3 text-left transition-all ${
+        isActive
+          ? 'bg-indigo-50 shadow-md shadow-indigo-100/50 dark:bg-gray-800 dark:shadow-black/20'
+          : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'
       }`}
     >
       <Avatar
@@ -201,33 +247,48 @@ function RoomListItem({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className="truncate text-sm font-medium text-gray-900 dark:text-white">
+          <span className={`truncate font-semibold ${isActive ? 'text-indigo-700 dark:text-white' : 'text-gray-900 dark:text-white'}`}>
             {room.name}
           </span>
           {room.lastMessageTs > 0 && (
-            <span className="ml-2 flex-shrink-0 text-xs text-gray-500">
+            <span className="ml-2 flex-shrink-0 text-xs text-gray-400">
               {formatDistanceToNow(new Date(room.lastMessageTs), { addSuffix: false })}
             </span>
           )}
         </div>
         <div className="flex items-center justify-between">
-          <p className="truncate text-xs text-gray-400">
-            {room.lastSenderName && <span className="text-gray-500">{room.lastSenderName}: </span>}
+          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+            {room.lastSenderName && <span className="text-gray-400 dark:text-gray-500">{room.lastSenderName}: </span>}
             {lastMsgPreview}
           </p>
-          {room.unreadCount > 0 && (
-            <span className="ml-2 flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-xs font-medium text-white">
-              {room.unreadCount > 99 ? '99+' : room.unreadCount}
-            </span>
-          )}
+          <div className="ml-2 flex items-center gap-1">
+            {room.unreadCount > 0 && (
+              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-xs font-medium text-white shadow-sm shadow-indigo-600/30">
+                {room.unreadCount > 99 ? '99+' : room.unreadCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
-      {!room.isDirect && (
-        <Hash className="h-3.5 w-3.5 flex-shrink-0 text-gray-600" />
-      )}
-      {room.encrypted && (
-        <Lock className="h-3 w-3 flex-shrink-0 text-green-600" />
-      )}
+      <div className="flex flex-col items-center gap-1">
+        {!room.isDirect && (
+          <Hash className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+        )}
+        {room.encrypted && (
+          <Lock className="h-3 w-3 flex-shrink-0 text-green-500" />
+        )}
+        <button
+          onClick={onArchive}
+          className="hidden rounded p-0.5 text-gray-400 transition-colors hover:text-indigo-500 group-hover:block"
+          title={room.isArchived ? 'Unarchive' : 'Archive'}
+        >
+          {room.isArchived ? (
+            <ArchiveRestore className="h-3.5 w-3.5" />
+          ) : (
+            <Archive className="h-3.5 w-3.5" />
+          )}
+        </button>
+      </div>
     </button>
   )
 }

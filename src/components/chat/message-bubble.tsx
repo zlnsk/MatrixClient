@@ -141,17 +141,17 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
 
           {/* Sender name */}
           {showAvatar && !isOwn && (
-            <p className="mb-1 ml-1 text-xs font-semibold text-gray-600 dark:text-gray-400">
+            <p className="mb-1 ml-1 text-sm font-semibold text-gray-600 dark:text-gray-400">
               {message.senderName}
             </p>
           )}
 
           {/* Bubble */}
           <div
-            className={`rounded-2xl px-4 py-2.5 shadow-md ${
+            className={`rounded-2xl px-4 py-3 ${
               isOwn
-                ? 'bg-indigo-600 text-white shadow-indigo-600/20'
-                : 'bg-white text-gray-900 shadow-gray-200/50 dark:bg-gray-800 dark:text-gray-100 dark:shadow-black/20'
+                ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                : 'bg-white text-gray-900 shadow-lg shadow-gray-200/60 dark:bg-gray-800 dark:text-gray-100 dark:shadow-black/30'
             }`}
           >
             {isEditing ? (
@@ -208,16 +208,16 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
                 )}
               </div>
             ) : (
-              <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+              <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
             )}
 
             {/* Timestamp + status */}
             <div className={`mt-1 flex items-center gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-              <span className={`text-[11px] ${isOwn ? 'text-indigo-200' : 'text-gray-400 dark:text-gray-500'}`}>
+              <span className={`text-xs ${isOwn ? 'text-indigo-200/80' : 'text-gray-400 dark:text-gray-500'}`}>
                 {format(new Date(message.timestamp), 'HH:mm')}
               </span>
               {message.isEdited && (
-                <span className={`text-[11px] ${isOwn ? 'text-indigo-200' : 'text-gray-400 dark:text-gray-500'}`}>
+                <span className={`text-xs ${isOwn ? 'text-indigo-200/80' : 'text-gray-400 dark:text-gray-500'}`}>
                   (edited)
                 </span>
               )}

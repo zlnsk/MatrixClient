@@ -14,6 +14,7 @@ export interface MatrixRoom {
   unreadCount: number
   members: MatrixRoomMember[]
   encrypted: boolean
+  isArchived: boolean
 }
 
 export interface MatrixRoomMember {
@@ -77,6 +78,9 @@ interface ChatState {
   markAsRead: (roomId: string) => Promise<void>
   sendTyping: (roomId: string, typing: boolean) => void
   refreshRoom: (roomId: string) => void
+  archiveRoom: (roomId: string) => Promise<void>
+  unarchiveRoom: (roomId: string) => Promise<void>
+  uploadFile: (roomId: string, file: File) => Promise<void>
 }
 
 function roomToMatrixRoom(room: Room): MatrixRoom {
@@ -116,6 +120,10 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     }
   }
 
+  // Check if archived (has m.lowpriority tag)
+  const tags = room.tags || {}
+  const isArchived = 'm.lowpriority' in tags
+
   return {
     roomId: room.roomId,
     name: room.name || 'Unnamed Room',
@@ -128,6 +136,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     unreadCount: (room as any).getUnreadNotificationCount('total') || 0,
     members,
     encrypted: room.hasEncryptionStateEvent(),
+    isArchived,
   }
 }
 
@@ -487,7 +496,72 @@ export const useChatStore = create<ChatState>((set, get) => ({
       get().loadMessages(roomId)
     }
   },
+
+  archiveRoom: async (roomId) => {
+    const client = getMatrixClient()
+    if (!client) return
+    await client.setRoomTag(roomId, 'm.lowpriority', { order: 0.5 })
+    get().loadRooms()
+  },
+
+  unarchiveRoom: async (roomId) => {
+    const client = getMatrixClient()
+    if (!client) return
+    await client.deleteRoomTag(roomId, 'm.lowpriority')
+    get().loadRooms()
+  },
+
+  uploadFile: async (roomId, file) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    // Upload file to Matrix content repository
+    const uploadResponse = await client.uploadContent(file, {
+      name: file.name,
+      type: file.type,
+    })
+    const mxcUrl = uploadResponse.content_uri
+
+    // Determine message type based on file MIME type
+    let msgtype = 'm.file'
+    if (file.type.startsWith('image/')) msgtype = 'm.image'
+    else if (file.type.startsWith('video/')) msgtype = 'm.video'
+    else if (file.type.startsWith('audio/')) msgtype = 'm.audio'
+
+    const content: Record<string, unknown> = {
+      msgtype,
+      body: file.name,
+      url: mxcUrl,
+      info: {
+        mimetype: file.type,
+        size: file.size,
+      },
+    }
+
+    // For images, try to get dimensions
+    if (msgtype === 'm.image') {
+      try {
+        const dimensions = await getImageDimensions(file)
+        ;(content.info as Record<string, unknown>).w = dimensions.width
+        ;(content.info as Record<string, unknown>).h = dimensions.height
+      } catch { /* ignore */ }
+    }
+
+    await (client as any).sendEvent(roomId, 'm.room.message', content)
+  },
 }))
+
+function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      resolve({ width: img.width, height: img.height })
+      URL.revokeObjectURL(img.src)
+    }
+    img.onerror = reject
+    img.src = URL.createObjectURL(file)
+  })
+}
 
 // Need to import sdk for Preset type
 import * as sdk from 'matrix-js-sdk'
