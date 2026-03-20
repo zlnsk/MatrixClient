@@ -29,6 +29,47 @@ async function initCrypto(client: sdk.MatrixClient): Promise<void> {
   }
 }
 
+async function enableKeyBackup(client: sdk.MatrixClient): Promise<void> {
+  try {
+    const crypto = client.getCrypto()
+    if (!crypto) return
+
+    // Check if server has a key backup and enable it
+    const check = await crypto.checkKeyBackupAndEnable()
+    if (check) {
+      console.log('Key backup found on server, version:', check.backupInfo?.version)
+      console.log('Backup trusted:', check.trustInfo?.trusted)
+    } else {
+      console.log('No key backup found on server')
+    }
+  } catch (err) {
+    console.warn('Key backup check failed:', err)
+  }
+}
+
+export async function restoreFromRecoveryKey(recoveryKey: string): Promise<{ total: number; imported: number }> {
+  if (!matrixClient) throw new Error('Not connected')
+  const crypto = matrixClient.getCrypto()
+  if (!crypto) throw new Error('Crypto not initialized')
+
+  // Decode the recovery key
+  const { decodeRecoveryKey } = await import('matrix-js-sdk/lib/crypto-api/recovery-key')
+  const keyBytes = decodeRecoveryKey(recoveryKey.trim())
+
+  // Get the backup info
+  const backupInfo = await crypto.getKeyBackupInfo()
+  if (!backupInfo) throw new Error('No key backup found on server')
+
+  // Store the decryption key and restore
+  await crypto.storeSessionBackupPrivateKey(keyBytes, backupInfo.version!)
+  const result = await crypto.restoreKeyBackup({
+    progressCallback: (progress: any) => {
+      console.log('Key restore progress:', progress)
+    },
+  })
+  return result
+}
+
 export async function loginWithPassword(
   username: string,
   password: string
@@ -94,7 +135,7 @@ export async function startSync(): Promise<void> {
   })
 
   // Wait for initial sync
-  return new Promise((resolve) => {
+  await new Promise<void>((resolve) => {
     const onSync = (state: string) => {
       if (state === 'PREPARED') {
         matrixClient?.removeListener(sdk.ClientEvent.Sync, onSync)
@@ -103,6 +144,9 @@ export async function startSync(): Promise<void> {
     }
     matrixClient?.on(sdk.ClientEvent.Sync, onSync)
   })
+
+  // After sync, check and enable key backup for decrypting historical messages
+  await enableKeyBackup(matrixClient)
 }
 
 export async function logout(): Promise<void> {

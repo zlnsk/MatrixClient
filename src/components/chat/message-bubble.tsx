@@ -108,7 +108,7 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
 
   return (
     <div
-      className={`group flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-3' : 'mt-0.5'}`}
+      className={`group flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-0.5'}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
         if (!showEmojiPicker && !showContextMenu) setShowActions(false)
@@ -126,7 +126,7 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
           )}
         </div>
 
-        <div className="relative" ref={actionsRef}>
+        <div className="relative flex flex-col" ref={actionsRef}>
           {/* Reply reference */}
           {message.replyToEvent && (
             <div className={`mb-1 rounded-xl px-3 py-1.5 text-xs shadow-sm ${
@@ -262,9 +262,9 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
             </div>
           )}
 
-          {/* Action buttons */}
+          {/* Action buttons — inline above the bubble */}
           {showActions && !isEditing && (
-            <div className={`absolute -top-9 ${isOwn ? 'right-0' : 'left-0'} flex items-center gap-0.5 rounded-xl border border-gray-200 bg-white p-0.5 shadow-lg animate-fade-in dark:border-gray-700 dark:bg-gray-800`}>
+            <div className={`flex items-center gap-0.5 rounded-xl border border-gray-200 bg-white p-0.5 shadow-lg animate-fade-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'self-end' : 'self-start'} mb-1`}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-white"
@@ -291,7 +291,7 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
 
           {/* Emoji picker */}
           {showEmojiPicker && (
-            <div className={`absolute -top-[72px] ${isOwn ? 'right-0' : 'left-0'} grid grid-cols-5 gap-0.5 rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800`}>
+            <div className={`grid grid-cols-5 gap-0.5 rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'self-end' : 'self-start'} mb-1`}>
               {QUICK_EMOJIS.map(emoji => (
                 <button
                   key={emoji}
@@ -306,7 +306,7 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
 
           {/* Context menu */}
           {showContextMenu && (
-            <div className={`absolute top-full mt-1 ${isOwn ? 'right-0' : 'left-0'} z-10 min-w-[160px] rounded-xl border border-gray-200 bg-white py-1 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800`}>
+            <div className={`z-10 min-w-[160px] rounded-xl border border-gray-200 bg-white py-1 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'self-end' : 'self-start'}`}>
               <button
                 onClick={handleCopy}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"

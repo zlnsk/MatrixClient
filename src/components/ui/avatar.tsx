@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 interface AvatarProps {
   src?: string | null
   name: string
@@ -51,25 +53,35 @@ function getAvatarColor(name: string) {
   return colors[hash % colors.length]
 }
 
+function InitialsFallback({ name, size }: { name: string; size: 'sm' | 'md' | 'lg' }) {
+  return (
+    <div
+      className={`${sizeMap[size]} ${getAvatarColor(name)} flex items-center justify-center rounded-full font-medium text-white`}
+    >
+      {getInitials(name)}
+    </div>
+  )
+}
+
 export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
+  const [imgError, setImgError] = useState(false)
+
   return (
     <div className="relative flex-shrink-0">
-      {src ? (
+      {src && !imgError ? (
         <img
           src={src}
           alt={name}
+          crossOrigin="anonymous"
           className={`${sizeMap[size]} rounded-full object-cover`}
+          onError={() => setImgError(true)}
         />
       ) : (
-        <div
-          className={`${sizeMap[size]} ${getAvatarColor(name)} flex items-center justify-center rounded-full font-medium text-white`}
-        >
-          {getInitials(name)}
-        </div>
+        <InitialsFallback name={name} size={size} />
       )}
       {status && (
         <span
-          className={`absolute ${statusSizeMap[size]} ${statusColorMap[status]} rounded-full border-2 border-gray-900`}
+          className={`absolute ${statusSizeMap[size]} ${statusColorMap[status]} rounded-full border-2 border-white dark:border-gray-900`}
         />
       )}
     </div>

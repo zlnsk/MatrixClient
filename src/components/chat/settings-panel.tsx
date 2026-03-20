@@ -5,7 +5,7 @@ import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { HOMESERVER_URL } from '@/lib/matrix/client'
+import { HOMESERVER_URL, restoreFromRecoveryKey } from '@/lib/matrix/client'
 import {
   X,
   Sun,
@@ -16,6 +16,8 @@ import {
   Palette,
   Loader2,
   Server,
+  Key,
+  CheckCircle,
 } from 'lucide-react'
 
 interface SettingsPanelProps {
@@ -28,6 +30,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [activeSection, setActiveSection] = useState<'profile' | 'appearance' | 'security'>('profile')
+  const [recoveryKey, setRecoveryKey] = useState('')
+  const [isRestoring, setIsRestoring] = useState(false)
+  const [restoreResult, setRestoreResult] = useState<string | null>(null)
+  const [restoreError, setRestoreError] = useState<string | null>(null)
 
   const handleSignOut = async () => {
     setIsLoggingOut(true)
@@ -179,6 +185,55 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">User ID</h4>
                 <p className="mt-1 font-mono text-xs text-gray-500">{user?.userId}</p>
+              </div>
+
+              {/* Recovery Key Restore */}
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <Key className="h-4 w-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Key Backup Recovery</h4>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">
+                  Enter your security key to decrypt messages sent before this device logged in.
+                </p>
+                <textarea
+                  value={recoveryKey}
+                  onChange={e => { setRecoveryKey(e.target.value); setRestoreError(null); setRestoreResult(null) }}
+                  placeholder="Enter recovery key (e.g. EsTC j9gP noRq ...)..."
+                  rows={2}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                />
+                {restoreError && (
+                  <p className="mt-2 text-xs text-red-500">{restoreError}</p>
+                )}
+                {restoreResult && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    {restoreResult}
+                  </div>
+                )}
+                <button
+                  onClick={async () => {
+                    if (!recoveryKey.trim()) return
+                    setIsRestoring(true)
+                    setRestoreError(null)
+                    setRestoreResult(null)
+                    try {
+                      const result = await restoreFromRecoveryKey(recoveryKey)
+                      setRestoreResult(`Restored ${result.imported} of ${result.total} keys`)
+                      setRecoveryKey('')
+                    } catch (err) {
+                      setRestoreError(err instanceof Error ? err.message : 'Failed to restore keys')
+                    } finally {
+                      setIsRestoring(false)
+                    }
+                  }}
+                  disabled={isRestoring || !recoveryKey.trim()}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                >
+                  {isRestoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Key className="h-3.5 w-3.5" />}
+                  {isRestoring ? 'Restoring keys...' : 'Restore from Recovery Key'}
+                </button>
               </div>
             </div>
           )}
