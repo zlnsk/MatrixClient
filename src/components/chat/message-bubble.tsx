@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
 import { format } from 'date-fns'
+import DOMPurify from 'dompurify'
 import {
   Reply,
   Smile,
@@ -18,6 +19,54 @@ import {
   Clock,
   Send,
 } from 'lucide-react'
+
+/**
+ * Render rich text from Matrix formatted_body (HTML) or parse markdown from plain text.
+ */
+function renderRichContent(content: string, formattedContent: string | null): string {
+  // If Matrix HTML formatted_body is available, sanitize and use it
+  if (formattedContent) {
+    return DOMPurify.sanitize(formattedContent, {
+      ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 'del', 's', 'strike', 'code', 'pre', 'br', 'p', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'sup', 'sub', 'hr', 'mx-reply'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'data-mx-color', 'data-mx-bg-color', 'class'],
+      ADD_ATTR: ['target'],
+    })
+  }
+
+  // Parse markdown from plain text
+  let html = escapeHtml(content)
+
+  // Code blocks (```)
+  html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
+  // Bold (**text** or __text__)
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/__(.+?)__/g, '<strong>$1</strong>')
+  // Italic (*text* or _text_)
+  html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
+  html = html.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '<em>$1</em>')
+  // Strikethrough (~~text~~)
+  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>')
+  // Links (auto-detect URLs)
+  html = html.replace(
+    /(?<!")https?:\/\/[^\s<]+/g,
+    '<a href="$&" target="_blank" rel="noopener noreferrer">$&</a>'
+  )
+
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 'del', 's', 'code', 'pre', 'br', 'a', 'blockquote', 'span'],
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
+  })
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
 
 interface MessageBubbleProps {
   message: MatrixMessage
@@ -208,7 +257,12 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
                 )}
               </div>
             ) : (
-              <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+              <div
+                className="rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words"
+                dangerouslySetInnerHTML={{
+                  __html: renderRichContent(message.content, message.formattedContent),
+                }}
+              />
             )}
 
             {/* Timestamp + status */}

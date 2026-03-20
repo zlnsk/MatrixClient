@@ -38,6 +38,14 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
         fullUserId = `${fullUserId}:lukasz.com`
       }
 
+      // Validate Matrix user ID format: @localpart:domain
+      const matrixIdRegex = /^@[a-zA-Z0-9._=\-/+]+:[a-zA-Z0-9.-]+$/
+      if (!matrixIdRegex.test(fullUserId)) {
+        setError('Invalid Matrix user ID format. Expected: @user:domain.com')
+        setIsCreating(false)
+        return
+      }
+
       const roomId = await createDirectChat(fullUserId)
       loadRooms()
       onRoomCreated(roomId)

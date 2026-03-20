@@ -8,7 +8,7 @@ import * as sdk from 'matrix-js-sdk'
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
-  const { loadRooms, activeRoom, loadMessages } = useChatStore()
+  const { loadRooms, activeRoom, loadMessages, unarchiveRoom } = useChatStore()
 
   useEffect(() => {
     if (!user) return
@@ -26,6 +26,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     ) => {
       if (!room) return
 
+      // If a new message arrives in an archived room, unarchive it
+      const eventType = event.getType()
+      if (
+        (eventType === 'm.room.message' || eventType === 'm.room.encrypted') &&
+        data?.liveEvent
+      ) {
+        const tags = room.tags || {}
+        if ('m.lowpriority' in tags) {
+          unarchiveRoom(room.roomId)
+        }
+      }
+
       // Refresh the room list
       loadRooms()
 
@@ -36,7 +48,6 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
 
       // Browser notification for messages from others
-      const eventType = event.getType()
       if (
         (eventType === 'm.room.message' || eventType === 'm.room.encrypted') &&
         event.getSender() !== user.userId &&
@@ -120,7 +131,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       client.removeListener(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
       client.removeListener('RoomMember.typing' as any, onRoomTyping)
     }
-  }, [user, activeRoom, loadRooms, loadMessages])
+  }, [user, activeRoom, loadRooms, loadMessages, unarchiveRoom])
 
   return <>{children}</>
 }

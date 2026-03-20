@@ -531,6 +531,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const client = getMatrixClient()
     if (!client) return
 
+    // Validate file size (100MB max)
+    const MAX_FILE_SIZE = 100 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      throw new Error('File too large. Maximum size is 100MB.')
+    }
+
     // Upload file to Matrix content repository
     const uploadResponse = await client.uploadContent(file, {
       name: file.name,

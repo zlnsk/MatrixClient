@@ -17,6 +17,10 @@ import {
   Archive,
   ArchiveRestore,
   LogOut,
+  Info,
+  X,
+  Shield,
+  Users,
 } from 'lucide-react'
 
 interface ChatAreaProps {
@@ -31,6 +35,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const [showSearch, setShowSearch] = useState(false)
   const [chatSearch, setChatSearch] = useState('')
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [showRoomInfo, setShowRoomInfo] = useState(false)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -88,7 +93,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col min-h-0 bg-gray-50 dark:bg-gray-950">
+    <div className="relative flex flex-1 flex-col min-h-0 bg-gray-50 dark:bg-gray-950">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 bg-white/90 px-4 py-3 shadow-md shadow-gray-200/40 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90 dark:shadow-black/30">
         <div className="flex items-center gap-3">
@@ -128,6 +133,13 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         </div>
 
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowRoomInfo(!showRoomInfo)}
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            title="Room info"
+          >
+            <Info className="h-5 w-5" />
+          </button>
           <button
             onClick={() => setShowSearch(!showSearch)}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
@@ -272,6 +284,87 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         onCancelReply={() => setReplyTo(null)}
         roomId={activeRoom.roomId}
       />
+
+      {/* Room Info Panel */}
+      {showRoomInfo && (
+        <div className="absolute right-0 top-0 z-40 h-full w-80 border-l border-gray-200 bg-white shadow-2xl animate-slide-in dark:border-gray-800 dark:bg-gray-900 overflow-y-auto">
+          <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Room Details</h3>
+            <button
+              onClick={() => setShowRoomInfo(false)}
+              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="p-4 space-y-5">
+            {/* Room avatar + name */}
+            <div className="flex flex-col items-center gap-3">
+              <Avatar
+                src={activeRoom.isDirect ? otherMember?.avatarUrl : activeRoom.avatarUrl}
+                name={roomDisplayName}
+                size="lg"
+              />
+              <div className="text-center">
+                <h4 className="text-lg font-bold text-gray-900 dark:text-white">{roomDisplayName}</h4>
+                {activeRoom.topic && (
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{activeRoom.topic}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Room ID */}
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Room ID</p>
+              <p className="mt-1 font-mono text-xs text-gray-700 dark:text-gray-300 break-all">{activeRoom.roomId}</p>
+            </div>
+
+            {/* Encryption */}
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+              <div className="flex items-center gap-2">
+                {activeRoom.encrypted ? (
+                  <>
+                    <Shield className="h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">End-to-end encrypted</span>
+                  </>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Not encrypted</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Members */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="h-4 w-4 text-gray-500" />
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Members ({activeRoom.members.length})
+                </h4>
+              </div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {activeRoom.members.map(member => (
+                  <div key={member.userId} className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <Avatar
+                      src={member.avatarUrl}
+                      name={member.displayName}
+                      size="sm"
+                      status={member.presence === 'online' ? 'online' : member.presence === 'unavailable' ? 'away' : null}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{member.displayName}</p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{member.userId}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

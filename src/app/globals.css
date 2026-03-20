@@ -97,3 +97,76 @@ body {
 .typing-dot:nth-child(3) {
   animation-delay: 0.4s;
 }
+
+/* ---- Rich content (message markdown/HTML) ---- */
+.rich-content strong, .rich-content b {
+  font-weight: 700;
+}
+
+.rich-content em, .rich-content i {
+  font-style: italic;
+}
+
+.rich-content del, .rich-content s {
+  text-decoration: line-through;
+}
+
+.rich-content code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.dark .rich-content code {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.rich-content pre {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 0.75em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.dark .rich-content pre {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rich-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.rich-content a {
+  color: #818cf8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.rich-content a:hover {
+  color: #6366f1;
+}
+
+.rich-content blockquote {
+  border-left: 3px solid #6366f1;
+  padding-left: 0.75em;
+  margin: 0.5em 0;
+  opacity: 0.85;
+}
+
+.rich-content mx-reply {
+  display: none;
+}
+
+.rich-content ul {
+  list-style: disc;
+  padding-left: 1.5em;
+}
+
+.rich-content ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+}

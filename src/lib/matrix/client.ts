@@ -156,6 +156,26 @@ export function restoreSession(): sdk.MatrixClient | null {
 
   try {
     const session = JSON.parse(stored)
+
+    // Validate session data
+    if (!session.accessToken || !session.userId || !session.deviceId || !session.homeserverUrl) {
+      localStorage.removeItem('matrix_session')
+      return null
+    }
+
+    // Validate homeserver URL matches expected server
+    try {
+      const url = new URL(session.homeserverUrl)
+      if (!url.hostname.endsWith('lukasz.com') && url.hostname !== 'lukasz.com') {
+        console.warn('Session homeserver does not match expected domain')
+        localStorage.removeItem('matrix_session')
+        return null
+      }
+    } catch {
+      localStorage.removeItem('matrix_session')
+      return null
+    }
+
     matrixClient = sdk.createClient({
       baseUrl: session.homeserverUrl,
       accessToken: session.accessToken,

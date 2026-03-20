@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
-  // Headers for WASM and SharedArrayBuffer
+  // Headers for WASM, SharedArrayBuffer, and security
   async headers() {
     return [
       {
@@ -37,6 +37,38 @@ const nextConfig: NextConfig = {
           {
             key: 'Cross-Origin-Embedder-Policy',
             value: 'credentialless',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' https://lukasz.com https://*.lukasz.com blob: data:",
+              "media-src 'self' https://lukasz.com https://*.lukasz.com blob:",
+              "connect-src 'self' https://lukasz.com https://*.lukasz.com wss://lukasz.com wss://*.lukasz.com",
+              "font-src 'self'",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'",
+            ].join('; '),
           },
         ],
       },
