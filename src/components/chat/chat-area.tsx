@@ -77,7 +77,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-950">
+    <div className="flex flex-1 flex-col min-h-0 bg-gray-950">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-800 bg-gray-900/80 px-4 py-3 backdrop-blur-sm">
         <div className="flex items-center gap-3">

@@ -10,6 +10,22 @@ export function getMatrixClient(): sdk.MatrixClient | null {
   return matrixClient
 }
 
+function createMatrixClient(opts: {
+  baseUrl: string
+  accessToken: string
+  userId: string
+  deviceId: string
+}): sdk.MatrixClient {
+  return sdk.createClient({
+    baseUrl: opts.baseUrl,
+    accessToken: opts.accessToken,
+    userId: opts.userId,
+    deviceId: opts.deviceId,
+    // Enable crypto support if available
+    cryptoCallbacks: {} as any,
+  })
+}
+
 export async function loginWithPassword(
   username: string,
   password: string
@@ -22,12 +38,19 @@ export async function loginWithPassword(
     initial_device_display_name: 'Matrix Client Web',
   })
 
-  matrixClient = sdk.createClient({
+  matrixClient = createMatrixClient({
     baseUrl: HOMESERVER_URL,
     accessToken: response.access_token,
     userId: response.user_id,
     deviceId: response.device_id,
   })
+
+  // Try to initialize crypto
+  try {
+    await (matrixClient as any).initCrypto?.()
+  } catch {
+    // Crypto not available — encrypted messages will show as locked
+  }
 
   // Persist session
   localStorage.setItem(
@@ -49,7 +72,7 @@ export function restoreSession(): sdk.MatrixClient | null {
 
   try {
     const session = JSON.parse(stored)
-    matrixClient = sdk.createClient({
+    matrixClient = createMatrixClient({
       baseUrl: session.homeserverUrl,
       accessToken: session.accessToken,
       userId: session.userId,
@@ -64,6 +87,13 @@ export function restoreSession(): sdk.MatrixClient | null {
 
 export async function startSync(): Promise<void> {
   if (!matrixClient) return
+
+  // Try to initialize crypto before starting sync
+  try {
+    await (matrixClient as any).initCrypto?.()
+  } catch {
+    // Crypto not available
+  }
 
   await matrixClient.startClient({
     initialSyncLimit: 20,

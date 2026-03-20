@@ -123,66 +123,99 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
 }
 
 function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | null {
-  const type = event.getType()
+  const wireType = event.getWireType?.() || event.getType()
+  const effectiveType = event.getType()
   const client = getMatrixClient()
   const userId = getUserId()
 
-  if (type === 'm.room.message' || type === 'm.room.encrypted' || type === 'm.sticker') {
-    const content = event.getContent()
-    const sender = event.getSender()!
-    const member = room.getMember(sender)
+  // Accept message events, encrypted events, and stickers
+  const isMessage = effectiveType === 'm.room.message' || effectiveType === 'm.sticker'
+  const isEncrypted = wireType === 'm.room.encrypted' || effectiveType === 'm.room.encrypted'
 
-    // Check for reply
-    let replyToEvent = null
-    const relatesTo = content['m.relates_to']
-    if (relatesTo?.['m.in_reply_to']?.event_id) {
-      const replyEvent = room.findEventById(relatesTo['m.in_reply_to'].event_id)
-      if (replyEvent) {
-        const replySender = replyEvent.getSender()!
-        const replyMember = room.getMember(replySender)
-        replyToEvent = {
-          eventId: replyEvent.getId()!,
-          senderId: replySender,
-          senderName: replyMember?.name || replySender,
-          content: replyEvent.getContent()?.body || '',
-        }
+  if (!isMessage && !isEncrypted) return null
+
+  const sender = event.getSender()!
+  const member = room.getMember(sender)
+
+  // For encrypted events, try to get decrypted content first
+  // getClearContent() returns the decrypted payload if the SDK has decrypted it
+  // Otherwise fall back to getContent() which may be ciphertext
+  const clearContent = (event as any).getClearContent?.()
+  const rawContent = event.getContent()
+  const content = clearContent || rawContent
+
+  // If this is an encrypted event that hasn't been decrypted,
+  // content will have {algorithm, ciphertext, ...} instead of {body, msgtype, ...}
+  const isUndecrypted = isEncrypted && !content.msgtype && !clearContent
+
+  // Check for reply
+  let replyToEvent = null
+  const relatesTo = content['m.relates_to']
+  if (relatesTo?.['m.in_reply_to']?.event_id) {
+    const replyEvt = room.findEventById(relatesTo['m.in_reply_to'].event_id)
+    if (replyEvt) {
+      const replySender = replyEvt.getSender()!
+      const replyMember = room.getMember(replySender)
+      const replyClear = (replyEvt as any).getClearContent?.()
+      const replyContent = replyClear || replyEvt.getContent()
+      replyToEvent = {
+        eventId: replyEvt.getId()!,
+        senderId: replySender,
+        senderName: replyMember?.name || replySender,
+        content: replyContent?.body || '',
       }
     }
+  }
 
-    // Collect reactions
-    const reactions = new Map<string, { count: number; users: string[]; includesMe: boolean }>()
-    const relatedEvents = room.getLiveTimeline().getEvents()
-    for (const e of relatedEvents) {
-      if (e.getType() === 'm.reaction') {
-        const rel = e.getContent()['m.relates_to']
-        if (rel?.event_id === event.getId() && rel?.key) {
-          const emoji = rel.key
-          const existing = reactions.get(emoji) || { count: 0, users: [], includesMe: false }
-          existing.count++
-          existing.users.push(e.getSender()!)
-          if (e.getSender() === userId) existing.includesMe = true
-          reactions.set(emoji, existing)
-        }
+  // Collect reactions
+  const reactions = new Map<string, { count: number; users: string[]; includesMe: boolean }>()
+  const relatedEvents = room.getLiveTimeline().getEvents()
+  for (const e of relatedEvents) {
+    if (e.getType() === 'm.reaction') {
+      const rel = e.getContent()['m.relates_to']
+      if (rel?.event_id === event.getId() && rel?.key) {
+        const emoji = rel.key
+        const existing = reactions.get(emoji) || { count: 0, users: [], includesMe: false }
+        existing.count++
+        existing.users.push(e.getSender()!)
+        if (e.getSender() === userId) existing.includesMe = true
+        reactions.set(emoji, existing)
       }
     }
+  }
 
-    // Check if edited
-    const isEdited = !!(content['m.new_content'] || event.replacingEvent())
-    const displayContent = content['m.new_content'] || content
-
-    // Media
-    let mediaUrl: string | null = null
-    let mediaInfo = null
-    if (displayContent.msgtype === 'm.image' || displayContent.msgtype === 'm.video' || displayContent.msgtype === 'm.audio' || displayContent.msgtype === 'm.file') {
-      const mxcUrl = displayContent.url
-      if (mxcUrl && client) {
-        mediaUrl = client.mxcUrlToHttp(mxcUrl) || null
-      }
-      mediaInfo = displayContent.info || null
+  // Check if edited
+  const replacingEvt = event.replacingEvent?.()
+  const isEdited = !!(content['m.new_content'] || replacingEvt)
+  let displayContent = content
+  if (content['m.new_content']) {
+    displayContent = content['m.new_content']
+  } else if (replacingEvt) {
+    const replaceClear = (replacingEvt as any).getClearContent?.()
+    const replaceContent = replaceClear || replacingEvt.getContent()
+    if (replaceContent?.['m.new_content']) {
+      displayContent = replaceContent['m.new_content']
     }
+  }
 
+  // Media
+  let mediaUrl: string | null = null
+  let mediaInfo = null
+  if (displayContent.msgtype === 'm.image' || displayContent.msgtype === 'm.video' || displayContent.msgtype === 'm.audio' || displayContent.msgtype === 'm.file') {
+    const mxcUrl = displayContent.url
+    if (mxcUrl && client) {
+      mediaUrl = client.mxcUrlToHttp(mxcUrl) || null
+    }
+    mediaInfo = displayContent.info || null
+  }
+
+  // Get body text
+  let body: string
+  if (isUndecrypted) {
+    body = '\u{1F512} Encrypted message (unable to decrypt)'
+  } else {
+    body = displayContent.body || ''
     // Strip reply fallback from body
-    let body = displayContent.body || ''
     if (body.startsWith('> ')) {
       const lines = body.split('\n')
       const firstNonQuote = lines.findIndex((l: string) => !l.startsWith('> ') && l !== '')
@@ -190,27 +223,29 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
         body = lines.slice(firstNonQuote).join('\n').trim()
       }
     }
-
-    return {
-      eventId: event.getId()!,
-      roomId: room.roomId,
-      senderId: sender,
-      senderName: member?.name || sender,
-      senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
-      type: displayContent.msgtype || 'm.text',
-      content: body,
-      formattedContent: displayContent.formatted_body || null,
-      timestamp: event.getTs(),
-      isEdited,
-      isRedacted: event.isRedacted(),
-      replyToEvent,
-      reactions,
-      mediaUrl,
-      mediaInfo,
+    // Fallback if body is still empty
+    if (!body && !mediaUrl) {
+      body = isEncrypted ? '\u{1F512} Encrypted message' : '[empty message]'
     }
   }
 
-  return null
+  return {
+    eventId: event.getId()!,
+    roomId: room.roomId,
+    senderId: sender,
+    senderName: member?.name || sender,
+    senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
+    type: displayContent.msgtype || 'm.text',
+    content: body,
+    formattedContent: displayContent.formatted_body || null,
+    timestamp: event.getTs(),
+    isEdited,
+    isRedacted: event.isRedacted(),
+    replyToEvent,
+    reactions,
+    mediaUrl,
+    mediaInfo,
+  }
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
