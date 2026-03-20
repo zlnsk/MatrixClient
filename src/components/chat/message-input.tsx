@@ -12,6 +12,8 @@ import {
   Image as ImageIcon,
   FileText,
   Loader2,
+  Mic,
+  Square,
 } from 'lucide-react'
 
 interface MessageInputProps {
@@ -38,10 +40,15 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [commandStatus, setCommandStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingDuration, setRecordingDuration] = useState(0)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (replyTo) inputRef.current?.focus()
@@ -64,6 +71,72 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' })
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop())
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        if (blob.size > 0) {
+          const file = new File([blob], `voice-message-${Date.now()}.webm`, { type: 'audio/webm' })
+          await uploadFile(roomId, file)
+        }
+        setRecordingDuration(0)
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(d => d + 1)
+      }, 1000)
+    } catch (err) {
+      console.error('Failed to start recording:', err)
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+    setIsRecording(false)
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current)
+      recordingTimerRef.current = null
+    }
+  }
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.ondataavailable = null
+      mediaRecorderRef.current.onstop = () => {
+        mediaRecorderRef.current?.stream?.getTracks().forEach(track => track.stop())
+      }
+      mediaRecorderRef.current.stop()
+    }
+    audioChunksRef.current = []
+    setIsRecording(false)
+    setRecordingDuration(0)
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current)
+      recordingTimerRef.current = null
+    }
+  }
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m}:${s.toString().padStart(2, '0')}`
+  }
 
   const handleContentChange = (value: string) => {
     setContent(value)
@@ -377,32 +450,61 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
           )}
         </div>
 
-        {/* Text input */}
-        <div className="flex-1">
-          <textarea
-            ref={inputRef}
-            value={content}
-            onChange={e => handleContentChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder="Type a message..."
-            rows={1}
-            className="max-h-32 min-h-[44px] w-full resize-none rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-sm text-gray-900 shadow-inner placeholder-gray-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-          />
-        </div>
+        {/* Text input / Recording indicator */}
+        {isRecording ? (
+          <div className="flex flex-1 items-center gap-3 rounded-full border border-red-300 bg-red-50 px-5 py-3 dark:border-red-800 dark:bg-red-900/20">
+            <span className="h-3 w-3 animate-pulse rounded-full bg-red-500" />
+            <span className="text-sm font-medium text-red-600 dark:text-red-400">Recording {formatDuration(recordingDuration)}</span>
+            <div className="flex-1" />
+            <button onClick={cancelRecording} className="rounded-full p-1 text-gray-400 hover:text-red-500" title="Cancel">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1">
+            <textarea
+              ref={inputRef}
+              value={content}
+              onChange={e => handleContentChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder="Type a message..."
+              rows={1}
+              className="max-h-32 min-h-[44px] w-full resize-none rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-sm text-gray-900 shadow-inner placeholder-gray-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+            />
+          </div>
+        )}
 
-        {/* Send button */}
-        <button
-          onClick={handleSubmit}
-          disabled={(!content.trim() && pendingFiles.length === 0) || isSending || isUploading}
-          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white transition-all hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600"
-        >
-          {isUploading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Send className="h-5 w-5" />
-          )}
-        </button>
+        {/* Send / Stop / Mic button */}
+        {isRecording ? (
+          <button
+            onClick={stopRecording}
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-red-500"
+            title="Stop recording"
+          >
+            <Square className="h-4 w-4" />
+          </button>
+        ) : !content.trim() && pendingFiles.length === 0 ? (
+          <button
+            onClick={startRecording}
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-600 transition-all hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            title="Record voice message"
+          >
+            <Mic className="h-5 w-5" />
+          </button>
+        ) : (
+          <button
+            onClick={handleSubmit}
+            disabled={(!content.trim() && pendingFiles.length === 0) || isSending || isUploading}
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white transition-all hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600"
+          >
+            {isUploading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+          </button>
+        )}
       </div>
     </div>
   )
