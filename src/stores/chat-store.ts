@@ -67,7 +67,7 @@ interface ChatState {
 
   loadRooms: () => void
   setActiveRoom: (room: MatrixRoom | null) => void
-  loadMessages: (roomId: string) => void
+  loadMessages: (roomId: string) => Promise<void>
   sendMessage: (roomId: string, content: string, replyToEventId?: string) => Promise<void>
   editMessage: (roomId: string, eventId: string, newContent: string) => Promise<void>
   redactMessage: (roomId: string, eventId: string) => Promise<void>
@@ -81,6 +81,7 @@ interface ChatState {
   archiveRoom: (roomId: string) => Promise<void>
   unarchiveRoom: (roomId: string) => Promise<void>
   uploadFile: (roomId: string, file: File) => Promise<void>
+  leaveRoom: (roomId: string) => Promise<void>
 }
 
 function roomToMatrixRoom(room: Room): MatrixRoom {
@@ -92,14 +93,18 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     (e) => e.getType() === 'm.room.message' || e.getType() === 'm.room.encrypted'
   ).pop()
 
-  const lastContent = lastEvent?.getContent()
+  // Use decrypted content for last message preview
+  const lastClear = lastEvent ? (lastEvent as any).getClearContent?.() : null
+  const lastContent = lastClear || lastEvent?.getContent()
   let lastMessage: string | null = null
   if (lastContent) {
     if (lastContent.msgtype === 'm.image') lastMessage = '📷 Image'
     else if (lastContent.msgtype === 'm.video') lastMessage = '🎬 Video'
     else if (lastContent.msgtype === 'm.audio') lastMessage = '🎤 Audio'
     else if (lastContent.msgtype === 'm.file') lastMessage = '📎 File'
-    else lastMessage = lastContent.body || null
+    else if (lastContent.body) lastMessage = lastContent.body
+    else if (lastContent.algorithm) lastMessage = '🔒 Encrypted message'
+    else lastMessage = null
   }
 
   const members = room.getJoinedMembers().map((m: RoomMember) => ({
@@ -323,7 +328,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  loadMessages: (roomId) => {
+  loadMessages: async (roomId) => {
     set({ isLoadingMessages: true })
     const client = getMatrixClient()
     if (!client) return
@@ -332,6 +337,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!room) {
       set({ isLoadingMessages: false })
       return
+    }
+
+    // Paginate backwards to load more history if the timeline is small
+    const timelineSet = room.getLiveTimeline()
+    const events = timelineSet.getEvents()
+    if (events.length < 50) {
+      try {
+        await client.scrollback(room, 50)
+      } catch {
+        // Pagination may fail for some rooms, that's ok
+      }
     }
 
     const timeline = room.getLiveTimeline().getEvents()
@@ -548,6 +564,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     await (client as any).sendEvent(roomId, 'm.room.message', content)
+  },
+
+  leaveRoom: async (roomId) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    // If this is the active room, clear it first
+    if (get().activeRoom?.roomId === roomId) {
+      set({ activeRoom: null, messages: [] })
+    }
+
+    await client.leave(roomId)
+    // Optionally forget (removes from room list permanently)
+    try {
+      await client.forget(roomId)
+    } catch {
+      // forget may fail if server doesn't support it
+    }
+    get().loadRooms()
   },
 }))
 

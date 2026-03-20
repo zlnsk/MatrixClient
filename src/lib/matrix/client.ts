@@ -176,7 +176,7 @@ export async function startSync(): Promise<void> {
   await initCrypto(matrixClient)
 
   await matrixClient.startClient({
-    initialSyncLimit: 20,
+    initialSyncLimit: 50,
   })
 
   // Wait for initial sync

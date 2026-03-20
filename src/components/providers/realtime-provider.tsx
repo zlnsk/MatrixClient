@@ -20,6 +20,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const onTimelineEvent = (
       event: sdk.MatrixEvent,
       room: sdk.Room | undefined,
+      _toStartOfTimeline?: boolean,
+      _removed?: boolean,
+      data?: { liveEvent?: boolean },
     ) => {
       if (!room) return
 
@@ -87,7 +90,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // Handle timeline reset (e.g. when room is re-synced)
+    const onTimelineReset = (room: sdk.Room | undefined) => {
+      if (!room) return
+      const currentActiveRoom = useChatStore.getState().activeRoom
+      if (currentActiveRoom?.roomId === room.roomId) {
+        loadMessages(room.roomId)
+      }
+      loadRooms()
+    }
+
     client.on(sdk.RoomEvent.Timeline, onTimelineEvent)
+    client.on(sdk.RoomEvent.TimelineReset, onTimelineReset)
     client.on(sdk.RoomEvent.MyMembership, onRoomMembership)
     client.on(sdk.RoomEvent.Receipt, onReceipt)
     client.on(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
@@ -100,6 +114,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     return () => {
       client.removeListener(sdk.RoomEvent.Timeline, onTimelineEvent)
+      client.removeListener(sdk.RoomEvent.TimelineReset, onTimelineReset)
       client.removeListener(sdk.RoomEvent.MyMembership, onRoomMembership)
       client.removeListener(sdk.RoomEvent.Receipt, onReceipt)
       client.removeListener(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)

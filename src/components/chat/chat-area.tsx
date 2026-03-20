@@ -16,6 +16,7 @@ import {
   Hash,
   Archive,
   ArchiveRestore,
+  LogOut,
 } from 'lucide-react'
 
 interface ChatAreaProps {
@@ -24,11 +25,12 @@ interface ChatAreaProps {
 
 export function ChatArea({ onBackClick }: ChatAreaProps) {
   const user = useAuthStore(s => s.user)
-  const { activeRoom, messages, isLoadingMessages, sendMessage, typingUsers, archiveRoom, unarchiveRoom, setActiveRoom } = useChatStore()
+  const { activeRoom, messages, isLoadingMessages, sendMessage, typingUsers, archiveRoom, unarchiveRoom, setActiveRoom, leaveRoom } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [replyTo, setReplyTo] = useState<MatrixMessage | null>(null)
   const [showSearch, setShowSearch] = useState(false)
   const [chatSearch, setChatSearch] = useState('')
+  const [confirmLeave, setConfirmLeave] = useState(false)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -144,6 +146,13 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
               <Archive className="h-5 w-5" />
             )}
           </button>
+          <button
+            onClick={() => setConfirmLeave(true)}
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            title="Leave room"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
           <button className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white">
             <Phone className="h-5 w-5" />
           </button>
@@ -166,6 +175,32 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
               autoFocus
               className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Leave confirmation */}
+      {confirmLeave && (
+        <div className="animate-slide-in border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/50 dark:bg-red-900/20">
+          <p className="text-sm text-red-700 dark:text-red-300">
+            Leave <strong>{activeRoom.name}</strong>? You will lose access to this room.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={async () => {
+                await leaveRoom(activeRoom.roomId)
+                setConfirmLeave(false)
+              }}
+              className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-500"
+            >
+              Leave
+            </button>
+            <button
+              onClick={() => setConfirmLeave(false)}
+              className="rounded-lg bg-gray-200 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
