@@ -21,7 +21,14 @@ import {
   X,
   Shield,
   Users,
+  Pencil,
+  UserPlus,
+  Bell,
+  BellOff,
+  Check,
+  Pin,
 } from 'lucide-react'
+import { getMatrixClient } from '@/lib/matrix/client'
 
 interface ChatAreaProps {
   onBackClick: () => void
@@ -29,13 +36,25 @@ interface ChatAreaProps {
 
 export function ChatArea({ onBackClick }: ChatAreaProps) {
   const user = useAuthStore(s => s.user)
-  const { activeRoom, messages, isLoadingMessages, sendMessage, typingUsers, archiveRoom, unarchiveRoom, setActiveRoom, leaveRoom } = useChatStore()
+  const { activeRoom, messages, isLoadingMessages, sendMessage, typingUsers, archiveRoom, unarchiveRoom, setActiveRoom, leaveRoom, setRoomName, setRoomTopic, inviteMember } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [replyTo, setReplyTo] = useState<MatrixMessage | null>(null)
   const [showSearch, setShowSearch] = useState(false)
   const [chatSearch, setChatSearch] = useState('')
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [showRoomInfo, setShowRoomInfo] = useState(false)
+
+  // Room settings state
+  const [editingName, setEditingName] = useState(false)
+  const [editingTopic, setEditingTopic] = useState(false)
+  const [nameInput, setNameInput] = useState('')
+  const [topicInput, setTopicInput] = useState('')
+  const [inviteInput, setInviteInput] = useState('')
+  const [inviteError, setInviteError] = useState('')
+  const [savingName, setSavingName] = useState(false)
+  const [savingTopic, setSavingTopic] = useState(false)
+  const [inviting, setInviting] = useState(false)
+  const [notifSetting, setNotifSetting] = useState<'all' | 'mentions' | 'mute'>('all')
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -306,10 +325,125 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                 name={roomDisplayName}
                 size="lg"
               />
-              <div className="text-center">
-                <h4 className="text-lg font-bold text-gray-900 dark:text-white">{roomDisplayName}</h4>
-                {activeRoom.topic && (
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{activeRoom.topic}</p>
+              <div className="w-full text-center">
+                {editingName ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={e => setNameInput(e.target.value)}
+                      autoFocus
+                      className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                      onKeyDown={async e => {
+                        if (e.key === 'Enter' && nameInput.trim()) {
+                          setSavingName(true)
+                          try {
+                            await setRoomName(activeRoom.roomId, nameInput.trim())
+                          } catch { /* handled in store */ }
+                          setSavingName(false)
+                          setEditingName(false)
+                        } else if (e.key === 'Escape') {
+                          setEditingName(false)
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!nameInput.trim()) return
+                        setSavingName(true)
+                        try {
+                          await setRoomName(activeRoom.roomId, nameInput.trim())
+                        } catch { /* handled in store */ }
+                        setSavingName(false)
+                        setEditingName(false)
+                      }}
+                      disabled={savingName}
+                      className="rounded-lg p-1.5 text-green-600 transition-colors hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
+                    >
+                      {savingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    </button>
+                    <button
+                      onClick={() => setEditingName(false)}
+                      className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    <h4 className="text-lg font-bold text-gray-900 dark:text-white">{roomDisplayName}</h4>
+                    {!activeRoom.isDirect && (
+                      <button
+                        onClick={() => { setNameInput(activeRoom.name); setEditingName(true) }}
+                        className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+                        title="Edit room name"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {editingTopic ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={topicInput}
+                      onChange={e => setTopicInput(e.target.value)}
+                      placeholder="Set a topic..."
+                      autoFocus
+                      className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                      onKeyDown={async e => {
+                        if (e.key === 'Enter') {
+                          setSavingTopic(true)
+                          try {
+                            await setRoomTopic(activeRoom.roomId, topicInput.trim())
+                          } catch { /* handled in store */ }
+                          setSavingTopic(false)
+                          setEditingTopic(false)
+                        } else if (e.key === 'Escape') {
+                          setEditingTopic(false)
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={async () => {
+                        setSavingTopic(true)
+                        try {
+                          await setRoomTopic(activeRoom.roomId, topicInput.trim())
+                        } catch { /* handled in store */ }
+                        setSavingTopic(false)
+                        setEditingTopic(false)
+                      }}
+                      disabled={savingTopic}
+                      className="rounded-lg p-1.5 text-green-600 transition-colors hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
+                    >
+                      {savingTopic ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    </button>
+                    <button
+                      onClick={() => setEditingTopic(false)}
+                      className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-1 flex items-center justify-center gap-1">
+                    {activeRoom.topic ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{activeRoom.topic}</p>
+                    ) : (
+                      <p className="text-sm italic text-gray-400 dark:text-gray-500">No topic set</p>
+                    )}
+                    {!activeRoom.isDirect && (
+                      <button
+                        onClick={() => { setTopicInput(activeRoom.topic || ''); setEditingTopic(true) }}
+                        className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+                        title="Edit room topic"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -335,6 +469,106 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                   </>
                 )}
               </div>
+            </div>
+
+            {/* Notification Settings */}
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+              <div className="flex items-center gap-2 mb-3">
+                <Bell className="h-4 w-4 text-gray-500" />
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Notifications</p>
+              </div>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setNotifSetting('all')}
+                  className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                    notifSetting === 'all'
+                      ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'
+                      : 'text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setNotifSetting('mentions')}
+                  className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                    notifSetting === 'mentions'
+                      ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'
+                      : 'text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  Mentions
+                </button>
+                <button
+                  onClick={() => setNotifSetting('mute')}
+                  className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                    notifSetting === 'mute'
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
+                      : 'text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <BellOff className="mx-auto h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Invite Member */}
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+              <div className="flex items-center gap-2 mb-3">
+                <UserPlus className="h-4 w-4 text-gray-500" />
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Invite Member</p>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inviteInput}
+                  onChange={e => { setInviteInput(e.target.value); setInviteError('') }}
+                  placeholder="@user:server.com"
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  onKeyDown={async e => {
+                    if (e.key === 'Enter') {
+                      const matrixIdRegex = /^@[a-zA-Z0-9._=\-/+]+:[a-zA-Z0-9.-]+$/
+                      if (!matrixIdRegex.test(inviteInput.trim())) {
+                        setInviteError('Invalid Matrix user ID format')
+                        return
+                      }
+                      setInviting(true)
+                      setInviteError('')
+                      try {
+                        await inviteMember(activeRoom.roomId, inviteInput.trim())
+                        setInviteInput('')
+                      } catch (err) {
+                        setInviteError(err instanceof Error ? err.message : 'Failed to invite')
+                      }
+                      setInviting(false)
+                    }
+                  }}
+                />
+                <button
+                  onClick={async () => {
+                    const matrixIdRegex = /^@[a-zA-Z0-9._=\-/+]+:[a-zA-Z0-9.-]+$/
+                    if (!matrixIdRegex.test(inviteInput.trim())) {
+                      setInviteError('Invalid Matrix user ID format')
+                      return
+                    }
+                    setInviting(true)
+                    setInviteError('')
+                    try {
+                      await inviteMember(activeRoom.roomId, inviteInput.trim())
+                      setInviteInput('')
+                    } catch (err) {
+                      setInviteError(err instanceof Error ? err.message : 'Failed to invite')
+                    }
+                    setInviting(false)
+                  }}
+                  disabled={inviting || !inviteInput.trim()}
+                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                </button>
+              </div>
+              {inviteError && (
+                <p className="mt-1.5 text-xs text-red-500 dark:text-red-400">{inviteError}</p>
+              )}
             </div>
 
             {/* Members */}

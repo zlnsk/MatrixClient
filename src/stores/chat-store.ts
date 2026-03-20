@@ -59,6 +59,7 @@ export interface MatrixMessage {
 
 interface ChatState {
   rooms: MatrixRoom[]
+  pendingInvites: MatrixRoom[]
   activeRoom: MatrixRoom | null
   messages: MatrixMessage[]
   isLoadingMessages: boolean
@@ -66,6 +67,10 @@ interface ChatState {
   searchQuery: string
 
   loadRooms: () => void
+  acceptInvite: (roomId: string) => Promise<void>
+  rejectInvite: (roomId: string) => Promise<void>
+  setDisplayName: (name: string) => Promise<void>
+  joinRoom: (roomIdOrAlias: string) => Promise<void>
   setActiveRoom: (room: MatrixRoom | null) => void
   loadMessages: (roomId: string) => Promise<void>
   sendMessage: (roomId: string, content: string, replyToEventId?: string) => Promise<void>
@@ -73,7 +78,11 @@ interface ChatState {
   redactMessage: (roomId: string, eventId: string) => Promise<void>
   sendReaction: (roomId: string, eventId: string, emoji: string) => Promise<void>
   createDirectChat: (userId: string) => Promise<string>
-  createGroupChat: (name: string, userIds: string[]) => Promise<string>
+  createGroupChat: (name: string, userIds: string[], options?: {
+    encrypted?: boolean
+    isPublic?: boolean
+    topic?: string
+  }) => Promise<string>
   setSearchQuery: (query: string) => void
   markAsRead: (roomId: string) => Promise<void>
   sendTyping: (roomId: string, typing: boolean) => void
@@ -82,6 +91,12 @@ interface ChatState {
   unarchiveRoom: (roomId: string) => Promise<void>
   uploadFile: (roomId: string, file: File) => Promise<void>
   leaveRoom: (roomId: string) => Promise<void>
+  setRoomName: (roomId: string, name: string) => Promise<void>
+  setRoomTopic: (roomId: string, topic: string) => Promise<void>
+  inviteMember: (roomId: string, userId: string) => Promise<void>
+  pinMessage: (roomId: string, eventId: string) => Promise<void>
+  unpinMessage: (roomId: string, eventId: string) => Promise<void>
+  forwardMessage: (fromRoomId: string, eventId: string, toRoomId: string) => Promise<void>
 }
 
 function roomToMatrixRoom(room: Room): MatrixRoom {
@@ -303,6 +318,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
 
 export const useChatStore = create<ChatState>((set, get) => ({
   rooms: [],
+  pendingInvites: [],
   activeRoom: null,
   messages: [],
   isLoadingMessages: false,
@@ -313,12 +329,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const client = getMatrixClient()
     if (!client) return
 
-    const rooms = client.getRooms()
+    const allRooms = client.getRooms()
+
+    const rooms = allRooms
       .filter(r => r.getMyMembership() === 'join')
       .map(roomToMatrixRoom)
       .sort((a, b) => b.lastMessageTs - a.lastMessageTs)
 
-    set({ rooms })
+    const pendingInvites = allRooms
+      .filter(r => r.getMyMembership() === 'invite')
+      .map((r) => ({
+        roomId: r.roomId,
+        name: r.name || 'Unnamed Room',
+        avatarUrl: getAvatarUrl(r.getMxcAvatarUrl()),
+        topic: r.currentState.getStateEvents('m.room.topic', '')?.getContent()?.topic || null,
+        isDirect: false,
+        lastMessage: null,
+        lastMessageTs: 0,
+        lastSenderName: null,
+        unreadCount: 0,
+        members: [],
+        encrypted: r.hasEncryptionStateEvent(),
+        isArchived: false,
+      } satisfies MatrixRoom))
+
+    set({ rooms, pendingInvites })
   },
 
   setActiveRoom: (room) => {
@@ -459,15 +494,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return result.room_id
   },
 
-  createGroupChat: async (name, userIds) => {
+  createGroupChat: async (name, userIds, options) => {
     const client = getMatrixClient()
     if (!client) throw new Error('Not connected')
 
-    const result = await client.createRoom({
+    const roomOptions: Record<string, unknown> = {
       name,
       invite: userIds,
-      preset: 'private_chat' as sdk.Preset,
-    })
+      preset: options?.isPublic ? 'public_chat' as sdk.Preset : 'private_chat' as sdk.Preset,
+    }
+
+    if (options?.isPublic) {
+      roomOptions.visibility = 'public'
+    }
+
+    if (options?.topic) {
+      roomOptions.topic = options.topic
+    }
+
+    if (options?.encrypted !== false) {
+      roomOptions.initial_state = [
+        {
+          type: 'm.room.encryption',
+          state_key: '',
+          content: { algorithm: 'm.megolm.v1.aes-sha2' },
+        },
+      ]
+    }
+
+    const result = await client.createRoom(roomOptions)
 
     return result.room_id
   },
@@ -589,6 +644,171 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // forget may fail if server doesn't support it
     }
     get().loadRooms()
+  },
+
+  setRoomName: async (roomId: string, name: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await client.setRoomName(roomId, name)
+      get().loadRooms()
+      get().refreshRoom(roomId)
+    } catch (err) {
+      console.error('Failed to set room name:', err)
+      throw err
+    }
+  },
+
+  setRoomTopic: async (roomId: string, topic: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await client.setRoomTopic(roomId, topic)
+      get().loadRooms()
+      get().refreshRoom(roomId)
+    } catch (err) {
+      console.error('Failed to set room topic:', err)
+      throw err
+    }
+  },
+
+  inviteMember: async (roomId: string, userId: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await client.invite(roomId, userId)
+      get().loadRooms()
+      get().refreshRoom(roomId)
+    } catch (err) {
+      console.error('Failed to invite member:', err)
+      throw err
+    }
+  },
+
+  acceptInvite: async (roomId: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await client.joinRoom(roomId)
+      get().loadRooms()
+    } catch (err) {
+      console.error('Failed to accept invite:', err)
+      throw err
+    }
+  },
+
+  rejectInvite: async (roomId: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await client.leave(roomId)
+      get().loadRooms()
+    } catch (err) {
+      console.error('Failed to reject invite:', err)
+      throw err
+    }
+  },
+
+  setDisplayName: async (name: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await client.setDisplayName(name)
+    } catch (err) {
+      console.error('Failed to set display name:', err)
+      throw err
+    }
+  },
+
+  joinRoom: async (roomIdOrAlias: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await client.joinRoom(roomIdOrAlias)
+      get().loadRooms()
+    } catch (err) {
+      console.error('Failed to join room:', err)
+      throw err
+    }
+  },
+
+  pinMessage: async (roomId: string, eventId: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      const room = client.getRoom(roomId)
+      if (!room) return
+      const pinEvent = room.currentState.getStateEvents('m.room.pinned_events', '')
+      const currentPinned: string[] = pinEvent?.getContent()?.pinned || []
+      if (currentPinned.includes(eventId)) return
+      await (client as any).sendStateEvent(roomId, 'm.room.pinned_events', { pinned: [...currentPinned, eventId] }, '')
+    } catch (err) {
+      console.error('Failed to pin message:', err)
+      throw err
+    }
+  },
+
+  unpinMessage: async (roomId: string, eventId: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      const room = client.getRoom(roomId)
+      if (!room) return
+      const pinEvent = room.currentState.getStateEvents('m.room.pinned_events', '')
+      const currentPinned: string[] = pinEvent?.getContent()?.pinned || []
+      const updated = currentPinned.filter((id: string) => id !== eventId)
+      await (client as any).sendStateEvent(roomId, 'm.room.pinned_events', { pinned: updated }, '')
+    } catch (err) {
+      console.error('Failed to unpin message:', err)
+      throw err
+    }
+  },
+
+  forwardMessage: async (fromRoomId: string, eventId: string, toRoomId: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      const room = client.getRoom(fromRoomId)
+      if (!room) return
+      const event = room.findEventById(eventId)
+      if (!event) return
+
+      const clearContent = (event as any).getClearContent?.()
+      const content = clearContent || event.getContent()
+      const msgtype = content.msgtype || 'm.text'
+
+      if (msgtype === 'm.image' || msgtype === 'm.video' || msgtype === 'm.audio' || msgtype === 'm.file') {
+        await (client as any).sendEvent(toRoomId, 'm.room.message', {
+          msgtype,
+          body: content.body || '',
+          url: content.url,
+          info: content.info || {},
+        })
+      } else {
+        const forwardContent: Record<string, unknown> = {
+          msgtype: 'm.text',
+          body: content.body || '',
+        }
+        if (content.formatted_body) {
+          forwardContent.format = 'org.matrix.custom.html'
+          forwardContent.formatted_body = content.formatted_body
+        }
+        await (client as any).sendEvent(toRoomId, 'm.room.message', forwardContent)
+      }
+    } catch (err) {
+      console.error('Failed to forward message:', err)
+      throw err
+    }
   },
 }))
 
