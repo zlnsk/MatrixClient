@@ -1,116 +1,91 @@
 'use client'
 
 import { useEffect, type ReactNode } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { getMatrixClient } from '@/lib/matrix/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore } from '@/stores/chat-store'
-import type { MessageWithDetails, User } from '@/types/database'
+import * as sdk from 'matrix-js-sdk'
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
-  const { addMessageToChat, updateMessageInChat, removeMessageFromChat, loadMessages, activeChat } = useChatStore()
+  const { loadRooms, refreshRoom, activeRoom, loadMessages } = useChatStore()
 
   useEffect(() => {
     if (!user) return
 
-    const supabase = createClient()
+    const client = getMatrixClient()
+    if (!client) return
 
-    // Listen for new messages
-    const messagesChannel = supabase
-      .channel('messages-realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        async (payload) => {
-          const msg = payload.new as MessageWithDetails
-          // Fetch full message with sender
-          const { data } = await supabase
-            .from('messages')
-            .select('*, sender:users(*), reactions:message_reactions(*, user:users(*))')
-            .eq('id', msg.id)
-            .single()
+    // Listen for new timeline events (messages, reactions, redactions)
+    const onTimelineEvent = (
+      event: sdk.MatrixEvent,
+      room: sdk.Room | undefined,
+    ) => {
+      if (!room) return
 
-          if (data) {
-            const d = data as Record<string, unknown>
-            const fullMessage: MessageWithDetails = {
-              ...(d as unknown as MessageWithDetails),
-              sender: d.sender as unknown as User,
-              reactions: (d.reactions || []) as MessageWithDetails['reactions'],
-            }
-            addMessageToChat(fullMessage)
+      // Refresh the room in the sidebar
+      loadRooms()
 
-            // Browser notification
-            if (msg.sender_id !== user.id && document.hidden) {
-              if (Notification.permission === 'granted') {
-                new Notification(`New message from ${fullMessage.sender.display_name}`, {
-                  body: fullMessage.content.substring(0, 100),
-                  icon: '/favicon.ico',
-                })
-              }
-            }
-          }
+      // If this is the active room, reload messages
+      if (activeRoom?.roomId === room.roomId) {
+        loadMessages(room.roomId)
+      }
+
+      // Browser notification for messages from others
+      const eventType = event.getType()
+      if (
+        (eventType === 'm.room.message' || eventType === 'm.room.encrypted') &&
+        event.getSender() !== user.userId &&
+        document.hidden
+      ) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const senderName = room.getMember(event.getSender()!)?.name || event.getSender()
+          const body = event.getContent()?.body || 'New message'
+          new Notification(`${senderName} in ${room.name}`, {
+            body: body.substring(0, 100),
+            icon: '/favicon.ico',
+          })
         }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'messages' },
-        async (payload) => {
-          const msg = payload.new as MessageWithDetails
-          if (msg.is_deleted) {
-            removeMessageFromChat(msg.id)
-          } else {
-            const { data } = await supabase
-              .from('messages')
-              .select('*, sender:users(*), reactions:message_reactions(*, user:users(*))')
-              .eq('id', msg.id)
-              .single()
-            if (data) {
-              const d2 = data as Record<string, unknown>
-              updateMessageInChat({
-                ...(d2 as unknown as MessageWithDetails),
-                sender: d2.sender as unknown as User,
-                reactions: (d2.reactions || []) as MessageWithDetails['reactions'],
-              } as MessageWithDetails)
-            }
-          }
-        }
-      )
-      .subscribe()
-
-    // Listen for reaction changes
-    const reactionsChannel = supabase
-      .channel('reactions-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'message_reactions' },
-        () => {
-          if (activeChat) {
-            loadMessages(activeChat.id)
-          }
-        }
-      )
-      .subscribe()
-
-    // Listen for user presence changes
-    const presenceChannel = supabase
-      .channel('users-realtime')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'users' },
-        () => {
-          // Trigger chat list reload to update presence
-        }
-      )
-      .subscribe()
-
-    // Set offline on page unload
-    const handleBeforeUnload = () => {
-      supabase
-        .from('users')
-        .update({ status: 'offline' as const, last_seen: new Date().toISOString() })
-        .eq('id', user.id)
+      }
     }
-    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // Listen for typing events
+    const onTyping = (event: sdk.MatrixEvent, member: sdk.RoomMember) => {
+      if (activeRoom && member.roomId === activeRoom.roomId) {
+        const typingMembers = client.getRoom(activeRoom.roomId)
+          ?.getMembers()
+          .filter((m) => {
+            const typingEvent = client.getRoom(activeRoom.roomId)?.currentState
+              .getStateEvents('m.typing', '')
+            return false // typing handled below
+          })
+        // Use the room's typing members directly
+      }
+    }
+
+    // Listen for room membership changes
+    const onRoomMembership = () => {
+      loadRooms()
+    }
+
+    // Listen for typing notifications
+    const onRoomTyping = (event: sdk.MatrixEvent, room: sdk.Room) => {
+      if (activeRoom?.roomId === room.roomId) {
+        const typingUserIds = (event.getContent()?.user_ids || []) as string[]
+        const typingNames = typingUserIds
+          .filter((id: string) => id !== user.userId)
+          .map((id: string) => room.getMember(id)?.name || id)
+
+        useChatStore.setState({ typingUsers: typingNames })
+      }
+    }
+
+    client.on(sdk.RoomEvent.Timeline, onTimelineEvent)
+    client.on(sdk.RoomEvent.MyMembership, onRoomMembership)
+    client.on(sdk.RoomMemberEvent.Typing, onTyping)
+
+    // For typing, listen on the raw event
+    client.on('RoomMember.typing' as any, onRoomTyping)
 
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
@@ -118,12 +93,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     }
 
     return () => {
-      supabase.removeChannel(messagesChannel)
-      supabase.removeChannel(reactionsChannel)
-      supabase.removeChannel(presenceChannel)
-      window.removeEventListener('beforeunload', handleBeforeUnload)
+      client.removeListener(sdk.RoomEvent.Timeline, onTimelineEvent)
+      client.removeListener(sdk.RoomEvent.MyMembership, onRoomMembership)
+      client.removeListener(sdk.RoomMemberEvent.Typing, onTyping)
+      client.removeListener('RoomMember.typing' as any, onRoomTyping)
     }
-  }, [user, activeChat, addMessageToChat, updateMessageInChat, removeMessageFromChat, loadMessages])
+  }, [user, activeRoom, loadRooms, refreshRoom, loadMessages])
 
   return <>{children}</>
 }

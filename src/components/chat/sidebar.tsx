@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-import { useChatStore } from '@/stores/chat-store'
+import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
 import { NewChatModal } from './new-chat-modal'
 import { formatDistanceToNow } from 'date-fns'
@@ -14,8 +14,8 @@ import {
   Users,
   MessageSquare,
   X,
+  Hash,
 } from 'lucide-react'
-import type { ChatWithDetails } from '@/types/database'
 
 interface SidebarProps {
   onSettingsClick: () => void
@@ -24,41 +24,41 @@ interface SidebarProps {
 
 export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   const user = useAuthStore(s => s.user)
-  const { chats, isLoadingChats, loadChats, setActiveChat, activeChat, markAsRead } = useChatStore()
+  const { rooms, loadRooms, setActiveRoom, activeRoom, markAsRead } = useChatStore()
   const [searchFilter, setSearchFilter] = useState('')
   const [showNewChat, setShowNewChat] = useState(false)
 
   useEffect(() => {
-    if (user) loadChats(user.id)
-  }, [user, loadChats])
+    if (user) loadRooms()
+  }, [user, loadRooms])
 
-  const handleSelectChat = useCallback(async (chat: ChatWithDetails) => {
-    await setActiveChat(chat)
-    if (user) await markAsRead(chat.id, user.id)
+  const handleSelectRoom = useCallback(async (room: MatrixRoom) => {
+    setActiveRoom(room)
+    await markAsRead(room.roomId)
     onChatSelect()
-  }, [setActiveChat, markAsRead, user, onChatSelect])
+  }, [setActiveRoom, markAsRead, onChatSelect])
 
-  const getChatDisplayName = (chat: ChatWithDetails) => {
-    if (chat.type === 'group') return chat.name || 'Group Chat'
-    const other = chat.members.find(m => m.user_id !== user?.id)
-    return other?.user?.display_name || 'Unknown'
-  }
-
-  const getChatAvatar = (chat: ChatWithDetails) => {
-    if (chat.type === 'group') return chat.avatar_url
-    const other = chat.members.find(m => m.user_id !== user?.id)
-    return other?.user?.avatar_url
-  }
-
-  const getChatStatus = (chat: ChatWithDetails) => {
-    if (chat.type === 'group') return null
-    const other = chat.members.find(m => m.user_id !== user?.id)
-    return other?.user?.status || null
-  }
-
-  const filteredChats = chats.filter(chat =>
-    getChatDisplayName(chat).toLowerCase().includes(searchFilter.toLowerCase())
+  const filteredRooms = rooms.filter(room =>
+    room.name.toLowerCase().includes(searchFilter.toLowerCase())
   )
+
+  const getOtherMemberAvatar = (room: MatrixRoom) => {
+    if (room.isDirect && room.members.length > 0) {
+      const other = room.members.find(m => m.userId !== user?.userId)
+      return other?.avatarUrl || room.avatarUrl
+    }
+    return room.avatarUrl
+  }
+
+  const getOtherMemberPresence = (room: MatrixRoom): 'online' | 'offline' | 'away' | null => {
+    if (room.isDirect) {
+      const other = room.members.find(m => m.userId !== user?.userId)
+      if (other?.presence === 'online') return 'online'
+      if (other?.presence === 'unavailable') return 'away'
+      if (other?.presence === 'offline') return 'offline'
+    }
+    return null
+  }
 
   return (
     <>
@@ -66,14 +66,14 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
       <div className="flex items-center justify-between border-b border-gray-800 p-4">
         <div className="flex items-center gap-3">
           <Avatar
-            src={user?.avatar_url}
-            name={user?.display_name || 'U'}
+            src={user?.avatarUrl}
+            name={user?.displayName || 'U'}
             size="md"
-            status={user?.status}
+            status="online"
           />
           <div>
             <h1 className="text-lg font-bold text-white">Matrix</h1>
-            <p className="text-xs text-gray-500">lukasz.com</p>
+            <p className="text-xs text-gray-500">{user?.userId}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -100,7 +100,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
-            placeholder="Search conversations..."
+            placeholder="Search rooms..."
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
             className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -122,25 +122,13 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
         <span className="text-xs font-medium text-green-400">End-to-end encrypted</span>
       </div>
 
-      {/* Chat list */}
+      {/* Room list */}
       <div className="flex-1 overflow-y-auto px-2">
-        {isLoadingChats ? (
-          <div className="flex flex-col gap-3 p-3">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex animate-pulse items-center gap-3 rounded-lg p-3">
-                <div className="h-10 w-10 rounded-full bg-gray-800" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 w-24 rounded bg-gray-800" />
-                  <div className="h-2.5 w-40 rounded bg-gray-800" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : filteredChats.length === 0 ? (
+        {filteredRooms.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <MessageSquare className="h-10 w-10 text-gray-700" />
             <p className="mt-3 text-sm text-gray-500">
-              {searchFilter ? 'No conversations found' : 'No conversations yet'}
+              {searchFilter ? 'No rooms found' : 'No rooms yet'}
             </p>
             {!searchFilter && (
               <button
@@ -153,15 +141,14 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
           </div>
         ) : (
           <div className="space-y-0.5 py-1">
-            {filteredChats.map(chat => (
-              <ChatListItem
-                key={chat.id}
-                chat={chat}
-                isActive={activeChat?.id === chat.id}
-                onClick={() => handleSelectChat(chat)}
-                displayName={getChatDisplayName(chat)}
-                avatarUrl={getChatAvatar(chat)}
-                status={getChatStatus(chat)}
+            {filteredRooms.map(room => (
+              <RoomListItem
+                key={room.roomId}
+                room={room}
+                isActive={activeRoom?.roomId === room.roomId}
+                onClick={() => handleSelectRoom(room)}
+                avatarUrl={getOtherMemberAvatar(room)}
+                presence={getOtherMemberPresence(room)}
               />
             ))}
           </div>
@@ -172,37 +159,31 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
       {showNewChat && (
         <NewChatModal
           onClose={() => setShowNewChat(false)}
-          onChatCreated={handleSelectChat}
+          onRoomCreated={(roomId) => {
+            const room = rooms.find(r => r.roomId === roomId)
+            if (room) handleSelectRoom(room)
+          }}
         />
       )}
     </>
   )
 }
 
-function ChatListItem({
-  chat,
+function RoomListItem({
+  room,
   isActive,
   onClick,
-  displayName,
   avatarUrl,
-  status,
+  presence,
 }: {
-  chat: ChatWithDetails
+  room: MatrixRoom
   isActive: boolean
   onClick: () => void
-  displayName: string
-  avatarUrl: string | null | undefined
-  status: string | null
+  avatarUrl: string | null
+  presence: 'online' | 'offline' | 'away' | null
 }) {
-  const lastMsg = chat.last_message
-  const lastMsgPreview = lastMsg
-    ? lastMsg.is_deleted
-      ? 'Message deleted'
-      : lastMsg.type === 'image'
-        ? '📷 Photo'
-        : lastMsg.type === 'voice'
-          ? '🎤 Voice message'
-          : lastMsg.content.substring(0, 50) + (lastMsg.content.length > 50 ? '...' : '')
+  const lastMsgPreview = room.lastMessage
+    ? room.lastMessage.substring(0, 50) + (room.lastMessage.length > 50 ? '...' : '')
     : 'No messages yet'
 
   return (
@@ -214,32 +195,38 @@ function ChatListItem({
     >
       <Avatar
         src={avatarUrl}
-        name={displayName}
+        name={room.name}
         size="md"
-        status={status as 'online' | 'offline' | 'away' | null}
+        status={presence}
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
           <span className="truncate text-sm font-medium text-white">
-            {displayName}
+            {room.name}
           </span>
-          {lastMsg && (
+          {room.lastMessageTs > 0 && (
             <span className="ml-2 flex-shrink-0 text-xs text-gray-500">
-              {formatDistanceToNow(new Date(lastMsg.created_at), { addSuffix: false })}
+              {formatDistanceToNow(new Date(room.lastMessageTs), { addSuffix: false })}
             </span>
           )}
         </div>
         <div className="flex items-center justify-between">
-          <p className="truncate text-xs text-gray-400">{lastMsgPreview}</p>
-          {chat.unread_count > 0 && (
+          <p className="truncate text-xs text-gray-400">
+            {room.lastSenderName && <span className="text-gray-500">{room.lastSenderName}: </span>}
+            {lastMsgPreview}
+          </p>
+          {room.unreadCount > 0 && (
             <span className="ml-2 flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-xs font-medium text-white">
-              {chat.unread_count > 99 ? '99+' : chat.unread_count}
+              {room.unreadCount > 99 ? '99+' : room.unreadCount}
             </span>
           )}
         </div>
       </div>
-      {chat.type === 'group' && (
-        <Users className="h-3.5 w-3.5 flex-shrink-0 text-gray-600" />
+      {!room.isDirect && (
+        <Hash className="h-3.5 w-3.5 flex-shrink-0 text-gray-600" />
+      )}
+      {room.encrypted && (
+        <Lock className="h-3 w-3 flex-shrink-0 text-green-600" />
       )}
     </button>
   )

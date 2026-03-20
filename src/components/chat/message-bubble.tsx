@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-import { useChatStore } from '@/stores/chat-store'
+import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
 import { format } from 'date-fns'
 import {
@@ -15,21 +15,20 @@ import {
   Check,
   X,
 } from 'lucide-react'
-import type { MessageWithDetails } from '@/types/database'
 
 interface MessageBubbleProps {
-  message: MessageWithDetails
+  message: MatrixMessage
   isOwn: boolean
   showAvatar: boolean
   onReply: () => void
-  chatId: string
+  roomId: string
 }
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥']
 
-export function MessageBubble({ message, isOwn, showAvatar, onReply, chatId }: MessageBubbleProps) {
+export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: MessageBubbleProps) {
   const user = useAuthStore(s => s.user)
-  const { addReaction, editMessage, deleteMessage } = useChatStore()
+  const { sendReaction, editMessage, redactMessage } = useChatStore()
   const [showActions, setShowActions] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showContextMenu, setShowContextMenu] = useState(false)
@@ -51,21 +50,20 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, chatId }: M
   }, [])
 
   const handleReaction = async (emoji: string) => {
-    if (!user) return
-    await addReaction(message.id, chatId, user.id, emoji)
+    await sendReaction(roomId, message.eventId, emoji)
     setShowEmojiPicker(false)
     setShowActions(false)
   }
 
   const handleEdit = async () => {
     if (editContent.trim() && editContent !== message.content) {
-      await editMessage(message.id, editContent.trim())
+      await editMessage(roomId, message.eventId, editContent.trim())
     }
     setIsEditing(false)
   }
 
   const handleDelete = async () => {
-    await deleteMessage(message.id)
+    await redactMessage(roomId, message.eventId)
     setShowContextMenu(false)
     setShowActions(false)
   }
@@ -77,7 +75,7 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, chatId }: M
     setShowContextMenu(false)
   }
 
-  if (message.is_deleted) {
+  if (message.isRedacted) {
     return (
       <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-3' : 'mt-0.5'}`}>
         <div className={`${isOwn ? 'mr-12' : 'ml-12'} rounded-2xl bg-gray-800/50 px-4 py-2`}>
@@ -86,13 +84,6 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, chatId }: M
       </div>
     )
   }
-
-  // Group reactions by emoji
-  const reactionGroups = message.reactions?.reduce((acc, r) => {
-    if (!acc[r.emoji]) acc[r.emoji] = []
-    acc[r.emoji].push(r)
-    return acc
-  }, {} as Record<string, typeof message.reactions>) || {}
 
   return (
     <div
@@ -107,8 +98,8 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, chatId }: M
         <div className="w-8 flex-shrink-0">
           {showAvatar && !isOwn && (
             <Avatar
-              src={message.sender?.avatar_url}
-              name={message.sender?.display_name || 'U'}
+              src={message.senderAvatar}
+              name={message.senderName}
               size="sm"
             />
           )}
@@ -116,17 +107,17 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, chatId }: M
 
         <div className="relative" ref={actionsRef}>
           {/* Reply reference */}
-          {message.reply_to && (
+          {message.replyToEvent && (
             <div className={`mb-1 rounded-lg bg-gray-800/60 px-3 py-1.5 text-xs ${isOwn ? 'border-r-2 border-indigo-500' : 'border-l-2 border-gray-600'}`}>
-              <p className="font-medium text-gray-400">{message.reply_to.sender?.display_name}</p>
-              <p className="truncate text-gray-500">{message.reply_to.content}</p>
+              <p className="font-medium text-gray-400">{message.replyToEvent.senderName}</p>
+              <p className="truncate text-gray-500">{message.replyToEvent.content}</p>
             </div>
           )}
 
-          {/* Sender name (group chats) */}
+          {/* Sender name */}
           {showAvatar && !isOwn && (
             <p className="mb-1 ml-1 text-xs font-medium text-gray-400">
-              {message.sender?.display_name}
+              {message.senderName}
             </p>
           )}
 
@@ -158,14 +149,38 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, chatId }: M
                   <X className="h-4 w-4" />
                 </button>
               </div>
-            ) : message.type === 'image' && message.media_url ? (
+            ) : message.mediaUrl ? (
               <div>
-                <img
-                  src={message.media_url}
-                  alt="Shared image"
-                  className="max-h-64 rounded-lg object-cover"
-                />
-                {message.content && <p className="mt-2 text-sm">{message.content}</p>}
+                {message.type === 'm.image' ? (
+                  <img
+                    src={message.mediaUrl}
+                    alt="Shared image"
+                    className="max-h-64 rounded-lg object-cover"
+                    style={{
+                      width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
+                    }}
+                  />
+                ) : message.type === 'm.video' ? (
+                  <video controls className="max-h-64 rounded-lg">
+                    <source src={message.mediaUrl} type={message.mediaInfo?.mimetype} />
+                  </video>
+                ) : message.type === 'm.audio' ? (
+                  <audio controls>
+                    <source src={message.mediaUrl} type={message.mediaInfo?.mimetype} />
+                  </audio>
+                ) : (
+                  <a
+                    href={message.mediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm underline"
+                  >
+                    📎 {message.content}
+                  </a>
+                )}
+                {message.content && message.type === 'm.image' && (
+                  <p className="mt-2 text-sm">{message.content}</p>
+                )}
               </div>
             ) : (
               <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
@@ -174,9 +189,9 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, chatId }: M
             {/* Timestamp */}
             <div className={`mt-1 flex items-center gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
               <span className={`text-xs ${isOwn ? 'text-indigo-200' : 'text-gray-500'}`}>
-                {format(new Date(message.created_at), 'HH:mm')}
+                {format(new Date(message.timestamp), 'HH:mm')}
               </span>
-              {message.updated_at !== message.created_at && !message.is_deleted && (
+              {message.isEdited && (
                 <span className={`text-xs ${isOwn ? 'text-indigo-200' : 'text-gray-500'}`}>
                   (edited)
                 </span>
@@ -185,20 +200,20 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, chatId }: M
           </div>
 
           {/* Reactions */}
-          {Object.keys(reactionGroups).length > 0 && (
+          {message.reactions.size > 0 && (
             <div className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-              {Object.entries(reactionGroups).map(([emoji, reactions]) => (
+              {Array.from(message.reactions.entries()).map(([emoji, data]) => (
                 <button
                   key={emoji}
                   onClick={() => handleReaction(emoji)}
                   className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
-                    reactions.some(r => r.user_id === user?.id)
+                    data.includesMe
                       ? 'border-indigo-500/50 bg-indigo-900/30 text-indigo-300'
                       : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600'
                   }`}
                 >
                   <span>{emoji}</span>
-                  <span>{reactions.length}</span>
+                  <span>{data.count}</span>
                 </button>
               ))}
             </div>

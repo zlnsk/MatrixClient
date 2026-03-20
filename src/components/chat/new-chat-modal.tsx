@@ -1,86 +1,78 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useAuthStore } from '@/stores/auth-store'
+import { useState } from 'react'
 import { useChatStore } from '@/stores/chat-store'
-import { Avatar } from '@/components/ui/avatar'
 import {
   X,
-  Search,
   MessageSquare,
   Users,
-  UserPlus,
   Loader2,
-  Check,
+  AtSign,
 } from 'lucide-react'
-import type { User, ChatWithDetails } from '@/types/database'
 
 interface NewChatModalProps {
   onClose: () => void
-  onChatCreated: (chat: ChatWithDetails) => void
+  onRoomCreated: (roomId: string) => void
 }
 
-export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
-  const currentUser = useAuthStore(s => s.user)
-  const { loadAllUsers, createDirectChat, createGroupChat, loadChats, chats } = useChatStore()
+export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
+  const { createDirectChat, createGroupChat, loadRooms } = useChatStore()
   const [tab, setTab] = useState<'direct' | 'group'>('direct')
-  const [users, setUsers] = useState<User[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([])
+  const [userId, setUserId] = useState('')
   const [groupName, setGroupName] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
+  const [groupMembers, setGroupMembers] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    loadAllUsers().then(allUsers => {
-      setUsers(allUsers.filter(u => u.id !== currentUser?.id))
-      setIsLoading(false)
-    })
-  }, [loadAllUsers, currentUser])
-
-  const filteredUsers = users.filter(u =>
-    u.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  const handleDirectChat = async (otherUser: User) => {
-    if (!currentUser) return
+  const handleDirectChat = async () => {
+    if (!userId.trim()) return
+    setError('')
     setIsCreating(true)
     try {
-      const chatId = await createDirectChat(currentUser.id, otherUser.id)
-      await loadChats(currentUser.id)
-      const chat = useChatStore.getState().chats.find(c => c.id === chatId)
-      if (chat) onChatCreated(chat)
+      // Ensure full Matrix user ID format
+      let fullUserId = userId.trim()
+      if (!fullUserId.startsWith('@')) {
+        fullUserId = `@${fullUserId}`
+      }
+      if (!fullUserId.includes(':')) {
+        fullUserId = `${fullUserId}:lukasz.com`
+      }
+
+      const roomId = await createDirectChat(fullUserId)
+      loadRooms()
+      onRoomCreated(roomId)
       onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create chat')
     } finally {
       setIsCreating(false)
     }
   }
 
   const handleCreateGroup = async () => {
-    if (!currentUser || !groupName.trim() || selectedUsers.length === 0) return
+    if (!groupName.trim() || !groupMembers.trim()) return
+    setError('')
     setIsCreating(true)
     try {
-      const chatId = await createGroupChat(
-        currentUser.id,
-        groupName.trim(),
-        selectedUsers.map(u => u.id)
-      )
-      await loadChats(currentUser.id)
-      const chat = useChatStore.getState().chats.find(c => c.id === chatId)
-      if (chat) onChatCreated(chat)
+      const memberIds = groupMembers
+        .split(',')
+        .map(m => {
+          let id = m.trim()
+          if (!id.startsWith('@')) id = `@${id}`
+          if (!id.includes(':')) id = `${id}:lukasz.com`
+          return id
+        })
+        .filter(Boolean)
+
+      const roomId = await createGroupChat(groupName.trim(), memberIds)
+      loadRooms()
+      onRoomCreated(roomId)
       onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create group')
     } finally {
       setIsCreating(false)
     }
-  }
-
-  const toggleUserSelection = (user: User) => {
-    setSelectedUsers(prev =>
-      prev.find(u => u.id === user.id)
-        ? prev.filter(u => u.id !== user.id)
-        : [...prev, user]
-    )
   }
 
   return (
@@ -100,7 +92,7 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
         {/* Tabs */}
         <div className="flex border-b border-gray-800">
           <button
-            onClick={() => { setTab('direct'); setSelectedUsers([]) }}
+            onClick={() => setTab('direct')}
             className={`flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
               tab === 'direct'
                 ? 'border-b-2 border-indigo-500 text-indigo-400'
@@ -124,102 +116,80 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
         </div>
 
         <div className="p-4">
-          {/* Group name input */}
-          {tab === 'group' && (
-            <div className="mb-3">
-              <input
-                type="text"
-                placeholder="Group name"
-                value={groupName}
-                onChange={e => setGroupName(e.target.value)}
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
+          {error && (
+            <div className="mb-3 rounded-lg border border-red-900/50 bg-red-900/20 px-4 py-3 text-sm text-red-400">
+              {error}
             </div>
           )}
 
-          {/* Selected users (group) */}
-          {tab === 'group' && selectedUsers.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-2">
-              {selectedUsers.map(u => (
-                <span
-                  key={u.id}
-                  className="flex items-center gap-1.5 rounded-full bg-indigo-600/20 px-3 py-1 text-xs text-indigo-300"
-                >
-                  {u.display_name}
-                  <button onClick={() => toggleUserSelection(u)} className="hover:text-white">
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
+          {tab === 'direct' ? (
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-400">
+                  Matrix User ID
+                </label>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="username:lukasz.com"
+                    value={userId}
+                    onChange={e => setUserId(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleDirectChat()}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-600">
+                  e.g. lca:lukasz.com or @lca:lukasz.com
+                </p>
+              </div>
+
+              <button
+                onClick={handleDirectChat}
+                disabled={isCreating || !userId.trim()}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+              >
+                {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                Start Chat
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-400">Group name</label>
+                <input
+                  type="text"
+                  placeholder="My Group"
+                  value={groupName}
+                  onChange={e => setGroupName(e.target.value)}
+                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-400">
+                  Members (comma-separated Matrix IDs)
+                </label>
+                <textarea
+                  placeholder="@user1:lukasz.com, @user2:lukasz.com"
+                  value={groupMembers}
+                  onChange={e => setGroupMembers(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <button
+                onClick={handleCreateGroup}
+                disabled={isCreating || !groupName.trim() || !groupMembers.trim()}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+              >
+                {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+                Create Group
+              </button>
             </div>
           )}
-
-          {/* Search */}
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
-
-          {/* User list */}
-          <div className="max-h-64 overflow-y-auto">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="py-8 text-center">
-                <UserPlus className="mx-auto h-8 w-8 text-gray-700" />
-                <p className="mt-2 text-sm text-gray-500">No users found</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {filteredUsers.map(u => (
-                  <button
-                    key={u.id}
-                    onClick={() => tab === 'direct' ? handleDirectChat(u) : toggleUserSelection(u)}
-                    disabled={isCreating}
-                    className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-800 disabled:opacity-50"
-                  >
-                    <Avatar src={u.avatar_url} name={u.display_name} size="md" status={u.status} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-white">{u.display_name}</p>
-                      <p className="truncate text-xs text-gray-500">{u.email}</p>
-                    </div>
-                    {tab === 'group' && selectedUsers.find(s => s.id === u.id) && (
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600">
-                        <Check className="h-3 w-3 text-white" />
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
-
-        {/* Create group button */}
-        {tab === 'group' && (
-          <div className="border-t border-gray-800 p-4">
-            <button
-              onClick={handleCreateGroup}
-              disabled={isCreating || !groupName.trim() || selectedUsers.length === 0}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
-            >
-              {isCreating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Users className="h-4 w-4" />
-              )}
-              Create Group ({selectedUsers.length} members)
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )

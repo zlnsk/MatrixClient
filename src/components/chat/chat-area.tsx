@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-import { useChatStore } from '@/stores/chat-store'
+import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
 import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
@@ -15,8 +15,8 @@ import {
   Search,
   Users,
   Loader2,
+  Hash,
 } from 'lucide-react'
-import type { MessageWithDetails } from '@/types/database'
 
 interface ChatAreaProps {
   onBackClick: () => void
@@ -24,10 +24,9 @@ interface ChatAreaProps {
 
 export function ChatArea({ onBackClick }: ChatAreaProps) {
   const user = useAuthStore(s => s.user)
-  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers } = useChatStore()
+  const { activeRoom, messages, isLoadingMessages, sendMessage, typingUsers } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const messagesContainerRef = useRef<HTMLDivElement>(null)
-  const [replyTo, setReplyTo] = useState<MessageWithDetails | null>(null)
+  const [replyTo, setReplyTo] = useState<MatrixMessage | null>(null)
   const [showSearch, setShowSearch] = useState(false)
   const [chatSearch, setChatSearch] = useState('')
 
@@ -39,32 +38,19 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     scrollToBottom()
   }, [messages, scrollToBottom])
 
-  if (!activeChat || !user) return null
+  if (!activeRoom || !user) return null
 
-  const otherUser = activeChat.type === 'direct'
-    ? activeChat.members.find(m => m.user_id !== user.id)?.user
+  const otherMember = activeRoom.isDirect
+    ? activeRoom.members.find(m => m.userId !== user.userId)
     : null
 
-  const chatName = activeChat.type === 'group'
-    ? activeChat.name || 'Group Chat'
-    : otherUser?.display_name || 'Unknown'
-
-  const chatStatus = activeChat.type === 'direct'
-    ? otherUser?.status || 'offline'
-    : `${activeChat.members.length} members`
-
-  const chatTypingUsers = typingUsers.get(activeChat.id)
-  const typingNames = chatTypingUsers
-    ? Array.from(chatTypingUsers)
-        .filter(id => id !== user.id)
-        .map(id => {
-          const member = activeChat.members.find(m => m.user_id === id)
-          return member?.user?.display_name || 'Someone'
-        })
-    : []
+  const roomDisplayName = activeRoom.name
+  const roomStatus = activeRoom.isDirect
+    ? otherMember?.presence === 'online' ? 'online' : otherMember?.presence === 'unavailable' ? 'away' : 'offline'
+    : `${activeRoom.members.length} members`
 
   const handleSend = async (content: string) => {
-    await sendMessage(activeChat.id, user.id, content, 'text', replyTo?.id)
+    await sendMessage(activeRoom.roomId, content, replyTo?.eventId)
     setReplyTo(null)
   }
 
@@ -73,10 +59,10 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     : messages
 
   // Group messages by date
-  const groupedMessages: { date: string; messages: MessageWithDetails[] }[] = []
+  const groupedMessages: { date: string; messages: MatrixMessage[] }[] = []
   let currentDate = ''
   for (const msg of filteredMessages) {
-    const msgDate = new Date(msg.created_at).toLocaleDateString('en-US', {
+    const msgDate = new Date(msg.timestamp).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -102,30 +88,30 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <Avatar
-            src={activeChat.type === 'direct' ? otherUser?.avatar_url : activeChat.avatar_url}
-            name={chatName}
+            src={activeRoom.isDirect ? otherMember?.avatarUrl : activeRoom.avatarUrl}
+            name={roomDisplayName}
             size="md"
-            status={activeChat.type === 'direct' ? (otherUser?.status as 'online' | 'offline' | 'away') : null}
+            status={activeRoom.isDirect ? (otherMember?.presence === 'online' ? 'online' : otherMember?.presence === 'unavailable' ? 'away' : 'offline') : null}
           />
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-white">{chatName}</h2>
-              {activeChat.type === 'group' && (
-                <Users className="h-4 w-4 text-gray-500" />
-              )}
+              <h2 className="text-lg font-bold text-white">{roomDisplayName}</h2>
+              {!activeRoom.isDirect && <Hash className="h-4 w-4 text-gray-500" />}
             </div>
             <div className="flex items-center gap-2">
-              {typingNames.length > 0 ? (
+              {typingUsers.length > 0 ? (
                 <span className="text-xs text-indigo-400">
-                  {typingNames.join(', ')} {typingNames.length === 1 ? 'is' : 'are'} typing...
+                  {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
                 </span>
               ) : (
-                <span className="text-xs text-gray-500">{chatStatus}</span>
+                <span className="text-xs text-gray-500">{roomStatus}</span>
               )}
-              <div className="flex items-center gap-1 rounded-full bg-green-900/50 px-2 py-0.5">
-                <Lock className="h-3 w-3 text-green-400" />
-                <span className="text-xs text-green-400">Encrypted</span>
-              </div>
+              {activeRoom.encrypted && (
+                <div className="flex items-center gap-1 rounded-full bg-green-900/50 px-2 py-0.5">
+                  <Lock className="h-3 w-3 text-green-400" />
+                  <span className="text-xs text-green-400">Encrypted</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -167,16 +153,21 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       )}
 
       {/* Messages */}
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-4 md:px-6"
-      >
+      <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6">
         {isLoadingMessages ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
           </div>
         ) : (
           <div className="space-y-4">
+            {activeRoom.topic && (
+              <div className="flex items-center justify-center py-2">
+                <span className="rounded-full bg-gray-800 px-4 py-1.5 text-xs text-gray-400">
+                  {activeRoom.topic}
+                </span>
+              </div>
+            )}
+
             {groupedMessages.map(group => (
               <div key={group.date}>
                 <div className="flex items-center justify-center py-4">
@@ -187,15 +178,15 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                 <div className="space-y-1">
                   {group.messages.map((msg, idx) => {
                     const prevMsg = idx > 0 ? group.messages[idx - 1] : null
-                    const showAvatar = !prevMsg || prevMsg.sender_id !== msg.sender_id
+                    const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId
                     return (
                       <MessageBubble
-                        key={msg.id}
+                        key={msg.eventId}
                         message={msg}
-                        isOwn={msg.sender_id === user.id}
+                        isOwn={msg.senderId === user.userId}
                         showAvatar={showAvatar}
                         onReply={() => setReplyTo(msg)}
-                        chatId={activeChat.id}
+                        roomId={activeRoom.roomId}
                       />
                     )
                   })}
@@ -204,7 +195,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             ))}
 
             {/* Typing indicator */}
-            {typingNames.length > 0 && (
+            {typingUsers.length > 0 && (
               <div className="flex items-end gap-2 animate-fade-in">
                 <div className="rounded-2xl bg-gray-800 px-4 py-3">
                   <div className="flex gap-1">
@@ -226,7 +217,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         onSend={handleSend}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
-        chatId={activeChat.id}
+        roomId={activeRoom.roomId}
       />
     </div>
   )

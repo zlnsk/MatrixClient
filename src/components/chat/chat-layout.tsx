@@ -9,7 +9,7 @@ import { useChatStore } from '@/stores/chat-store'
 export function ChatLayout() {
   const [showSettings, setShowSettings] = useState(false)
   const [showMobileSidebar, setShowMobileSidebar] = useState(true)
-  const activeChat = useChatStore(s => s.activeChat)
+  const activeRoom = useChatStore(s => s.activeRoom)
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-950 dark:bg-gray-950">
@@ -25,9 +25,9 @@ export function ChatLayout() {
 
       {/* Main chat area */}
       <div className={`${
-        !showMobileSidebar || !activeChat ? 'flex' : 'hidden'
+        !showMobileSidebar || !activeRoom ? 'flex' : 'hidden'
       } md:flex flex-1 flex-col`}>
-        {activeChat ? (
+        {activeRoom ? (
           <ChatArea onBackClick={() => setShowMobileSidebar(true)} />
         ) : (
           <EmptyState />

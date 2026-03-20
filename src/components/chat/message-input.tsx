@@ -1,38 +1,32 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useAuthStore } from '@/stores/auth-store'
-import { createClient } from '@/lib/supabase/client'
+import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
 import {
   Send,
   Paperclip,
   Smile,
   X,
   Reply,
-  Image as ImageIcon,
-  Mic,
 } from 'lucide-react'
-import type { MessageWithDetails } from '@/types/database'
 
 interface MessageInputProps {
   onSend: (content: string) => Promise<void>
-  replyTo: MessageWithDetails | null
+  replyTo: MatrixMessage | null
   onCancelReply: () => void
-  chatId: string
+  roomId: string
 }
 
 const EMOJI_LIST = ['😀', '😂', '🥲', '😍', '🤔', '😎', '🙏', '👍', '👎', '❤️', '🔥', '💯', '🎉', '😢', '😮', '🤝', '✅', '⭐', '🚀', '💡']
 
-export function MessageInput({ onSend, replyTo, onCancelReply, chatId }: MessageInputProps) {
-  const user = useAuthStore(s => s.user)
-  const preferences = useAuthStore(s => s.preferences)
+export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: MessageInputProps) {
+  const { sendTyping } = useChatStore()
   const [content, setContent] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
   const [isSending, setIsSending] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (replyTo) inputRef.current?.focus()
@@ -48,31 +42,27 @@ export function MessageInput({ onSend, replyTo, onCancelReply, chatId }: Message
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Broadcast typing indicator
-  useEffect(() => {
-    if (!user || !content) return
-    const supabase = createClient()
-    const channel = supabase.channel(`typing:${chatId}`)
-    channel.send({
-      type: 'broadcast',
-      event: 'typing',
-      payload: { user_id: user.id, is_typing: content.length > 0 },
-    })
-    const timeout = setTimeout(() => {
-      channel.send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: { user_id: user.id, is_typing: false },
-      })
-    }, 3000)
-    return () => clearTimeout(timeout)
-  }, [content, user, chatId])
+  const handleContentChange = (value: string) => {
+    setContent(value)
+
+    // Send typing indicator
+    if (value.length > 0) {
+      sendTyping(roomId, true)
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTyping(roomId, false)
+      }, 4000)
+    } else {
+      sendTyping(roomId, false)
+    }
+  }
 
   const handleSubmit = async () => {
     const trimmed = content.trim()
     if (!trimmed || isSending) return
 
     setIsSending(true)
+    sendTyping(roomId, false)
     try {
       await onSend(trimmed)
       setContent('')
@@ -83,42 +73,9 @@ export function MessageInput({ onSend, replyTo, onCancelReply, chatId }: Message
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    const enterToSend = preferences?.enter_to_send !== false
-    if (e.key === 'Enter' && enterToSend && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
-    }
-  }
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user) return
-
-    setIsUploading(true)
-    try {
-      const supabase = createClient()
-      const ext = file.name.split('.').pop()
-      const path = `chat-uploads/${chatId}/${Date.now()}.${ext}`
-
-      const { error } = await supabase.storage
-        .from('media')
-        .upload(path, file)
-
-      if (error) throw error
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('media')
-        .getPublicUrl(path)
-
-      // Send as image message
-      const { sendMessage } = await import('@/stores/chat-store').then(m => m.useChatStore.getState())
-      await sendMessage(chatId, user.id, file.name, 'image', replyTo?.id)
-      onCancelReply()
-    } catch (err) {
-      console.error('Upload failed:', err)
-    } finally {
-      setIsUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -136,7 +93,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, chatId }: Message
           <Reply className="h-4 w-4 flex-shrink-0 text-indigo-400" />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-indigo-400">
-              Replying to {replyTo.sender?.display_name}
+              Replying to {replyTo.senderName}
             </p>
             <p className="truncate text-xs text-gray-400">{replyTo.content}</p>
           </div>
@@ -151,26 +108,12 @@ export function MessageInput({ onSend, replyTo, onCancelReply, chatId }: Message
 
       <div className="flex items-end gap-3">
         {/* Attachment button */}
-        <div className="relative">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="rounded-full p-2.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white disabled:opacity-50"
-          >
-            {isUploading ? (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-600 border-t-indigo-500" />
-            ) : (
-              <Paperclip className="h-5 w-5" />
-            )}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,video/*,.pdf,.doc,.docx"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-        </div>
+        <button
+          className="rounded-full p-2.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+          title="Attach file"
+        >
+          <Paperclip className="h-5 w-5" />
+        </button>
 
         {/* Emoji button */}
         <div className="relative" ref={emojiRef}>
@@ -200,12 +143,11 @@ export function MessageInput({ onSend, replyTo, onCancelReply, chatId }: Message
           <textarea
             ref={inputRef}
             value={content}
-            onChange={e => setContent(e.target.value)}
+            onChange={e => handleContentChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             rows={1}
             className="max-h-32 min-h-[44px] w-full resize-none rounded-full border border-gray-700 bg-gray-800 px-5 py-3 text-sm text-white placeholder-gray-500 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            style={{ height: content.includes('\n') ? 'auto' : undefined }}
           />
         </div>
 
