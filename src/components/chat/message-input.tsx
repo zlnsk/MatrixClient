@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
+import { getMatrixClient } from '@/lib/matrix/client'
 import {
   Send,
   Paperclip,
@@ -29,13 +30,14 @@ const EMOJI_CATEGORIES: Record<string, string[]> = {
 }
 
 export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: MessageInputProps) {
-  const { sendTyping, uploadFile } = useChatStore()
+  const { sendTyping, uploadFile, setDisplayName, joinRoom, inviteMember, setRoomTopic } = useChatStore()
   const [content, setContent] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
   const [emojiCategory, setEmojiCategory] = useState('Smileys')
   const [isSending, setIsSending] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [commandStatus, setCommandStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -44,6 +46,14 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   useEffect(() => {
     if (replyTo) inputRef.current?.focus()
   }, [replyTo])
+
+  // Auto-dismiss command status after 4 seconds
+  useEffect(() => {
+    if (commandStatus) {
+      const timer = setTimeout(() => setCommandStatus(null), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [commandStatus])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -68,6 +78,65 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
     }
   }
 
+  const handleSlashCommand = async (trimmed: string): Promise<boolean> => {
+    const client = getMatrixClient()
+    if (!client) return false
+
+    // /me <action> - Send an emote
+    const meMatch = trimmed.match(/^\/me\s+([\s\S]+)$/)
+    if (meMatch) {
+      const action = meMatch[1]
+      await (client as any).sendEvent(roomId, 'm.room.message', {
+        msgtype: 'm.emote',
+        body: action,
+      })
+      setCommandStatus({ type: 'success', message: 'Emote sent' })
+      return true
+    }
+
+    // /nick <name> - Change display name
+    const nickMatch = trimmed.match(/^\/nick\s+([\s\S]+)$/)
+    if (nickMatch) {
+      await setDisplayName(nickMatch[1])
+      setCommandStatus({ type: 'success', message: `Display name changed to "${nickMatch[1]}"` })
+      return true
+    }
+
+    // /topic <topic> - Set room topic
+    const topicMatch = trimmed.match(/^\/topic\s+([\s\S]+)$/)
+    if (topicMatch) {
+      await setRoomTopic(roomId, topicMatch[1])
+      setCommandStatus({ type: 'success', message: 'Room topic updated' })
+      return true
+    }
+
+    // /invite <userId> - Invite user to room
+    const inviteMatch = trimmed.match(/^\/invite\s+(\S+)$/)
+    if (inviteMatch) {
+      await inviteMember(roomId, inviteMatch[1])
+      setCommandStatus({ type: 'success', message: `Invited ${inviteMatch[1]}` })
+      return true
+    }
+
+    // /join <roomId> - Join a room
+    const joinMatch = trimmed.match(/^\/join\s+(\S+)$/)
+    if (joinMatch) {
+      await joinRoom(joinMatch[1])
+      setCommandStatus({ type: 'success', message: `Joined ${joinMatch[1]}` })
+      return true
+    }
+
+    // /shrug [message] - Prepend shrug to message
+    const shrugMatch = trimmed.match(/^\/shrug(?:\s+([\s\S]*))?$/)
+    if (shrugMatch) {
+      const shrugMsg = `¯\\_(ツ)_/¯${shrugMatch[1] ? ' ' + shrugMatch[1] : ''}`
+      await onSend(shrugMsg)
+      return true
+    }
+
+    return false
+  }
+
   const handleSubmit = async () => {
     const trimmed = content.trim()
     const hasFiles = pendingFiles.length > 0
@@ -76,6 +145,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
     if (isSending || isUploading) return
 
     setIsSending(true)
+    setCommandStatus(null)
     sendTyping(roomId, false)
     try {
       // Upload pending files first
@@ -86,6 +156,20 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         }
         setPendingFiles([])
         setIsUploading(false)
+      }
+      // Check for slash commands
+      if (trimmed && trimmed.startsWith('/')) {
+        try {
+          const handled = await handleSlashCommand(trimmed)
+          if (handled) {
+            setContent('')
+            inputRef.current?.focus()
+            return
+          }
+        } catch (err) {
+          setCommandStatus({ type: 'error', message: err instanceof Error ? err.message : 'Command failed' })
+          return
+        }
       }
       // Send text message if present
       if (trimmed) {
@@ -160,6 +244,25 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
 
   return (
     <div className="border-t border-gray-200 bg-white/80 p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/50 dark:shadow-[0_-2px_10px_rgba(0,0,0,0.3)]">
+      {/* Command status */}
+      {commandStatus && (
+        <div
+          className={`mb-3 flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+            commandStatus.type === 'success'
+              ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+              : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+          }`}
+        >
+          <span>{commandStatus.message}</span>
+          <button
+            onClick={() => setCommandStatus(null)}
+            className="ml-2 flex-shrink-0 rounded p-0.5 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Reply preview */}
       {replyTo && (
         <div className="mb-3 flex items-center gap-2 rounded-lg border-l-2 border-indigo-500 bg-gray-100 px-3 py-2 animate-slide-in dark:bg-gray-800">

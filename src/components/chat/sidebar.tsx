@@ -17,6 +17,8 @@ import {
   Hash,
   Archive,
   ArchiveRestore,
+  Check,
+  Mail,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -26,10 +28,12 @@ interface SidebarProps {
 
 export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   const user = useAuthStore(s => s.user)
-  const { rooms, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom } = useChatStore()
+  const { rooms, pendingInvites, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom, acceptInvite, rejectInvite } = useChatStore()
   const [searchFilter, setSearchFilter] = useState('')
   const [showNewChat, setShowNewChat] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [showInvites, setShowInvites] = useState(true)
+  const [inviteError, setInviteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) loadRooms()
@@ -136,6 +140,75 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
 
       {/* Room list */}
       <div className="flex-1 overflow-y-auto px-2">
+        {/* Invitations section */}
+        {pendingInvites.length > 0 && (
+          <div className="mb-2">
+            <button
+              onClick={() => setShowInvites(!showInvites)}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Invitations ({pendingInvites.length})
+              <span className="ml-auto text-gray-400">{showInvites ? '▲' : '▼'}</span>
+            </button>
+            {inviteError && (
+              <p className="px-3 py-1 text-xs text-red-500">{inviteError}</p>
+            )}
+            {showInvites && (
+              <div className="space-y-0.5 py-1">
+                {pendingInvites.map(invite => (
+                  <div
+                    key={invite.roomId}
+                    className="flex items-center gap-3 rounded-xl p-3 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                  >
+                    <Avatar
+                      src={invite.avatarUrl}
+                      name={invite.name}
+                      size="md"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">
+                        {invite.name}
+                      </span>
+                      <span className="text-xs text-gray-500">Invited</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={async () => {
+                          try {
+                            setInviteError(null)
+                            await acceptInvite(invite.roomId)
+                          } catch (err) {
+                            setInviteError(`Failed to accept: ${err instanceof Error ? err.message : 'Unknown error'}`)
+                          }
+                        }}
+                        className="rounded-lg p-1.5 text-green-600 transition-colors hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-900/30"
+                        title="Accept invitation"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            setInviteError(null)
+                            await rejectInvite(invite.roomId)
+                          } catch (err) {
+                            setInviteError(`Failed to reject: ${err instanceof Error ? err.message : 'Unknown error'}`)
+                          }
+                        }}
+                        className="rounded-lg p-1.5 text-red-600 transition-colors hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30"
+                        title="Reject invitation"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeRooms.length === 0 && !showArchived ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <MessageSquare className="h-10 w-10 text-gray-300 dark:text-gray-700" />

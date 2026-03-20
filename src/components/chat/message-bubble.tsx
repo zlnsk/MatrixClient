@@ -18,6 +18,8 @@ import {
   X,
   Clock,
   Send,
+  Pin,
+  Forward,
 } from 'lucide-react'
 
 /**
@@ -74,16 +76,18 @@ interface MessageBubbleProps {
   showAvatar: boolean
   onReply: () => void
   roomId: string
+  isPinned?: boolean
 }
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🎉', '🙏', '💯', '✅']
 
-export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: MessageBubbleProps) {
+export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isPinned }: MessageBubbleProps) {
   const user = useAuthStore(s => s.user)
-  const { sendReaction, editMessage, redactMessage } = useChatStore()
+  const { sendReaction, editMessage, redactMessage, pinMessage, unpinMessage, forwardMessage, rooms } = useChatStore()
   const [showActions, setShowActions] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showContextMenu, setShowContextMenu] = useState(false)
+  const [showForwardPicker, setShowForwardPicker] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
   const [copied, setCopied] = useState(false)
@@ -95,6 +99,7 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
         setShowActions(false)
         setShowEmojiPicker(false)
         setShowContextMenu(false)
+        setShowForwardPicker(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -125,6 +130,31 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
     setShowContextMenu(false)
+  }
+
+  const handlePin = async () => {
+    try {
+      if (isPinned) {
+        await unpinMessage(roomId, message.eventId)
+      } else {
+        await pinMessage(roomId, message.eventId)
+      }
+    } catch (err) {
+      console.error('Failed to pin/unpin message:', err)
+    }
+    setShowContextMenu(false)
+    setShowActions(false)
+  }
+
+  const handleForward = async (toRoomId: string) => {
+    try {
+      await forwardMessage(roomId, message.eventId, toRoomId)
+    } catch (err) {
+      console.error('Failed to forward message:', err)
+    }
+    setShowForwardPicker(false)
+    setShowContextMenu(false)
+    setShowActions(false)
   }
 
   // Status icon for own messages
@@ -193,6 +223,14 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
             <p className="mb-1 ml-1 text-sm font-semibold text-gray-600 dark:text-gray-400">
               {message.senderName}
             </p>
+          )}
+
+          {/* Pin indicator */}
+          {isPinned && (
+            <div className={`mb-1 flex items-center gap-1 text-xs text-amber-500 dark:text-amber-400 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+              <Pin className="h-3 w-3" />
+              <span>Pinned</span>
+            </div>
           )}
 
           {/* Bubble */}
@@ -368,6 +406,23 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
                 {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                 {copied ? 'Copied!' : 'Copy text'}
               </button>
+              <button
+                onClick={handlePin}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                <Pin className="h-4 w-4" />
+                {isPinned ? 'Unpin message' : 'Pin message'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowForwardPicker(!showForwardPicker)
+                  setShowContextMenu(false)
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                <Forward className="h-4 w-4" />
+                Forward
+              </button>
               {isOwn && (
                 <>
                   <button
@@ -391,6 +446,27 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId }: M
                     Delete message
                   </button>
                 </>
+              )}
+            </div>
+          )}
+
+          {/* Forward room picker */}
+          {showForwardPicker && (
+            <div className={`z-10 min-w-[200px] max-h-[240px] overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'self-end' : 'self-start'}`}>
+              <p className="px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">Forward to...</p>
+              {rooms
+                .filter(r => r.roomId !== roomId)
+                .map(r => (
+                  <button
+                    key={r.roomId}
+                    onClick={() => handleForward(r.roomId)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                  >
+                    <span className="truncate">{r.name}</span>
+                  </button>
+                ))}
+              {rooms.filter(r => r.roomId !== roomId).length === 0 && (
+                <p className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">No other rooms available</p>
               )}
             </div>
           )}

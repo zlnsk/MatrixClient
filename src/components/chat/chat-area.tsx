@@ -55,6 +55,23 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const [savingTopic, setSavingTopic] = useState(false)
   const [inviting, setInviting] = useState(false)
   const [notifSetting, setNotifSetting] = useState<'all' | 'mentions' | 'mute'>('all')
+  const [pinnedEventIds, setPinnedEventIds] = useState<string[]>([])
+  const [showPinnedBanner, setShowPinnedBanner] = useState(true)
+
+  // Load pinned events from room state
+  useEffect(() => {
+    if (!activeRoom) {
+      setPinnedEventIds([])
+      return
+    }
+    const client = getMatrixClient()
+    if (!client) return
+    const room = client.getRoom(activeRoom.roomId)
+    if (!room) return
+    const pinEvent = room.currentState.getStateEvents('m.room.pinned_events', '')
+    const pinned: string[] = pinEvent?.getContent()?.pinned || []
+    setPinnedEventIds(pinned)
+  }, [activeRoom, messages])
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -210,6 +227,25 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         </div>
       )}
 
+      {/* Pinned messages banner */}
+      {pinnedEventIds.length > 0 && showPinnedBanner && (
+        <div className="flex items-center justify-between border-b border-amber-200 bg-amber-50 px-4 py-2 dark:border-amber-900/50 dark:bg-amber-900/20">
+          <div className="flex items-center gap-2">
+            <Pin className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+            <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+              {pinnedEventIds.length} pinned {pinnedEventIds.length === 1 ? 'message' : 'messages'}
+            </span>
+          </div>
+          <button
+            onClick={() => setShowPinnedBanner(false)}
+            className="rounded-lg p-1 text-amber-500 transition-colors hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/30"
+            title="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Leave confirmation */}
       {confirmLeave && (
         <div className="animate-slide-in border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/50 dark:bg-red-900/20">
@@ -271,6 +307,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                         showAvatar={showAvatar}
                         onReply={() => setReplyTo(msg)}
                         roomId={activeRoom.roomId}
+                        isPinned={pinnedEventIds.includes(msg.eventId)}
                       />
                     )
                   })}
