@@ -1,0 +1,75 @@
+'use client'
+
+import { useState } from 'react'
+import { Sidebar } from './sidebar'
+import { ChatArea } from './chat-area'
+import { SettingsPanel } from './settings-panel'
+import { useChatStore } from '@/stores/chat-store'
+
+export function ChatLayout() {
+  const [showSettings, setShowSettings] = useState(false)
+  const [showMobileSidebar, setShowMobileSidebar] = useState(true)
+  const activeChat = useChatStore(s => s.activeChat)
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-gray-950 dark:bg-gray-950">
+      {/* Sidebar - always visible on desktop, conditional on mobile */}
+      <div className={`${
+        showMobileSidebar ? 'flex' : 'hidden'
+      } md:flex w-full md:w-80 flex-shrink-0 flex-col border-r border-gray-800 bg-gray-900`}>
+        <Sidebar
+          onSettingsClick={() => setShowSettings(true)}
+          onChatSelect={() => setShowMobileSidebar(false)}
+        />
+      </div>
+
+      {/* Main chat area */}
+      <div className={`${
+        !showMobileSidebar || !activeChat ? 'flex' : 'hidden'
+      } md:flex flex-1 flex-col`}>
+        {activeChat ? (
+          <ChatArea onBackClick={() => setShowMobileSidebar(true)} />
+        ) : (
+          <EmptyState />
+        )}
+      </div>
+
+      {/* Settings overlay */}
+      {showSettings && (
+        <SettingsPanel onClose={() => setShowSettings(false)} />
+      )}
+    </div>
+  )
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center bg-gray-950 p-8">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-900">
+        <svg
+          className="h-10 w-10 text-gray-700"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
+        </svg>
+      </div>
+      <h3 className="mt-6 text-lg font-medium text-gray-300">
+        Welcome to Matrix Client
+      </h3>
+      <p className="mt-2 max-w-sm text-center text-sm text-gray-500">
+        Select a conversation from the sidebar or start a new chat to begin messaging securely.
+      </p>
+      <div className="mt-4 flex items-center gap-2 rounded-full bg-green-900/30 px-3 py-1.5">
+        <div className="h-2 w-2 rounded-full bg-green-400" />
+        <span className="text-xs text-green-400">End-to-end encrypted</span>
+      </div>
+    </div>
+  )
+}
