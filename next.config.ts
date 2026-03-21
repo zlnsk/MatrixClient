@@ -1,8 +1,26 @@
 import type { NextConfig } from "next";
+import { execSync } from "child_process";
+import { readFileSync } from "fs";
 
 const isTauri = process.env.TAURI_ENV === '1'
 
+// Build version: <package version>+<git short hash>.<YYYYMMDD-HHmmss>
+function getBuildVersion(): string {
+  const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
+  let gitHash = 'unknown'
+  try {
+    gitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
+  } catch { /* not a git repo */ }
+  const now = new Date()
+  const ts = now.toISOString().replace(/[-:T]/g, '').slice(0, 15) // YYYYMMDDHHmmss
+  return `${pkg.version}+${gitHash}.${ts}`
+}
+
 const nextConfig: NextConfig = {
+  // Expose build version to client code
+  env: {
+    NEXT_PUBLIC_BUILD_VERSION: getBuildVersion(),
+  },
   // Static export for Tauri, standalone for Docker/server
   ...(isTauri ? { output: 'export' } : { output: 'standalone' }),
   // Turbopack config (default bundler in Next.js 16)

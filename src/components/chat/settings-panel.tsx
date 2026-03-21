@@ -196,6 +196,9 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               )}
               Sign out
             </button>
+            <p className="mt-3 px-3 text-[10px] text-gray-400 dark:text-gray-600 select-all">
+              v{process.env.NEXT_PUBLIC_BUILD_VERSION}
+            </p>
           </div>
         </div>
 
