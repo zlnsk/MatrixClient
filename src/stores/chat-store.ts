@@ -178,16 +178,17 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   const sender = event.getSender()!
   const member = room.getMember(sender)
 
-  // For encrypted events, try to get decrypted content first
-  // getClearContent() returns the decrypted payload if the SDK has decrypted it
-  // Otherwise fall back to getContent() which may be ciphertext
-  const clearContent = (event as any).getClearContent?.()
+  // For encrypted events, try to get decrypted content first.
+  // getContent() returns decrypted content if the SDK has decrypted the event.
+  // getClearContent() returns decrypted content only for encrypted events.
+  // We check both to handle all SDK code paths (JS crypto vs Rust crypto).
   const rawContent = event.getContent()
-  const content = clearContent || rawContent
+  const clearContent = (event as any).getClearContent?.()
+  const content = (clearContent?.msgtype ? clearContent : null) || (rawContent?.msgtype ? rawContent : null) || clearContent || rawContent
 
   // If this is an encrypted event that hasn't been decrypted,
   // content will have {algorithm, ciphertext, ...} instead of {body, msgtype, ...}
-  const isUndecrypted = isEncrypted && !content.msgtype && !clearContent
+  const isUndecrypted = isEncrypted && !content.msgtype
 
   // Check for reply
   let replyToEvent = null

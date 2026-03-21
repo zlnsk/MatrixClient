@@ -8,6 +8,8 @@ import * as sdk from 'matrix-js-sdk'
 import { CryptoEvent } from 'matrix-js-sdk/lib/crypto-api/CryptoEvent'
 import type { VerificationRequest } from 'matrix-js-sdk/lib/crypto-api/verification'
 import { VerificationDialog } from '@/components/chat/verification-dialog'
+import { CallOverlay } from '@/components/chat/call-overlay'
+import { setupIncomingCallListener } from '@/lib/matrix/voip'
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
@@ -21,6 +23,35 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     const { loadRooms, loadMessages, unarchiveRoom } = useChatStore.getState()
 
+    // --- Debounce helpers ---
+    // Debounce loadRooms so rapid-fire events batch together
+    let loadRoomsTimer: ReturnType<typeof setTimeout> | null = null
+    const debouncedLoadRooms = () => {
+      if (loadRoomsTimer) clearTimeout(loadRoomsTimer)
+      loadRoomsTimer = setTimeout(() => {
+        loadRooms()
+        loadRoomsTimer = null
+      }, 300)
+    }
+
+    // Debounce loadMessages per room (only active room matters)
+    let loadMessagesTimer: ReturnType<typeof setTimeout> | null = null
+    const debouncedLoadMessages = (roomId: string) => {
+      if (loadMessagesTimer) clearTimeout(loadMessagesTimer)
+      loadMessagesTimer = setTimeout(() => {
+        const currentActiveRoom = useChatStore.getState().activeRoom
+        if (currentActiveRoom?.roomId === roomId) {
+          loadMessages(roomId)
+        }
+        loadMessagesTimer = null
+      }, 150)
+    }
+
+    // Track whether timeline events fired during this sync cycle
+    // so onSync doesn't redundantly reload messages
+    let timelineEventFiredThisCycle = false
+    let syncCycleResetTimer: ReturnType<typeof setTimeout> | null = null
+
     // Listen for new timeline events (messages, reactions, redactions)
     const onTimelineEvent = (
       event: sdk.MatrixEvent,
@@ -30,6 +61,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       data?: { liveEvent?: boolean },
     ) => {
       if (!room) return
+
+      timelineEventFiredThisCycle = true
+      // Reset the flag after a short window (sync events come in bursts)
+      if (syncCycleResetTimer) clearTimeout(syncCycleResetTimer)
+      syncCycleResetTimer = setTimeout(() => {
+        timelineEventFiredThisCycle = false
+      }, 500)
 
       // If a new message arrives in an archived room, unarchive it
       const eventType = event.getType()
@@ -43,13 +81,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Refresh the room list
-      loadRooms()
+      // Refresh the room list (debounced)
+      debouncedLoadRooms()
 
-      // If this is the active room, reload messages
+      // If this is the active room, reload messages (debounced)
       const currentActiveRoom = useChatStore.getState().activeRoom
       if (currentActiveRoom?.roomId === room.roomId) {
-        loadMessages(room.roomId)
+        debouncedLoadMessages(room.roomId)
       }
 
       // Browser notification for messages from others
@@ -71,31 +109,34 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // When an encrypted event gets decrypted, reload messages
+    // When an encrypted event gets decrypted, reload messages immediately (not debounced)
+    // since decryption is critical for showing message content
     const onEventDecrypted = (event: sdk.MatrixEvent) => {
       const currentActiveRoom = useChatStore.getState().activeRoom
       if (currentActiveRoom && event.getRoomId() === currentActiveRoom.roomId) {
         loadMessages(currentActiveRoom.roomId)
       }
-      // Also refresh sidebar for last message preview
-      loadRooms()
+      // Also refresh sidebar for last message preview (debounced)
+      debouncedLoadRooms()
     }
 
     // After each sync completes, refresh room list and active room messages
-    // This catches any events that might not trigger individual Timeline events
+    // Skip message reload if timeline events already handled it this cycle
     const onSync = (state: string) => {
       if (state === 'SYNCING') {
-        loadRooms()
-        const currentActiveRoom = useChatStore.getState().activeRoom
-        if (currentActiveRoom) {
-          loadMessages(currentActiveRoom.roomId)
+        debouncedLoadRooms()
+        if (!timelineEventFiredThisCycle) {
+          const currentActiveRoom = useChatStore.getState().activeRoom
+          if (currentActiveRoom) {
+            debouncedLoadMessages(currentActiveRoom.roomId)
+          }
         }
       }
     }
 
     // Listen for room membership changes
     const onRoomMembership = () => {
-      loadRooms()
+      debouncedLoadRooms()
     }
 
     // Listen for typing notifications
@@ -110,11 +151,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Listen for read receipts
+    // Listen for read receipts - only reload if active room
     const onReceipt = (_event: sdk.MatrixEvent, room: sdk.Room) => {
       const currentActiveRoom = useChatStore.getState().activeRoom
       if (currentActiveRoom?.roomId === room.roomId) {
-        loadMessages(room.roomId)
+        debouncedLoadMessages(room.roomId)
       }
     }
 
@@ -123,9 +164,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       if (!room) return
       const currentActiveRoom = useChatStore.getState().activeRoom
       if (currentActiveRoom?.roomId === room.roomId) {
-        loadMessages(room.roomId)
+        loadMessages(room.roomId) // Immediate reload on reset, not debounced
       }
-      loadRooms()
+      debouncedLoadRooms()
     }
 
     // Listen for incoming verification requests
@@ -148,7 +189,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       Notification.requestPermission()
     }
 
+    // Set up incoming VoIP call listener
+    const cleanupCallListener = setupIncomingCallListener()
+
     return () => {
+      // Clean up debounce timers
+      if (loadRoomsTimer) clearTimeout(loadRoomsTimer)
+      if (loadMessagesTimer) clearTimeout(loadMessagesTimer)
+      if (syncCycleResetTimer) clearTimeout(syncCycleResetTimer)
+
+      // Clean up call listener
+      cleanupCallListener?.()
+
       client.removeListener(sdk.RoomEvent.Timeline, onTimelineEvent)
       client.removeListener(sdk.RoomEvent.TimelineReset, onTimelineReset)
       client.removeListener(sdk.RoomEvent.MyMembership, onRoomMembership)
@@ -163,6 +215,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
+      <CallOverlay />
       {verificationRequest && (
         <VerificationDialog
           request={verificationRequest}
