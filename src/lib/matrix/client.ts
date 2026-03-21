@@ -186,22 +186,9 @@ export async function generateSecurityKey(password: string): Promise<string> {
   const crypto = matrixClient.getCrypto()
   if (!crypto) throw new Error('Crypto not initialized')
 
-  // Generate a recovery key
-  const recoveryKey = await crypto.createRecoveryKeyFromPassphrase()
-  const encodedKey = recoveryKey.encodedPrivateKey!
-
-  // Set the pending key so the SSSS callback can provide it
-  pendingSecretStorageKey = recoveryKey.privateKey
-
-  // Bootstrap secret storage with a callback that returns the pre-generated key
-  await crypto.bootstrapSecretStorage({
-    createSecretStorageKey: async () => recoveryKey,
-    setupNewSecretStorage: true,
-    setupNewKeyBackup: true,
-  })
-
-  // Bootstrap cross-signing (uses the Interactive Auth flow)
+  // Bootstrap cross-signing FIRST so fresh keys exist before secret storage stores them
   await crypto.bootstrapCrossSigning({
+    setupNewCrossSigning: true,
     authUploadDeviceSigningKeys: async (makeRequest) => {
       // Try without auth first; if 401, retry with password
       try {
@@ -221,6 +208,20 @@ export async function generateSecurityKey(password: string): Promise<string> {
         }
       }
     },
+  })
+
+  // Generate a recovery key
+  const recoveryKey = await crypto.createRecoveryKeyFromPassphrase()
+  const encodedKey = recoveryKey.encodedPrivateKey!
+
+  // Set the pending key so the SSSS callback can provide it
+  pendingSecretStorageKey = recoveryKey.privateKey
+
+  // Bootstrap secret storage — stores the fresh cross-signing keys with the new SSSS key
+  await crypto.bootstrapSecretStorage({
+    createSecretStorageKey: async () => recoveryKey,
+    setupNewSecretStorage: true,
+    setupNewKeyBackup: true,
   })
 
   pendingSecretStorageKey = null
