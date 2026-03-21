@@ -37,6 +37,30 @@ export function ChatLayout() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
+  // Cmd/Ctrl+1-9 to switch between chats
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      const num = parseInt(e.key, 10)
+      if (num < 1 || num > 9 || isNaN(num)) return
+
+      const { rooms, setActiveRoom, markAsRead } = useChatStore.getState()
+      const visibleRooms = rooms
+        .filter(r => !r.isArchived)
+        .sort((a, b) => b.lastMessageTs - a.lastMessageTs)
+      const target = visibleRooms[num - 1]
+      if (!target) return
+
+      e.preventDefault()
+      setActiveRoom(target)
+      markAsRead(target.roomId)
+      setShowMobileSidebar(false)
+      history.pushState({ view: 'chat' }, '')
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
     <div className="flex h-dvh overflow-hidden bg-gray-50 dark:bg-gray-950">
       {/* Sidebar - always visible on desktop, conditional on mobile */}

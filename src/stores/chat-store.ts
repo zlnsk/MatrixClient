@@ -599,6 +599,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
 
   markAsRead: async (roomId) => {
+    // Immediately clear the unread count in local state
+    const state = get()
+    const updateRoom = (r: MatrixRoom) =>
+      r.roomId === roomId ? { ...r, unreadCount: 0 } : r
+    set({
+      rooms: state.rooms.map(updateRoom),
+      activeRoom: state.activeRoom?.roomId === roomId
+        ? { ...state.activeRoom, unreadCount: 0 }
+        : state.activeRoom,
+    })
+
     const client = getMatrixClient()
     if (!client) return
 
