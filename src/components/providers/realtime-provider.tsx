@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, useRef, type ReactNode } from 'react'
 import { getMatrixClient } from '@/lib/matrix/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore } from '@/stores/chat-store'
@@ -11,7 +11,6 @@ import { VerificationDialog } from '@/components/chat/verification-dialog'
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
-  const { loadRooms, activeRoom, loadMessages, unarchiveRoom } = useChatStore()
   const [verificationRequest, setVerificationRequest] = useState<VerificationRequest | null>(null)
 
   useEffect(() => {
@@ -19,6 +18,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     const client = getMatrixClient()
     if (!client) return
+
+    const { loadRooms, loadMessages, unarchiveRoom } = useChatStore.getState()
 
     // Listen for new timeline events (messages, reactions, redactions)
     const onTimelineEvent = (
@@ -80,6 +81,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       loadRooms()
     }
 
+    // After each sync completes, refresh room list and active room messages
+    // This catches any events that might not trigger individual Timeline events
+    const onSync = (state: string) => {
+      if (state === 'SYNCING') {
+        loadRooms()
+        const currentActiveRoom = useChatStore.getState().activeRoom
+        if (currentActiveRoom) {
+          loadMessages(currentActiveRoom.roomId)
+        }
+      }
+    }
+
     // Listen for room membership changes
     const onRoomMembership = () => {
       loadRooms()
@@ -126,6 +139,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     client.on(sdk.RoomEvent.MyMembership, onRoomMembership)
     client.on(sdk.RoomEvent.Receipt, onReceipt)
     client.on(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
+    client.on(sdk.ClientEvent.Sync, onSync)
     client.on('RoomMember.typing' as any, onRoomTyping)
     client.on(CryptoEvent.VerificationRequestReceived as any, onVerificationRequest)
 
@@ -140,10 +154,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       client.removeListener(sdk.RoomEvent.MyMembership, onRoomMembership)
       client.removeListener(sdk.RoomEvent.Receipt, onReceipt)
       client.removeListener(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
+      client.removeListener(sdk.ClientEvent.Sync, onSync)
       client.removeListener('RoomMember.typing' as any, onRoomTyping)
       client.removeListener(CryptoEvent.VerificationRequestReceived as any, onVerificationRequest)
     }
-  }, [user, activeRoom, loadRooms, loadMessages, unarchiveRoom])
+  }, [user]) // Only re-run when user changes (login/logout). All handlers read current state from store.
 
   return (
     <>

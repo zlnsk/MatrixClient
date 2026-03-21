@@ -328,6 +328,23 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                       const room = rooms.find(r => r.roomId === result.roomId)
                       if (room) {
                         handleSelectRoom(room)
+                      } else {
+                        // Room might not be in local state (e.g. left room still in search index)
+                        // Create a minimal room object to allow navigation
+                        handleSelectRoom({
+                          roomId: result.roomId,
+                          name: result.roomName,
+                          avatarUrl: null,
+                          topic: null,
+                          isDirect: false,
+                          lastMessage: null,
+                          lastMessageTs: 0,
+                          lastSenderName: null,
+                          unreadCount: 0,
+                          members: [],
+                          encrypted: false,
+                          isArchived: false,
+                        })
                       }
                     }}
                     className="flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60"
