@@ -168,6 +168,20 @@ async function enableKeyBackup(client: sdk.MatrixClient): Promise<void> {
     if (check) {
       console.log('Key backup found on server, version:', check.backupInfo?.version)
       console.log('Backup trusted:', check.trustInfo?.trusted)
+
+      // If backup is trusted, try to load the backup decryption key from
+      // secret storage and restore historical room keys automatically
+      if (check.trustInfo?.trusted) {
+        try {
+          await crypto.loadSessionBackupPrivateKeyFromSecretStorage()
+          console.log('Loaded backup decryption key from secret storage')
+          const result = await crypto.restoreKeyBackup()
+          console.log(`Auto-restored ${result.imported} of ${result.total} keys from backup`)
+        } catch (err) {
+          // Secret storage key not available (user hasn't entered recovery key yet) — expected
+          console.log('Could not auto-restore from backup (secret storage key not available):', err)
+        }
+      }
     } else {
       console.log('No key backup found on server')
     }
@@ -223,6 +237,15 @@ export async function generateSecurityKey(password: string): Promise<string> {
     setupNewSecretStorage: true,
     setupNewKeyBackup: true,
   })
+
+  // Load the backup key and restore any existing backed-up room keys
+  try {
+    await crypto.loadSessionBackupPrivateKeyFromSecretStorage()
+    const result = await crypto.restoreKeyBackup()
+    console.log(`Restored ${result.imported} of ${result.total} keys after security setup`)
+  } catch (err) {
+    console.log('No existing key backup to restore:', err)
+  }
 
   pendingSecretStorageKey = null
   return encodedKey
