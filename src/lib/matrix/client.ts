@@ -189,26 +189,34 @@ async function enableKeyBackup(client: sdk.MatrixClient): Promise<void> {
     if (!crypto) return
 
     // Check if server has a key backup and enable it
-    const check = await crypto.checkKeyBackupAndEnable()
-    if (check) {
-      console.log('Key backup found on server, version:', check.backupInfo?.version)
-      console.log('Backup trusted:', check.trustInfo?.trusted)
-
-      // If backup is trusted AND we have the SSSS key in memory, load the
-      // backup decryption key and restore historical room keys.
-      // Without pendingSecretStorageKey the callback returns null → "falsey" error.
-      if (check.trustInfo?.trusted && pendingSecretStorageKey) {
-        try {
-          await crypto.loadSessionBackupPrivateKeyFromSecretStorage()
-          console.log('Loaded backup decryption key from secret storage')
-          const result = await crypto.restoreKeyBackup()
-          console.log(`Auto-restored ${result.imported} of ${result.total} keys from backup`)
-        } catch (err) {
-          console.log('Could not auto-restore from backup:', err)
-        }
-      }
-    } else {
+    // Check backup info and trust BEFORE enabling, to avoid the SDK firing
+    // per-session key requests against an untrusted backup (causing 404 spam).
+    const backupInfo = await crypto.getKeyBackupInfo()
+    if (!backupInfo) {
       console.log('No key backup found on server')
+      return
+    }
+    console.log('Key backup found on server, version:', backupInfo.version)
+
+    const trustInfo = await crypto.isKeyBackupTrusted(backupInfo)
+    console.log('Backup trusted:', trustInfo.trusted)
+
+    if (!trustInfo.trusted) {
+      console.log('Skipping key backup enable — backup is not trusted')
+      return
+    }
+
+    // Backup is trusted — safe to enable without 404 spam
+    const check = await crypto.checkKeyBackupAndEnable()
+    if (check && pendingSecretStorageKey) {
+      try {
+        await crypto.loadSessionBackupPrivateKeyFromSecretStorage()
+        console.log('Loaded backup decryption key from secret storage')
+        const result = await crypto.restoreKeyBackup()
+        console.log(`Auto-restored ${result.imported} of ${result.total} keys from backup`)
+      } catch (err) {
+        console.log('Could not auto-restore from backup:', err)
+      }
     }
   } catch (err) {
     console.warn('Key backup check failed:', err)
