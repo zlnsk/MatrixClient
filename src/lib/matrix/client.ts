@@ -169,17 +169,17 @@ async function enableKeyBackup(client: sdk.MatrixClient): Promise<void> {
       console.log('Key backup found on server, version:', check.backupInfo?.version)
       console.log('Backup trusted:', check.trustInfo?.trusted)
 
-      // If backup is trusted, try to load the backup decryption key from
-      // secret storage and restore historical room keys automatically
-      if (check.trustInfo?.trusted) {
+      // If backup is trusted AND we have the SSSS key in memory, load the
+      // backup decryption key and restore historical room keys.
+      // Without pendingSecretStorageKey the callback returns null → "falsey" error.
+      if (check.trustInfo?.trusted && pendingSecretStorageKey) {
         try {
           await crypto.loadSessionBackupPrivateKeyFromSecretStorage()
           console.log('Loaded backup decryption key from secret storage')
           const result = await crypto.restoreKeyBackup()
           console.log(`Auto-restored ${result.imported} of ${result.total} keys from backup`)
         } catch (err) {
-          // Secret storage key not available (user hasn't entered recovery key yet) — expected
-          console.log('Could not auto-restore from backup (secret storage key not available):', err)
+          console.log('Could not auto-restore from backup:', err)
         }
       }
     } else {
@@ -200,7 +200,15 @@ export async function generateSecurityKey(password: string): Promise<string> {
   const crypto = matrixClient.getCrypto()
   if (!crypto) throw new Error('Crypto not initialized')
 
-  // Bootstrap cross-signing FIRST so fresh keys exist before secret storage stores them
+  // Generate the recovery key FIRST so the SSSS callback can always provide it.
+  // bootstrapCrossSigning may access existing secret storage, which triggers
+  // getSecretStorageKey — without pendingSecretStorageKey set, it returns null
+  // causing "getSecretStorageKey callback returned falsey".
+  const recoveryKey = await crypto.createRecoveryKeyFromPassphrase()
+  const encodedKey = recoveryKey.encodedPrivateKey!
+  pendingSecretStorageKey = recoveryKey.privateKey
+
+  // Bootstrap cross-signing so fresh keys exist before secret storage stores them
   await crypto.bootstrapCrossSigning({
     setupNewCrossSigning: true,
     authUploadDeviceSigningKeys: async (makeRequest) => {
@@ -223,13 +231,6 @@ export async function generateSecurityKey(password: string): Promise<string> {
       }
     },
   })
-
-  // Generate a recovery key
-  const recoveryKey = await crypto.createRecoveryKeyFromPassphrase()
-  const encodedKey = recoveryKey.encodedPrivateKey!
-
-  // Set the pending key so the SSSS callback can provide it
-  pendingSecretStorageKey = recoveryKey.privateKey
 
   // Bootstrap secret storage — stores the fresh cross-signing keys with the new SSSS key
   await crypto.bootstrapSecretStorage({
