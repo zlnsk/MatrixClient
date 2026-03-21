@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, memo } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
@@ -396,7 +396,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   )
 }
 
-function RoomListItem({
+const RoomListItem = memo(function RoomListItem({
   room,
   isActive,
   onClick,
@@ -476,4 +476,22 @@ function RoomListItem({
       </div>
     </button>
   )
-}
+}, (prevProps, nextProps) => {
+  // Custom comparator: skip re-render if the room data we display hasn't changed
+  const prevRoom = prevProps.room
+  const nextRoom = nextProps.room
+  return (
+    prevRoom.roomId === nextRoom.roomId &&
+    prevRoom.name === nextRoom.name &&
+    prevRoom.lastMessage === nextRoom.lastMessage &&
+    prevRoom.lastMessageTs === nextRoom.lastMessageTs &&
+    prevRoom.lastSenderName === nextRoom.lastSenderName &&
+    prevRoom.unreadCount === nextRoom.unreadCount &&
+    prevRoom.isDirect === nextRoom.isDirect &&
+    prevRoom.encrypted === nextRoom.encrypted &&
+    prevRoom.isArchived === nextRoom.isArchived &&
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.avatarUrl === nextProps.avatarUrl &&
+    prevProps.presence === nextProps.presence
+  )
+})

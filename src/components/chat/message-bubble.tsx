@@ -89,7 +89,7 @@ interface MessageBubbleProps {
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🎉', '🙏', '💯', '✅']
 
-export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isPinned }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isPinned }: MessageBubbleProps) {
   const user = useAuthStore(s => s.user)
   const { sendReaction, editMessage, redactMessage, pinMessage, unpinMessage, forwardMessage, rooms } = useChatStore()
   const [showActions, setShowActions] = useState(false)
@@ -537,4 +537,23 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isP
       </div>
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  // Custom comparator for React.memo — return true if props are equal (skip re-render)
+  const prevMsg = prevProps.message
+  const nextMsg = nextProps.message
+  return (
+    prevMsg.eventId === nextMsg.eventId &&
+    prevMsg.content === nextMsg.content &&
+    prevMsg.formattedContent === nextMsg.formattedContent &&
+    prevMsg.isEdited === nextMsg.isEdited &&
+    prevMsg.isRedacted === nextMsg.isRedacted &&
+    prevMsg.reactions.size === nextMsg.reactions.size &&
+    prevMsg.readBy.length === nextMsg.readBy.length &&
+    prevMsg.status === nextMsg.status &&
+    prevMsg.mediaUrl === nextMsg.mediaUrl &&
+    prevProps.isOwn === nextProps.isOwn &&
+    prevProps.showAvatar === nextProps.showAvatar &&
+    prevProps.roomId === nextProps.roomId &&
+    prevProps.isPinned === nextProps.isPinned
+  )
+})

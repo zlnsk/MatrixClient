@@ -170,3 +170,14 @@ body {
   list-style: decimal;
   padding-left: 1.5em;
 }
+
+/* ---- Performance optimizations ---- */
+/* GPU-accelerate the scrollable message list for smoother scrolling */
+.message-scroll-container {
+  will-change: transform;
+}
+
+/* Layout isolation on message bubbles to prevent reflow propagation */
+.message-bubble-container {
+  contain: content;
+}
