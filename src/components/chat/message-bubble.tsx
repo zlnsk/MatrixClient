@@ -218,7 +218,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
   return (
     <div
-      className={`group flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-0.5'}`}
+      className={`message-bubble-container group flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-0.5'}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
         if (!showEmojiPicker && !showContextMenu) setShowActions(false)
