@@ -28,14 +28,28 @@ import { decryptMediaAttachment, fetchAuthenticatedMedia } from '@/lib/matrix/me
 /**
  * Render rich text from Matrix formatted_body (HTML) or parse markdown from plain text.
  */
+// Shared DOMPurify config — restrict to safe subset of HTML
+const PURIFY_CONFIG_FORMATTED = {
+  ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 'del', 's', 'strike', 'code', 'pre', 'br', 'p', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'sup', 'sub', 'hr', 'mx-reply'],
+  ALLOWED_ATTR: ['href', 'target', 'rel', 'data-mx-color', 'data-mx-bg-color', 'class'],
+  ADD_ATTR: ['target'],
+  FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 'svg', 'math'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'style'],
+  ALLOW_DATA_ATTR: false,
+}
+
+const PURIFY_CONFIG_PLAIN = {
+  ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 'del', 's', 'code', 'pre', 'br', 'a', 'blockquote', 'span'],
+  ALLOWED_ATTR: ['href', 'target', 'rel'],
+  FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'svg', 'math'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'style'],
+  ALLOW_DATA_ATTR: false,
+}
+
 function renderRichContent(content: string, formattedContent: string | null): string {
   // If Matrix HTML formatted_body is available, sanitize and use it
   if (formattedContent) {
-    return DOMPurify.sanitize(formattedContent, {
-      ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 'del', 's', 'strike', 'code', 'pre', 'br', 'p', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'sup', 'sub', 'hr', 'mx-reply'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'data-mx-color', 'data-mx-bg-color', 'class'],
-      ADD_ATTR: ['target'],
-    })
+    return DOMPurify.sanitize(formattedContent, PURIFY_CONFIG_FORMATTED)
   }
 
   // Parse markdown from plain text
@@ -59,10 +73,7 @@ function renderRichContent(content: string, formattedContent: string | null): st
     '<a href="$&" target="_blank" rel="noopener noreferrer">$&</a>'
   )
 
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 'del', 's', 'code', 'pre', 'br', 'a', 'blockquote', 'span'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-  })
+  return DOMPurify.sanitize(html, PURIFY_CONFIG_PLAIN)
 }
 
 function extractFirstUrl(text: string): string | null {
@@ -432,6 +443,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-white"
                 title="React"
+                aria-label="Add reaction"
               >
                 <Smile className="h-3.5 w-3.5" />
               </button>
@@ -439,6 +451,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 onClick={onReply}
                 className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-white"
                 title="Reply"
+                aria-label="Reply to message"
               >
                 <Reply className="h-3.5 w-3.5" />
               </button>
@@ -446,6 +459,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 onClick={() => setShowContextMenu(!showContextMenu)}
                 className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-white"
                 title="More"
+                aria-label="More actions"
+                aria-haspopup="menu"
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
               </button>

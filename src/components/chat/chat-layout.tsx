@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { Sidebar } from './sidebar'
 import { ChatArea } from './chat-area'
-import { SettingsPanel } from './settings-panel'
 import { useChatStore } from '@/stores/chat-store'
+
+// Lazy load heavy modal components — only fetched when opened
+const SettingsPanel = lazy(() => import('./settings-panel').then(m => ({ default: m.SettingsPanel })))
 
 export function ChatLayout() {
   const [showSettings, setShowSettings] = useState(false)
@@ -34,9 +36,11 @@ export function ChatLayout() {
         )}
       </div>
 
-      {/* Settings overlay */}
+      {/* Settings overlay — lazy loaded */}
       {showSettings && (
-        <SettingsPanel onClose={() => setShowSettings(false)} />
+        <Suspense fallback={null}>
+          <SettingsPanel onClose={() => setShowSettings(false)} />
+        </Suspense>
       )}
     </div>
   )

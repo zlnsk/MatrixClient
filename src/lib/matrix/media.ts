@@ -127,18 +127,34 @@ export async function decryptMediaAttachment(
   return URL.createObjectURL(blob)
 }
 
-// Simple in-memory cache for thumbnail blob URLs
+// LRU cache for thumbnail blob URLs — evicts oldest entries to bound memory
+const THUMBNAIL_CACHE_MAX = 500
 const thumbnailCache = new Map<string, string>()
 
 /**
- * Fetch a thumbnail with caching. Returns blob URL.
+ * Fetch a thumbnail with LRU caching. Returns blob URL.
+ * Evicts oldest entries and revokes their blob URLs when cache exceeds max size.
  */
 export async function fetchCachedThumbnail(mxcUrl: string, width: number = 96, height: number = 96): Promise<string> {
   const cacheKey = `${mxcUrl}:${width}x${height}`
   const cached = thumbnailCache.get(cacheKey)
-  if (cached) return cached
+  if (cached) {
+    // Move to end (most recently used) by re-inserting
+    thumbnailCache.delete(cacheKey)
+    thumbnailCache.set(cacheKey, cached)
+    return cached
+  }
 
   const blobUrl = await fetchAuthenticatedThumbnail(mxcUrl, width, height)
   thumbnailCache.set(cacheKey, blobUrl)
+
+  // Evict oldest entries if over limit
+  if (thumbnailCache.size > THUMBNAIL_CACHE_MAX) {
+    const firstKey = thumbnailCache.keys().next().value!
+    const evicted = thumbnailCache.get(firstKey)
+    thumbnailCache.delete(firstKey)
+    if (evicted) URL.revokeObjectURL(evicted)
+  }
+
   return blobUrl
 }

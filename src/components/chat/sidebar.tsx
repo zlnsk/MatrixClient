@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, memo } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo, memo, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
-import { NewChatModal } from './new-chat-modal'
-import { RoomDirectory } from './room-directory'
+
+// Lazy load modals — only fetched when opened
+const NewChatModal = lazy(() => import('./new-chat-modal').then(m => ({ default: m.NewChatModal })))
+const RoomDirectory = lazy(() => import('./room-directory').then(m => ({ default: m.RoomDirectory })))
 import { formatDistanceToNow } from 'date-fns'
 import {
   Search,
@@ -78,12 +80,12 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
     onChatSelect()
   }, [setActiveRoom, markAsRead, onChatSelect])
 
-  const activeRooms = rooms.filter(room =>
+  const activeRooms = useMemo(() => rooms.filter(room =>
     !room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
-  )
-  const archivedRooms = rooms.filter(room =>
+  ), [rooms, searchFilter])
+  const archivedRooms = useMemo(() => rooms.filter(room =>
     room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
-  )
+  ), [rooms, searchFilter])
 
   const getOtherMemberAvatar = (room: MatrixRoom) => {
     if (room.isDirect && room.members.length > 0) {
@@ -136,6 +138,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             onClick={() => setShowNewChat(true)}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             title="New chat"
+            aria-label="New chat"
           >
             <Plus className="h-5 w-5" />
           </button>
@@ -143,6 +146,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             onClick={() => setShowDirectory(true)}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             title="Browse rooms"
+            aria-label="Browse public rooms"
           >
             <Globe className="h-5 w-5" />
           </button>
@@ -150,6 +154,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             onClick={onSettingsClick}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             title="Settings"
+            aria-label="Settings"
           >
             <Settings className="h-5 w-5" />
           </button>
@@ -161,10 +166,11 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
-            type="text"
+            type="search"
             placeholder="Search rooms..."
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
+            aria-label="Search rooms and messages"
             className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
           />
           {searchFilter && (
@@ -179,7 +185,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
       </div>
 
       {/* Room list */}
-      <div className="flex-1 overflow-y-auto px-2">
+      <nav className="flex-1 overflow-y-auto px-2" aria-label="Chat rooms">
         {/* Invitations section */}
         {pendingInvites.length > 0 && (
           <div className="mb-2">
@@ -369,28 +375,32 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             )}
           </div>
         )}
-      </div>
+      </nav>
 
-      {/* New Chat Modal */}
+      {/* New Chat Modal — lazy loaded */}
       {showNewChat && (
-        <NewChatModal
-          onClose={() => setShowNewChat(false)}
-          onRoomCreated={(roomId) => {
-            const room = rooms.find(r => r.roomId === roomId)
-            if (room) handleSelectRoom(room)
-          }}
-        />
+        <Suspense fallback={null}>
+          <NewChatModal
+            onClose={() => setShowNewChat(false)}
+            onRoomCreated={(roomId) => {
+              const room = rooms.find(r => r.roomId === roomId)
+              if (room) handleSelectRoom(room)
+            }}
+          />
+        </Suspense>
       )}
 
-      {/* Room Directory Modal */}
+      {/* Room Directory Modal — lazy loaded */}
       {showDirectory && (
-        <RoomDirectory
-          onClose={() => setShowDirectory(false)}
-          onRoomJoined={(roomId) => {
-            const room = rooms.find(r => r.roomId === roomId)
-            if (room) handleSelectRoom(room)
-          }}
-        />
+        <Suspense fallback={null}>
+          <RoomDirectory
+            onClose={() => setShowDirectory(false)}
+            onRoomJoined={(roomId) => {
+              const room = rooms.find(r => r.roomId === roomId)
+              if (room) handleSelectRoom(room)
+            }}
+          />
+        </Suspense>
       )}
     </>
   )

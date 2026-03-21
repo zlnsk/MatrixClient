@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { AuthProvider } from '@/components/providers/auth-provider'
 import { RealtimeProvider } from '@/components/providers/realtime-provider'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -17,13 +18,15 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark h-full">
       <body className="h-full antialiased">
-        <ThemeProvider>
-          <AuthProvider>
-            <RealtimeProvider>
-              {children}
-            </RealtimeProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <ErrorBoundary>
+          <ThemeProvider>
+            <AuthProvider>
+              <RealtimeProvider>
+                {children}
+              </RealtimeProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )
