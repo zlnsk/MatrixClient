@@ -414,7 +414,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                     {message.content}
                   </a>
                 )}
-                {message.content && message.type === 'm.image' && (
+                {message.content && message.type === 'm.image' && !/^(image\.\w+|pasted-image-\d+\.\w+)$/i.test(message.content) && (
                   <p className="mt-2 text-sm">{message.content}</p>
                 )}
               </div>

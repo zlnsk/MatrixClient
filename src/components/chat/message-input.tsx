@@ -372,10 +372,12 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
                     {getFileIcon(file)}
                   </div>
                 )}
-                <div className="max-w-[120px]">
-                  <p className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{file.name}</p>
-                  <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
-                </div>
+                {!file.type.startsWith('image/') && (
+                  <div className="max-w-[120px]">
+                    <p className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{file.name}</p>
+                    <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
+                  </div>
+                )}
                 <button
                   onClick={() => removePendingFile(idx)}
                   className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition-transform hover:scale-110"
