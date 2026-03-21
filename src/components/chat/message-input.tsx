@@ -316,7 +316,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white/80 p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/50 dark:shadow-[0_-2px_10px_rgba(0,0,0,0.3)]">
+    <div className="border-t border-gray-200 bg-white/80 px-2 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/50 dark:shadow-[0_-2px_10px_rgba(0,0,0,0.3)] md:px-4 md:py-4" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
       {/* Command status */}
       {commandStatus && (
         <div
@@ -388,7 +388,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         </div>
       )}
 
-      <div className="flex items-end gap-3">
+      <div className="flex items-end gap-1.5 md:gap-3">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -402,17 +402,19 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         {/* Attachment button */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-full p-2.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+          className="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:hover:bg-gray-800 dark:hover:text-white dark:active:bg-gray-700 md:p-2.5"
           title="Attach file"
+          aria-label="Attach file"
         >
           <Paperclip className="h-5 w-5" />
         </button>
 
-        {/* Emoji button */}
-        <div className="relative" ref={emojiRef}>
+        {/* Emoji button — hidden on small mobile to save space */}
+        <div className="relative hidden sm:block" ref={emojiRef}>
           <button
             onClick={() => setShowEmoji(!showEmoji)}
-            className="rounded-full p-2.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:hover:bg-gray-800 dark:hover:text-white dark:active:bg-gray-700 md:p-2.5"
+            aria-label="Emoji picker"
           >
             <Smile className="h-5 w-5" />
           </button>
@@ -470,7 +472,8 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               onPaste={handlePaste}
               placeholder="Type a message..."
               rows={1}
-              className="max-h-32 min-h-[44px] w-full resize-none rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-sm text-gray-900 shadow-inner placeholder-gray-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+              enterKeyHint="send"
+              className="max-h-32 min-h-[42px] w-full resize-none rounded-full border border-gray-200 bg-gray-50 px-4 py-2.5 text-base text-gray-900 shadow-inner placeholder-gray-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 md:min-h-[44px] md:px-5 md:py-3 md:text-sm"
             />
           </div>
         )}
@@ -479,16 +482,18 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         {isRecording ? (
           <button
             onClick={stopRecording}
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-red-500"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-red-500 active:bg-red-700 md:h-11 md:w-11"
             title="Stop recording"
+            aria-label="Stop recording"
           >
             <Square className="h-4 w-4" />
           </button>
         ) : !content.trim() && pendingFiles.length === 0 ? (
           <button
             onClick={startRecording}
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-600 transition-all hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-600 transition-all hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:active:bg-gray-500 md:h-11 md:w-11"
             title="Record voice message"
+            aria-label="Record voice message"
           >
             <Mic className="h-5 w-5" />
           </button>
@@ -496,7 +501,8 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
           <button
             onClick={handleSubmit}
             disabled={(!content.trim() && pendingFiles.length === 0) || isSending || isUploading}
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white transition-all hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white transition-all hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-indigo-600 md:h-11 md:w-11"
+            aria-label="Send message"
           >
             {isUploading ? (
               <Loader2 className="h-5 w-5 animate-spin" />

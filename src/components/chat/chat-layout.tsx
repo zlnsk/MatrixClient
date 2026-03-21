@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { Sidebar } from './sidebar'
 import { ChatArea } from './chat-area'
 import { useChatStore } from '@/stores/chat-store'
@@ -13,15 +13,39 @@ export function ChatLayout() {
   const [showMobileSidebar, setShowMobileSidebar] = useState(true)
   const activeRoom = useChatStore(s => s.activeRoom)
 
+  // Navigate into chat: push a history entry so Android back button works
+  const handleChatSelect = useCallback(() => {
+    setShowMobileSidebar(false)
+    history.pushState({ view: 'chat' }, '')
+  }, [])
+
+  // Navigate back to sidebar
+  const handleBackToSidebar = useCallback(() => {
+    setShowMobileSidebar(true)
+    // If we pushed a state, go back to pop it; otherwise just show sidebar
+    if (history.state?.view === 'chat') {
+      history.back()
+    }
+  }, [])
+
+  // Handle browser/Android back button
+  useEffect(() => {
+    const handlePopState = () => {
+      setShowMobileSidebar(true)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-dvh overflow-hidden bg-gray-50 dark:bg-gray-950">
       {/* Sidebar - always visible on desktop, conditional on mobile */}
       <div className={`${
         showMobileSidebar ? 'flex' : 'hidden'
       } md:flex w-full md:w-80 flex-shrink-0 flex-col border-r border-gray-200 bg-white shadow-lg shadow-gray-200/50 dark:border-gray-800 dark:bg-gray-900 dark:shadow-black/30`}>
         <Sidebar
           onSettingsClick={() => setShowSettings(true)}
-          onChatSelect={() => setShowMobileSidebar(false)}
+          onChatSelect={handleChatSelect}
         />
       </div>
 
@@ -30,7 +54,7 @@ export function ChatLayout() {
         !showMobileSidebar || !activeRoom ? 'flex' : 'hidden'
       } md:flex flex-1 flex-col min-h-0 min-w-0`}>
         {activeRoom ? (
-          <ChatArea onBackClick={() => setShowMobileSidebar(true)} />
+          <ChatArea onBackClick={handleBackToSidebar} />
         ) : (
           <EmptyState />
         )}

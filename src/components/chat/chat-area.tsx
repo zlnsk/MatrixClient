@@ -205,10 +205,11 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     <div className="relative flex flex-1 flex-col min-h-0 bg-gray-50 dark:bg-gray-950">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 bg-white/90 px-4 py-3 shadow-md shadow-gray-200/40 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90 dark:shadow-black/30">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
           <button
             onClick={onBackClick}
-            className="rounded-lg p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white md:hidden"
+            className="flex-shrink-0 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white dark:active:bg-gray-700 md:hidden"
+            aria-label="Back to chat list"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -218,21 +219,21 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             size="md"
             status={activeRoom.isDirect ? (otherMember?.presence === 'online' ? 'online' : otherMember?.presence === 'unavailable' ? 'away' : 'offline') : null}
           />
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{roomDisplayName}</h2>
-              {!activeRoom.isDirect && <Hash className="h-4 w-4 text-gray-400" />}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <h2 className="truncate text-base font-bold text-gray-900 dark:text-white md:text-lg">{roomDisplayName}</h2>
+              {!activeRoom.isDirect && <Hash className="h-4 w-4 flex-shrink-0 text-gray-400" />}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {typingUsers.length > 0 ? (
-                <span className="text-sm text-indigo-500 dark:text-indigo-400">
+                <span className="truncate text-xs text-indigo-500 dark:text-indigo-400 md:text-sm">
                   {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
                 </span>
               ) : (
-                <span className="text-sm text-gray-500">{roomStatus}</span>
+                <span className="truncate text-xs text-gray-500 md:text-sm">{roomStatus}</span>
               )}
               {activeRoom.encrypted && (
-                <div className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 dark:bg-green-900/50">
+                <div className="hidden items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 dark:bg-green-900/50 sm:flex">
                   <Lock className="h-3 w-3 text-green-500 dark:text-green-400" />
                   <span className="text-xs text-green-600 dark:text-green-400">Encrypted</span>
                 </div>
@@ -241,25 +242,28 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 md:gap-1">
           <button
             onClick={() => setShowRoomInfo(!showRoomInfo)}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             title="Room info"
+            aria-label="Room info"
           >
             <Info className="h-5 w-5" />
           </button>
           <button
             onClick={() => setShowSearch(!showSearch)}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="hidden sm:block rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             title="Search"
+            aria-label="Search in conversation"
           >
             <Search className="h-5 w-5" />
           </button>
           <button
             onClick={handleArchiveToggle}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="hidden sm:block rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             title={activeRoom.isArchived ? 'Unarchive' : 'Archive'}
+            aria-label={activeRoom.isArchived ? 'Unarchive' : 'Archive'}
           >
             {activeRoom.isArchived ? (
               <ArchiveRestore className="h-5 w-5" />
@@ -269,8 +273,9 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           </button>
           <button
             onClick={() => setConfirmLeave(true)}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            className="hidden md:block rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400"
             title="Leave room"
+            aria-label="Leave room"
           >
             <LogOut className="h-5 w-5" />
           </button>
@@ -278,13 +283,15 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             onClick={() => placeCall(activeRoom.roomId, false)}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             title="Voice call"
+            aria-label="Voice call"
           >
             <Phone className="h-5 w-5" />
           </button>
           <button
             onClick={() => placeCall(activeRoom.roomId, true)}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="hidden sm:block rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
             title="Video call"
+            aria-label="Video call"
           >
             <Video className="h-5 w-5" />
           </button>
