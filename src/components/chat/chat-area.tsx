@@ -297,22 +297,26 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           >
             <LogOut className="h-5 w-5" />
           </button>
-          <button
-            onClick={() => placeCall(activeRoom.roomId, false)}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
-            title="Voice call"
-            aria-label="Voice call"
-          >
-            <Phone className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => placeCall(activeRoom.roomId, true)}
-            className="hidden sm:block rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
-            title="Video call"
-            aria-label="Video call"
-          >
-            <Video className="h-5 w-5" />
-          </button>
+          {!activeRoom.isBridged && (
+            <>
+              <button
+                onClick={() => placeCall(activeRoom.roomId, false)}
+                className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+                title="Voice call"
+                aria-label="Voice call"
+              >
+                <Phone className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => placeCall(activeRoom.roomId, true)}
+                className="hidden sm:block rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+                title="Video call"
+                aria-label="Video call"
+              >
+                <Video className="h-5 w-5" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 

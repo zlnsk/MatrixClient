@@ -145,16 +145,41 @@ async function initCrypto(client: sdk.MatrixClient): Promise<void> {
     await client.initRustCrypto({
       useIndexedDB: true,
     })
-
-    // Set the global policy to auto-accept room key requests and
-    // trust devices for faster decryption experience
-    const crypto = client.getCrypto()
-    if (crypto) {
-      // Auto-verify own device cross-signing
-      await crypto.setDeviceVerified(client.getUserId()!, client.getDeviceId()!)
-    }
   } catch (err) {
-    console.warn('Crypto initialization failed, encrypted messages will not be decrypted:', err)
+    // If the stored crypto account doesn't match the current device ID
+    // (e.g. user logged out and back in, or device ID changed),
+    // clear the stale IndexedDB crypto store and retry.
+    const errMsg = String(err)
+    if (errMsg.includes('account in the store doesn\'t match')) {
+      console.warn('Crypto store has stale device keys, clearing and reinitializing...')
+      try {
+        // Delete all IndexedDB databases that the Rust crypto SDK creates
+        const databases = await indexedDB.databases()
+        for (const db of databases) {
+          if (db.name && (db.name.includes('matrix-sdk-crypto') || db.name.includes('_rust_sdk'))) {
+            indexedDB.deleteDatabase(db.name)
+          }
+        }
+        // Retry crypto init
+        await client.initRustCrypto({
+          useIndexedDB: true,
+        })
+      } catch (retryErr) {
+        console.error('Crypto initialization failed after clearing store:', retryErr)
+        throw retryErr
+      }
+    } else {
+      console.error('Crypto initialization failed:', err)
+      throw err
+    }
+  }
+
+  // Set the global policy to auto-accept room key requests and
+  // trust devices for faster decryption experience
+  const crypto = client.getCrypto()
+  if (crypto) {
+    // Auto-verify own device cross-signing
+    await crypto.setDeviceVerified(client.getUserId()!, client.getDeviceId()!)
   }
 }
 

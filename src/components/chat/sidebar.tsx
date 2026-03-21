@@ -350,6 +350,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                           members: [],
                           encrypted: false,
                           isArchived: false,
+                          isBridged: false,
                         })
                       }
                     }}

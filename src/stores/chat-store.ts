@@ -15,6 +15,7 @@ export interface MatrixRoom {
   members: MatrixRoomMember[]
   encrypted: boolean
   isArchived: boolean
+  isBridged: boolean
 }
 
 export interface MatrixRoomMember {
@@ -171,6 +172,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     members,
     encrypted: room.hasEncryptionStateEvent(),
     isArchived,
+    isBridged: members.some(m => /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId)),
   }
 }
 
@@ -372,6 +374,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         members: [],
         encrypted: r.hasEncryptionStateEvent(),
         isArchived: false,
+        isBridged: false,
       } satisfies MatrixRoom))
 
     set({ rooms, pendingInvites })
@@ -623,9 +626,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!room) return
 
     const events = room.getLiveTimeline().getEvents()
-    const lastEvent = events[events.length - 1]
+    // Find the last event with a real server-assigned ID (skip local echoes starting with ~)
+    const lastEvent = events.findLast(e => {
+      const id = e.getId()
+      return id && !id.startsWith('~')
+    })
     if (lastEvent) {
-      await client.sendReadReceipt(lastEvent)
+      try {
+        await client.sendReadReceipt(lastEvent)
+      } catch {
+        // Read receipt may fail for some events, ignore
+      }
     }
   },
 
