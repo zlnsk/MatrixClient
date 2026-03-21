@@ -127,10 +127,24 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     return (pinEvent?.getContent()?.pinned || []) as string[]
   }, [activeRoom, messages])
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const prevRoomIdRef = useRef<string | null>(null)
+
+  const scrollToBottom = useCallback((instant?: boolean) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' })
   }, [])
 
+  // Scroll instantly to bottom when switching rooms
+  useEffect(() => {
+    if (activeRoom && activeRoom.roomId !== prevRoomIdRef.current) {
+      prevRoomIdRef.current = activeRoom.roomId
+      // Use requestAnimationFrame to ensure DOM has rendered the new messages
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
+      })
+    }
+  }, [activeRoom])
+
+  // Scroll smoothly for new messages in the same room
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
