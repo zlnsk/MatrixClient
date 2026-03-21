@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo, memo } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
@@ -89,6 +90,40 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;')
 }
 
+function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm cursor-pointer animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-label="Image preview"
+    >
+      <button
+        onClick={onClose}
+        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+        aria-label="Close preview"
+      >
+        <X className="h-6 w-6" />
+      </button>
+      <img
+        src={src}
+        alt={alt}
+        className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      />
+    </div>,
+    document.body
+  )
+}
+
 interface MessageBubbleProps {
   message: MatrixMessage
   isOwn: boolean
@@ -111,6 +146,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   const [editContent, setEditContent] = useState(message.content)
   const [copied, setCopied] = useState(false)
   const [mediaBlobUrl, setMediaBlobUrl] = useState<string | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const actionsRef = useRef<HTMLDivElement>(null)
 
   // Fetch all media via authenticated endpoint (handles both encrypted and unencrypted)
@@ -316,16 +352,25 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               <div>
                 {message.type === 'm.image' ? (
                   effectiveMediaUrl ? (
-                    <img
-                      src={effectiveMediaUrl}
-                      alt={message.content || 'Shared image'}
-                      className="max-w-full rounded-xl object-contain shadow-sm cursor-pointer"
-                      style={{
-                        maxHeight: 480,
-                        width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
-                      }}
-                      onClick={() => window.open(effectiveMediaUrl, '_blank')}
-                    />
+                    <>
+                      <img
+                        src={effectiveMediaUrl}
+                        alt={message.content || 'Shared image'}
+                        className="max-w-full rounded-xl object-contain shadow-sm cursor-pointer transition-opacity hover:opacity-90"
+                        style={{
+                          maxHeight: 480,
+                          width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
+                        }}
+                        onClick={() => setLightboxOpen(true)}
+                      />
+                      {lightboxOpen && (
+                        <ImageLightbox
+                          src={effectiveMediaUrl}
+                          alt={message.content || 'Shared image'}
+                          onClose={() => setLightboxOpen(false)}
+                        />
+                      )}
+                    </>
                   ) : (
                     <div className="flex h-32 w-48 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700">
                       <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
