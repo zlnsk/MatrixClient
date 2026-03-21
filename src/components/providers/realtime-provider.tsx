@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useRef, type ReactNode } from 'react'
-import { getMatrixClient } from '@/lib/matrix/client'
+import { useEffect, useState, useCallback, type ReactNode } from 'react'
+import { getMatrixClient, getCrossSigningStatus, requestSelfVerification, restoreFromRecoveryKey } from '@/lib/matrix/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore } from '@/stores/chat-store'
 import * as sdk from 'matrix-js-sdk'
@@ -9,11 +9,13 @@ import { CryptoEvent } from 'matrix-js-sdk/lib/crypto-api/CryptoEvent'
 import type { VerificationRequest } from 'matrix-js-sdk/lib/crypto-api/verification'
 import { VerificationDialog } from '@/components/chat/verification-dialog'
 import { CallOverlay } from '@/components/chat/call-overlay'
+import { NewSessionBanner } from '@/components/chat/new-session-banner'
 import { setupIncomingCallListener } from '@/lib/matrix/voip'
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
   const [verificationRequest, setVerificationRequest] = useState<VerificationRequest | null>(null)
+  const [showNewSessionBanner, setShowNewSessionBanner] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -189,6 +191,21 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       Notification.requestPermission()
     }
 
+    // Check cross-signing status after sync — prompt verification if needed
+    const checkCrossSigning = async () => {
+      try {
+        const status = await getCrossSigningStatus()
+        if (status.exists && !status.thisDeviceVerified) {
+          setShowNewSessionBanner(true)
+        }
+      } catch {
+        // ignore
+      }
+    }
+    // Small delay to let sync settle
+    const csTimer = setTimeout(checkCrossSigning, 3000)
+
+
     // Set up incoming VoIP call listener
     const cleanupCallListener = setupIncomingCallListener()
 
@@ -197,6 +214,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       if (loadRoomsTimer) clearTimeout(loadRoomsTimer)
       if (loadMessagesTimer) clearTimeout(loadMessagesTimer)
       if (syncCycleResetTimer) clearTimeout(syncCycleResetTimer)
+      clearTimeout(csTimer)
 
       // Clean up call listener
       cleanupCallListener?.()
@@ -212,10 +230,32 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     }
   }, [user]) // Only re-run when user changes (login/logout). All handlers read current state from store.
 
+  const handleVerifyWithSession = useCallback(async () => {
+    try {
+      const request = await requestSelfVerification()
+      setVerificationRequest(request)
+      setShowNewSessionBanner(false)
+    } catch (err) {
+      console.error('Failed to request self-verification:', err)
+    }
+  }, [])
+
+  const handleVerifyWithKey = useCallback(async (key: string) => {
+    await restoreFromRecoveryKey(key)
+    setShowNewSessionBanner(false)
+  }, [])
+
   return (
     <>
       {children}
       <CallOverlay />
+      {showNewSessionBanner && !verificationRequest && (
+        <NewSessionBanner
+          onVerifyWithSession={handleVerifyWithSession}
+          onVerifyWithKey={handleVerifyWithKey}
+          onDismiss={() => setShowNewSessionBanner(false)}
+        />
+      )}
       {verificationRequest && (
         <VerificationDialog
           request={verificationRequest}

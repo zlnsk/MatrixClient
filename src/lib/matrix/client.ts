@@ -176,6 +176,100 @@ async function enableKeyBackup(client: sdk.MatrixClient): Promise<void> {
   }
 }
 
+/**
+ * Bootstrap cross-signing, secret storage, and key backup.
+ * Generates a new security/recovery key that the user must save.
+ * Returns the encoded recovery key string.
+ */
+export async function generateSecurityKey(password: string): Promise<string> {
+  if (!matrixClient) throw new Error('Not connected')
+  const crypto = matrixClient.getCrypto()
+  if (!crypto) throw new Error('Crypto not initialized')
+
+  // Generate a recovery key
+  const recoveryKey = await crypto.createRecoveryKeyFromPassphrase()
+  const encodedKey = recoveryKey.encodedPrivateKey!
+
+  // Set the pending key so the SSSS callback can provide it
+  pendingSecretStorageKey = recoveryKey.privateKey
+
+  // Bootstrap secret storage with a callback that returns the pre-generated key
+  await crypto.bootstrapSecretStorage({
+    createSecretStorageKey: async () => recoveryKey,
+    setupNewSecretStorage: true,
+    setupNewKeyBackup: true,
+  })
+
+  // Bootstrap cross-signing (uses the Interactive Auth flow)
+  await crypto.bootstrapCrossSigning({
+    authUploadDeviceSigningKeys: async (makeRequest) => {
+      // Try without auth first; if 401, retry with password
+      try {
+        await makeRequest({})
+      } catch (err: any) {
+        if (err.httpStatus === 401 && err.data?.flows) {
+          await makeRequest({
+            type: 'm.login.password',
+            identifier: {
+              type: 'm.id.user',
+              user: matrixClient!.getUserId()!,
+            },
+            password,
+          })
+        } else {
+          throw err
+        }
+      }
+    },
+  })
+
+  pendingSecretStorageKey = null
+  return encodedKey
+}
+
+/**
+ * Check if cross-signing is set up and if this device is cross-signed.
+ */
+export async function getCrossSigningStatus(): Promise<{
+  exists: boolean
+  thisDeviceVerified: boolean
+}> {
+  if (!matrixClient) return { exists: false, thisDeviceVerified: false }
+  const crypto = matrixClient.getCrypto()
+  if (!crypto) return { exists: false, thisDeviceVerified: false }
+
+  try {
+    const status = await crypto.getCrossSigningStatus()
+    const isCrossSigned = status.publicKeysOnDevice && status.privateKeysInSecretStorage
+
+    // Check if our device is verified by cross-signing
+    const userId = matrixClient.getUserId()!
+    const deviceId = matrixClient.getDeviceId()!
+    const deviceVerification = await crypto.getDeviceVerificationStatus(userId, deviceId)
+    const thisDeviceVerified = deviceVerification?.crossSigningVerified ?? false
+
+    return {
+      exists: isCrossSigned,
+      thisDeviceVerified,
+    }
+  } catch {
+    return { exists: false, thisDeviceVerified: false }
+  }
+}
+
+/**
+ * Request interactive verification from another session of the same user.
+ */
+export async function requestSelfVerification(): Promise<any> {
+  if (!matrixClient) throw new Error('Not connected')
+  const crypto = matrixClient.getCrypto()
+  if (!crypto) throw new Error('Crypto not initialized')
+
+  const userId = matrixClient.getUserId()!
+  const request = await crypto.requestOwnUserVerification()
+  return request
+}
+
 export async function restoreFromRecoveryKey(input: string): Promise<{ total: number; imported: number }> {
   if (!matrixClient) throw new Error('Not connected')
   const crypto = matrixClient.getCrypto()

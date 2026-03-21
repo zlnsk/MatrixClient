@@ -5,7 +5,7 @@ import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
-import { getHomeserverUrl, getHomeserverDomain, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient } from '@/lib/matrix/client'
+import { getHomeserverUrl, getHomeserverDomain, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient, generateSecurityKey } from '@/lib/matrix/client'
 import {
   X,
   Sun,
@@ -21,6 +21,9 @@ import {
   Pencil,
   Camera,
   Monitor,
+  ShieldPlus,
+  Copy,
+  Check,
 } from 'lucide-react'
 
 interface SettingsPanelProps {
@@ -49,6 +52,11 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [deletePassword, setDeletePassword] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [deviceError, setDeviceError] = useState<string | null>(null)
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false)
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null)
+  const [generateKeyPassword, setGenerateKeyPassword] = useState('')
+  const [generateKeyError, setGenerateKeyError] = useState<string | null>(null)
+  const [keyCopied, setKeyCopied] = useState(false)
 
   const handleDeleteDevice = async (deviceId: string) => {
     if (!deletePassword.trim()) {
@@ -353,6 +361,78 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">User ID</h4>
                 <p className="mt-1 font-mono text-xs text-gray-500">{user?.userId}</p>
+              </div>
+
+              {/* Generate Security Key */}
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <ShieldPlus className="h-4 w-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Security Key</h4>
+                </div>
+                {generatedKey ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      Cross-signing and key backup are set up. Save this security key — you'll need it to verify new sessions.
+                    </p>
+                    <div className="relative rounded-lg border border-indigo-200 bg-white p-3 font-mono text-xs text-gray-900 break-all dark:border-indigo-800 dark:bg-gray-900 dark:text-white">
+                      {generatedKey}
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedKey)
+                          setKeyCopied(true)
+                          setTimeout(() => setKeyCopied(false), 2000)
+                        }}
+                        className="absolute top-2 right-2 rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+                        title="Copy to clipboard"
+                      >
+                        {keyCopied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-red-500 dark:text-red-400">
+                      Store this key securely. If you lose it, you won't be able to decrypt message history on new devices.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-500">
+                      Set up cross-signing and key backup for this account. This generates a security key that other sessions can use to verify and decrypt messages.
+                    </p>
+                    <input
+                      type="password"
+                      value={generateKeyPassword}
+                      onChange={e => { setGenerateKeyPassword(e.target.value); setGenerateKeyError(null) }}
+                      placeholder="Account password (required for signing)"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                    />
+                    {generateKeyError && (
+                      <p className="text-xs text-red-500">{generateKeyError}</p>
+                    )}
+                    <button
+                      onClick={async () => {
+                        if (!generateKeyPassword.trim()) {
+                          setGenerateKeyError('Password is required')
+                          return
+                        }
+                        setIsGeneratingKey(true)
+                        setGenerateKeyError(null)
+                        try {
+                          const key = await generateSecurityKey(generateKeyPassword)
+                          setGeneratedKey(key)
+                          setGenerateKeyPassword('')
+                        } catch (err) {
+                          setGenerateKeyError(err instanceof Error ? err.message : 'Failed to generate security key')
+                        } finally {
+                          setIsGeneratingKey(false)
+                        }
+                      }}
+                      disabled={isGeneratingKey || !generateKeyPassword.trim()}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                    >
+                      {isGeneratingKey ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldPlus className="h-3.5 w-3.5" />}
+                      {isGeneratingKey ? 'Setting up...' : 'Generate Security Key'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Recovery Key Restore */}
