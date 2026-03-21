@@ -147,10 +147,21 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const tags = room.tags || {}
   const isArchived = 'm.lowpriority' in tags
 
+  // For DM rooms, prefer the other member's avatar over the room avatar
+  // (bridges like mautrix-signal often set the room avatar to a generic logo)
+  let roomAvatarMxc = room.getMxcAvatarUrl()
+  if (isDirect && client) {
+    const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
+    const memberAvatar = otherMember?.getMxcAvatarUrl()
+    if (memberAvatar) {
+      roomAvatarMxc = memberAvatar
+    }
+  }
+
   return {
     roomId: room.roomId,
     name: room.name || 'Unnamed Room',
-    avatarUrl: getAvatarUrl(room.getMxcAvatarUrl()),
+    avatarUrl: getAvatarUrl(roomAvatarMxc),
     topic: room.currentState.getStateEvents('m.room.topic', '')?.getContent()?.topic || null,
     isDirect,
     lastMessage,
