@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, memo } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
@@ -343,9 +343,18 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isP
                   <p className="mt-2 text-sm">{message.content}</p>
                 )}
               </div>
+            ) : message.msgtype === 'm.emote' ? (
+              <div className="rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words italic">
+                <span className="font-medium not-italic">{message.senderName}</span>{' '}
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: renderRichContent(message.content, message.formattedContent),
+                  }}
+                />
+              </div>
             ) : (
               <div
-                className="rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words"
+                className={`rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words ${message.msgtype === 'm.notice' ? 'italic opacity-70' : ''}`}
                 dangerouslySetInnerHTML={{
                   __html: renderRichContent(message.content, message.formattedContent),
                 }}

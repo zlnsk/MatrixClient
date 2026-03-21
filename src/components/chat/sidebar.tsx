@@ -455,7 +455,7 @@ function RoomListItem({
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-center gap-1">
+      <div className="relative flex flex-col items-center gap-1">
         {!room.isDirect && (
           <Hash className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
         )}
@@ -464,13 +464,13 @@ function RoomListItem({
         )}
         <button
           onClick={onArchive}
-          className="hidden rounded p-0.5 text-gray-400 transition-colors hover:text-indigo-500 group-hover:block"
+          className="absolute -right-1 -top-1 hidden rounded-full bg-white p-1 text-gray-400 shadow-sm transition-colors hover:text-indigo-500 group-hover:block dark:bg-gray-800"
           title={room.isArchived ? 'Unarchive' : 'Archive'}
         >
           {room.isArchived ? (
-            <ArchiveRestore className="h-3.5 w-3.5" />
+            <ArchiveRestore className="h-3 w-3" />
           ) : (
-            <Archive className="h-3.5 w-3.5" />
+            <Archive className="h-3 w-3" />
           )}
         </button>
       </div>

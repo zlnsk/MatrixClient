@@ -54,6 +54,7 @@ export interface MatrixMessage {
   mediaUrl: string | null
   mediaInfo: { w?: number; h?: number; mimetype?: string; size?: number } | null
   encryptedFile: { url: string; key: { k: string; alg: string; key_ops: string[]; kty: string; ext: boolean }; iv: string; hashes: Record<string, string>; v: string } | null
+  msgtype: string
   readBy: ReadReceipt[]
   status: 'sending' | 'sent' | 'delivered' | 'read'
 }
@@ -308,6 +309,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     senderName: member?.name || sender,
     senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
     type: displayContent.msgtype || 'm.text',
+    msgtype: displayContent.msgtype || 'm.text',
     content: body,
     formattedContent: displayContent.formatted_body || null,
     timestamp: event.getTs(),
@@ -393,11 +395,39 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     const timeline = room.getLiveTimeline().getEvents()
-    const messages = timeline
+    const newMessages = timeline
       .map((e) => eventToMatrixMessage(e, room))
       .filter((m): m is MatrixMessage => m !== null)
 
-    set({ messages, isLoadingMessages: false })
+    // Quick equality check: skip setState if messages haven't actually changed.
+    // Compare by length, then key fields of each message to avoid unnecessary re-renders.
+    const existing = get().messages
+    let changed = existing.length !== newMessages.length
+    if (!changed) {
+      for (let i = 0; i < newMessages.length; i++) {
+        const a = existing[i]
+        const b = newMessages[i]
+        if (
+          a.eventId !== b.eventId ||
+          a.timestamp !== b.timestamp ||
+          a.content !== b.content ||
+          a.isEdited !== b.isEdited ||
+          a.isRedacted !== b.isRedacted ||
+          a.reactions.size !== b.reactions.size ||
+          a.readBy.length !== b.readBy.length ||
+          a.status !== b.status
+        ) {
+          changed = true
+          break
+        }
+      }
+    }
+
+    if (changed) {
+      set({ messages: newMessages, isLoadingMessages: false })
+    } else {
+      set({ isLoadingMessages: false })
+    }
   },
 
   sendMessage: async (roomId, content, replyToEventId) => {
