@@ -5,7 +5,7 @@ import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
-import { HOMESERVER_URL, restoreFromRecoveryKey, getMatrixClient } from '@/lib/matrix/client'
+import { HOMESERVER_URL, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient } from '@/lib/matrix/client'
 import {
   X,
   Sun,
@@ -46,6 +46,28 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [devices, setDevices] = useState<{deviceId: string, displayName: string | null, lastSeenIp: string | null, lastSeenTs: number}[]>([])
   const [loadingDevices, setLoadingDevices] = useState(false)
   const [deletingDevice, setDeletingDevice] = useState<string | null>(null)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [deviceError, setDeviceError] = useState<string | null>(null)
+
+  const handleDeleteDevice = async (deviceId: string) => {
+    if (!deletePassword.trim()) {
+      setDeviceError('Password is required to sign out a session')
+      return
+    }
+    setDeletingDevice(deviceId)
+    setDeviceError(null)
+    try {
+      await deleteOtherDevice(deviceId, deletePassword)
+      setShowDeleteConfirm(null)
+      setDeletePassword('')
+      await loadDevices()
+    } catch (err) {
+      setDeviceError(err instanceof Error ? err.message : 'Failed to sign out session')
+    } finally {
+      setDeletingDevice(null)
+    }
+  }
 
   useEffect(() => {
     if (activeSection === 'security') {
@@ -397,19 +419,61 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {devices.map(device => {
                       const isCurrent = device.deviceId === getMatrixClient()?.getDeviceId()
+                      const isConfirming = showDeleteConfirm === device.deviceId
                       return (
-                        <div key={device.deviceId} className={`flex items-center gap-3 rounded-lg p-2 ${isCurrent ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
-                          <Monitor className={`h-4 w-4 flex-shrink-0 ${isCurrent ? 'text-green-500' : 'text-gray-400'}`} />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              {device.displayName || device.deviceId}
-                              {isCurrent && <span className="ml-1.5 text-xs text-green-600 dark:text-green-400">(this device)</span>}
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              {device.deviceId}
-                              {device.lastSeenTs ? ` · Last seen ${new Date(device.lastSeenTs).toLocaleDateString()}` : ''}
-                            </p>
+                        <div key={device.deviceId} className={`rounded-lg p-2 ${isCurrent ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
+                          <div className="flex items-center gap-3">
+                            <Monitor className={`h-4 w-4 flex-shrink-0 ${isCurrent ? 'text-green-500' : 'text-gray-400'}`} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {device.displayName || device.deviceId}
+                                {isCurrent && <span className="ml-1.5 text-xs text-green-600 dark:text-green-400">(this device)</span>}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {device.deviceId}
+                                {device.lastSeenTs ? ` · Last seen ${new Date(device.lastSeenTs).toLocaleDateString()}` : ''}
+                              </p>
+                            </div>
+                            {!isCurrent && !isConfirming && (
+                              <button
+                                onClick={() => { setShowDeleteConfirm(device.deviceId); setDeviceError(null); setDeletePassword('') }}
+                                className="flex-shrink-0 rounded px-2 py-1 text-xs text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                              >
+                                Sign out
+                              </button>
+                            )}
                           </div>
+                          {isConfirming && (
+                            <div className="mt-2 ml-7 space-y-2">
+                              <p className="text-xs text-gray-500">Enter your account password to sign out this session:</p>
+                              <input
+                                type="password"
+                                value={deletePassword}
+                                onChange={e => { setDeletePassword(e.target.value); setDeviceError(null) }}
+                                onKeyDown={e => { if (e.key === 'Enter') handleDeleteDevice(device.deviceId) }}
+                                placeholder="Account password"
+                                autoFocus
+                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-900 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                              />
+                              {deviceError && <p className="text-xs text-red-500">{deviceError}</p>}
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleDeleteDevice(device.deviceId)}
+                                  disabled={deletingDevice === device.deviceId}
+                                  className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500 disabled:opacity-50"
+                                >
+                                  {deletingDevice === device.deviceId ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
+                                  Confirm sign out
+                                </button>
+                                <button
+                                  onClick={() => { setShowDeleteConfirm(null); setDeletePassword(''); setDeviceError(null) }}
+                                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )
                     })}

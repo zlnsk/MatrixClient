@@ -1,10 +1,61 @@
 'use client'
 
 import * as sdk from 'matrix-js-sdk'
+import type { Logger } from 'matrix-js-sdk/lib/logger'
+import type { CryptoCallbacks } from 'matrix-js-sdk/lib/crypto-api'
 
 let matrixClient: sdk.MatrixClient | null = null
 
 const HOMESERVER_URL = 'https://lukasz.com'
+
+// Pending secret storage key for the getSecretStorageKey callback
+let pendingSecretStorageKey: Uint8Array | null = null
+let pendingSecretStorageResolve: ((key: [string, Uint8Array] | null) => void) | null = null
+
+const cryptoCallbacks: CryptoCallbacks = {
+  getSecretStorageKey: async ({ keys }: { keys: Record<string, any> }, _name: string): Promise<[string, Uint8Array<ArrayBuffer>] | null> => {
+    if (pendingSecretStorageKey) {
+      const keyId = Object.keys(keys)[0]
+      const key = new Uint8Array(pendingSecretStorageKey) as Uint8Array<ArrayBuffer>
+      pendingSecretStorageKey = null
+      return [keyId, key]
+    }
+    return null
+  },
+}
+
+// Patterns for crypto/decryption noise we want to suppress
+const SUPPRESSED_PATTERNS = [
+  'key backup is not working',
+  'sent before this device logged in',
+  'DecryptionError',
+  'Failed to decrypt event',
+  'Unable to decrypt',
+  'olm_internal_error',
+  'megolm session not yet available',
+  'Received megolm session for',
+]
+
+function isSuppressed(args: any[]): boolean {
+  const msg = args.map(a => (typeof a === 'string' ? a : a?.message || '')).join(' ')
+  return SUPPRESSED_PATTERNS.some(p => msg.includes(p))
+}
+
+/**
+ * A logger that filters out noisy crypto decryption warnings.
+ * These occur for every historical message sent before this device logged in
+ * when key backup hasn't been restored yet - expected behavior, not errors.
+ */
+const filteredLogger: Logger = {
+  getChild(namespace: string): Logger {
+    return filteredLogger
+  },
+  trace(...msg: any[]) { if (!isSuppressed(msg)) console.trace(...msg) },
+  debug(...msg: any[]) { if (!isSuppressed(msg)) console.debug(...msg) },
+  info(...msg: any[]) { if (!isSuppressed(msg)) console.info(...msg) },
+  warn(...msg: any[]) { if (!isSuppressed(msg)) console.warn(...msg) },
+  error(...msg: any[]) { if (!isSuppressed(msg)) console.error(...msg) },
+}
 
 export function getMatrixClient(): sdk.MatrixClient | null {
   return matrixClient
@@ -54,50 +105,66 @@ export async function restoreFromRecoveryKey(input: string): Promise<{ total: nu
 
   const trimmed = input.trim()
 
-  // Get the backup info from server
-  const backupInfo = await crypto.getKeyBackupInfo()
-  if (!backupInfo) throw new Error('No key backup found on server')
-
-  // Try decoding as a recovery key first (space-separated base58 groups)
-  // If that fails, try as a passphrase
+  // Try decoding as a recovery key (space-separated base58 groups like "EsTH r6vv 8Yi8...")
   let keyBytes: Uint8Array | null = null
 
   try {
     const { decodeRecoveryKey } = await import('matrix-js-sdk/lib/crypto-api/recovery-key')
     keyBytes = decodeRecoveryKey(trimmed)
   } catch {
-    // Not a valid recovery key format — will try as passphrase below
     console.log('Not a recovery key format, trying as passphrase...')
   }
 
-  if (keyBytes) {
-    // Store the decoded key and attempt restore
-    await crypto.storeSessionBackupPrivateKey(keyBytes, backupInfo.version!)
-
+  if (!keyBytes) {
+    // Try deriving from passphrase via SSSS passphrase info
     try {
-      const result = await crypto.restoreKeyBackup({
-        progressCallback: (progress: any) => {
-          console.log('Key restore progress:', progress)
-        },
-      })
-      return result
-    } catch (err) {
-      // If the key doesn't match, provide a clear error
-      const msg = err instanceof Error ? err.message : String(err)
-      if (msg.includes('does not match')) {
-        throw new Error(
-          'Recovery key does not match the backup on the server. ' +
-          'Make sure you are using the correct security key for this account. ' +
-          'You can find it in another Matrix client under Settings > Security.'
-        )
+      const secretStorage = matrixClient.secretStorage
+      const defaultKeyId = await secretStorage.getDefaultKeyId()
+      if (defaultKeyId) {
+        const keyInfo = await secretStorage.getKey(defaultKeyId)
+        if (keyInfo && keyInfo[1]?.passphrase) {
+          const { deriveRecoveryKeyFromPassphrase } = await import('matrix-js-sdk/lib/crypto-api/key-passphrase')
+          const pp = keyInfo[1].passphrase
+          keyBytes = await deriveRecoveryKeyFromPassphrase(trimmed, pp.salt, pp.iterations, pp.bits || 256)
+        }
       }
-      throw err
+    } catch {
+      // Not a passphrase either
     }
   }
 
-  // Fall back to passphrase-based restore
+  if (!keyBytes) {
+    throw new Error(
+      'Could not decode the recovery key. Make sure you entered it correctly, ' +
+      'including all spaces between groups.'
+    )
+  }
+
+  // Method 1: Use Secret Storage (SSSS) flow - this is how Element's "Security Key" works.
+  // The recovery key unlocks Secret Storage, which contains the backup decryption key.
   try {
-    const result = await crypto.restoreKeyBackupWithPassphrase(trimmed, {
+    pendingSecretStorageKey = keyBytes
+    await crypto.loadSessionBackupPrivateKeyFromSecretStorage()
+    console.log('Loaded backup key from Secret Storage')
+
+    const result = await crypto.restoreKeyBackup({
+      progressCallback: (progress: any) => {
+        console.log('Key restore progress:', progress)
+      },
+    })
+    return result
+  } catch (err) {
+    console.log('Secret Storage flow failed, trying direct backup key:', err)
+    pendingSecretStorageKey = null
+  }
+
+  // Method 2: Try using the key directly as the backup decryption key
+  const backupInfo = await crypto.getKeyBackupInfo()
+  if (!backupInfo?.version) throw new Error('No key backup found on server')
+
+  try {
+    await crypto.storeSessionBackupPrivateKey(keyBytes, backupInfo.version)
+    const result = await crypto.restoreKeyBackup({
       progressCallback: (progress: any) => {
         console.log('Key restore progress:', progress)
       },
@@ -107,11 +174,38 @@ export async function restoreFromRecoveryKey(input: string): Promise<{ total: nu
     const msg = err instanceof Error ? err.message : String(err)
     if (msg.includes('does not match')) {
       throw new Error(
-        'The passphrase or recovery key does not match the backup on the server. ' +
-        'Please check and try again.'
+        'Recovery key does not match the backup on the server. ' +
+        'Make sure you are using the correct security key for this account. ' +
+        'You can find it in another Matrix client under Settings > Security.'
       )
     }
     throw err
+  }
+}
+
+export async function deleteOtherDevice(
+  deviceId: string,
+  password: string
+): Promise<void> {
+  if (!matrixClient) throw new Error('Not connected')
+
+  try {
+    // First attempt without auth to get the session info
+    await matrixClient.deleteDevice(deviceId)
+  } catch (err: any) {
+    // The server will return 401 with the auth flow info
+    if (err.httpStatus === 401 && err.data?.flows) {
+      await matrixClient.deleteDevice(deviceId, {
+        type: 'm.login.password',
+        identifier: {
+          type: 'm.id.user',
+          user: matrixClient.getUserId()!,
+        },
+        password,
+      } as any)
+    } else {
+      throw err
+    }
   }
 }
 
@@ -132,6 +226,8 @@ export async function loginWithPassword(
     accessToken: response.access_token,
     userId: response.user_id,
     deviceId: response.device_id,
+    logger: filteredLogger,
+    cryptoCallbacks,
   })
 
   await initCrypto(matrixClient)
@@ -181,6 +277,8 @@ export function restoreSession(): sdk.MatrixClient | null {
       accessToken: session.accessToken,
       userId: session.userId,
       deviceId: session.deviceId,
+      logger: filteredLogger,
+      cryptoCallbacks,
     })
     return matrixClient
   } catch {
