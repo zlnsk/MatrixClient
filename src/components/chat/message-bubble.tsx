@@ -23,7 +23,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { LinkPreview } from './link-preview'
-import { decryptMediaAttachment } from '@/lib/matrix/media'
+import { decryptMediaAttachment, fetchAuthenticatedMedia } from '@/lib/matrix/media'
 
 /**
  * Render rich text from Matrix formatted_body (HTML) or parse markdown from plain text.
@@ -99,30 +99,39 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
   const [copied, setCopied] = useState(false)
-  const [decryptedMediaUrl, setDecryptedMediaUrl] = useState<string | null>(null)
+  const [mediaBlobUrl, setMediaBlobUrl] = useState<string | null>(null)
   const actionsRef = useRef<HTMLDivElement>(null)
 
-  // Decrypt encrypted media attachments
+  // Fetch all media via authenticated endpoint (handles both encrypted and unencrypted)
   useEffect(() => {
-    if (!message.encryptedFile || !message.mediaUrl) return
+    if (!message.mediaUrl) return
     let cancelled = false
-    decryptMediaAttachment(
-      message.mediaUrl,
-      message.encryptedFile,
-      message.mediaInfo?.mimetype
-    ).then(url => {
-      if (!cancelled) setDecryptedMediaUrl(url)
-    }).catch(err => {
-      console.error('Failed to decrypt media:', err)
-    })
-    return () => {
-      cancelled = true
-      if (decryptedMediaUrl) URL.revokeObjectURL(decryptedMediaUrl)
+
+    async function loadMedia() {
+      try {
+        let url: string
+        if (message.encryptedFile) {
+          // Encrypted media: fetch with auth, then decrypt
+          url = await decryptMediaAttachment(
+            message.encryptedFile.url,
+            message.encryptedFile,
+            message.mediaInfo?.mimetype
+          )
+        } else {
+          // Unencrypted media: fetch with auth, return blob URL
+          url = await fetchAuthenticatedMedia(message.mediaUrl!, message.mediaInfo?.mimetype)
+        }
+        if (!cancelled) setMediaBlobUrl(url)
+      } catch (err) {
+        console.error('Failed to load media:', err)
+      }
     }
+    loadMedia()
+
+    return () => { cancelled = true }
   }, [message.eventId, message.encryptedFile, message.mediaUrl]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Use decrypted URL for encrypted media, otherwise use direct URL
-  const effectiveMediaUrl = message.encryptedFile ? decryptedMediaUrl : message.mediaUrl
+  const effectiveMediaUrl = mediaBlobUrl
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -418,8 +427,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           )}
 
           {/* Action buttons — floating above the bubble */}
-          {showActions && !isEditing && (
-            <div className={`absolute -top-8 z-10 flex items-center gap-0.5 rounded-xl border border-gray-200 bg-white p-0.5 shadow-lg animate-fade-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-0' : 'left-0'}`}>
+          <div className={`absolute -top-8 z-10 flex items-center gap-0.5 rounded-xl border border-gray-200 bg-white p-0.5 shadow-lg dark:border-gray-700 dark:bg-gray-800 transition-opacity duration-150 ${isOwn ? 'right-0' : 'left-0'} ${showActions && !isEditing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-white"
@@ -442,7 +450,6 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 <MoreHorizontal className="h-3.5 w-3.5" />
               </button>
             </div>
-          )}
 
           {/* Emoji picker */}
           {showEmojiPicker && (

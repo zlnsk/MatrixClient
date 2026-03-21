@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { fetchCachedThumbnail } from '@/lib/matrix/media'
 
 interface AvatarProps {
   src?: string | null
@@ -64,22 +65,44 @@ function InitialsFallback({ name, size }: { name: string; size: 'sm' | 'md' | 'l
 }
 
 export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [imgError, setImgError] = useState(false)
-  const [lastSrc, setLastSrc] = useState(src)
 
-  // Reset error state when src changes so new URLs get a chance to load
-  if (src !== lastSrc) {
-    setLastSrc(src)
+  useEffect(() => {
+    if (!src) {
+      setBlobUrl(null)
+      return
+    }
+
+    // If it's an MXC URL, fetch via authenticated endpoint
+    if (src.startsWith('mxc://')) {
+      let cancelled = false
+      fetchCachedThumbnail(src, 96, 96)
+        .then(url => {
+          if (!cancelled) {
+            setBlobUrl(url)
+            setImgError(false)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setImgError(true)
+        })
+      return () => { cancelled = true }
+    }
+
+    // For non-MXC URLs (blob:, data:, https:), use directly
+    setBlobUrl(src)
     setImgError(false)
-  }
+  }, [src])
+
+  const displayUrl = blobUrl
 
   return (
     <div className="relative flex-shrink-0">
-      {src && !imgError ? (
+      {displayUrl && !imgError ? (
         <img
-          src={src}
+          src={displayUrl}
           alt={name}
-          crossOrigin="anonymous"
           className={`${sizeMap[size]} rounded-full object-cover`}
           onError={() => setImgError(true)}
         />

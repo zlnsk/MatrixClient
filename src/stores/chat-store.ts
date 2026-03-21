@@ -246,8 +246,8 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   let encryptedFile = null
   if (displayContent.msgtype === 'm.image' || displayContent.msgtype === 'm.video' || displayContent.msgtype === 'm.audio' || displayContent.msgtype === 'm.file') {
     const mxcUrl = displayContent.url || displayContent.file?.url
-    if (mxcUrl && client) {
-      mediaUrl = client.mxcUrlToHttp(mxcUrl) || null
+    if (mxcUrl) {
+      mediaUrl = mxcUrl  // Store raw MXC URL; components fetch via authenticated endpoint
     }
     if (displayContent.file) {
       encryptedFile = displayContent.file

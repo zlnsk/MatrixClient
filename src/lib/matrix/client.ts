@@ -357,10 +357,10 @@ export async function logout(): Promise<void> {
 
 export function getAvatarUrl(
   mxcUrl: string | null | undefined,
-  size: number = 96
 ): string | null {
-  if (!mxcUrl || !matrixClient) return null
-  return matrixClient.mxcUrlToHttp(mxcUrl, size, size, 'crop') || null
+  if (!mxcUrl) return null
+  // Return raw MXC URL; Avatar component fetches via authenticated endpoint
+  return mxcUrl
 }
 
 export function getUserId(): string | null {

@@ -31,27 +31,35 @@ import {
   FileText,
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
-import { decryptMediaAttachment } from '@/lib/matrix/media'
+import { decryptMediaAttachment, fetchAuthenticatedMedia } from '@/lib/matrix/media'
 import { placeCall } from '@/lib/matrix/voip'
 
 function MediaThumbnail({ message }: { message: MatrixMessage }) {
   const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!message.encryptedFile || !message.mediaUrl) {
-      setDecryptedUrl(message.mediaUrl)
-      return
-    }
+    if (!message.mediaUrl) return
     let cancelled = false
-    decryptMediaAttachment(
-      message.mediaUrl,
-      message.encryptedFile,
-      message.mediaInfo?.mimetype
-    ).then(url => {
-      if (!cancelled) setDecryptedUrl(url)
-    }).catch(err => {
-      console.error('Failed to decrypt media thumbnail:', err)
-    })
+
+    async function loadMedia() {
+      try {
+        let url: string
+        if (message.encryptedFile) {
+          url = await decryptMediaAttachment(
+            message.encryptedFile.url,
+            message.encryptedFile,
+            message.mediaInfo?.mimetype
+          )
+        } else {
+          url = await fetchAuthenticatedMedia(message.mediaUrl!, message.mediaInfo?.mimetype)
+        }
+        if (!cancelled) setDecryptedUrl(url)
+      } catch (err) {
+        console.error('Failed to load media thumbnail:', err)
+      }
+    }
+    loadMedia()
+
     return () => {
       cancelled = true
       if (decryptedUrl && decryptedUrl.startsWith('blob:')) URL.revokeObjectURL(decryptedUrl)
