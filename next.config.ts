@@ -3,8 +3,8 @@ import type { NextConfig } from "next";
 const isTauri = process.env.TAURI_ENV === '1'
 
 const nextConfig: NextConfig = {
-  // Static export for Tauri desktop builds
-  ...(isTauri && { output: 'export' }),
+  // Static export for Tauri, standalone for Docker/server
+  ...(isTauri ? { output: 'export' } : { output: 'standalone' }),
   // Turbopack config (default bundler in Next.js 16)
   turbopack: {},
   images: {
