@@ -11,6 +11,7 @@ import { VerificationDialog } from '@/components/chat/verification-dialog'
 import { CallOverlay } from '@/components/chat/call-overlay'
 import { NewSessionBanner } from '@/components/chat/new-session-banner'
 import { setupIncomingCallListener } from '@/lib/matrix/voip'
+import { playNotificationSound } from '@/lib/notification-sound'
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
@@ -92,13 +93,17 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         debouncedLoadMessages(room.roomId)
       }
 
-      // Browser notification for messages from others
+      // Sound + browser notification for messages from others
       if (
         (eventType === 'm.room.message' || eventType === 'm.room.encrypted') &&
         event.getSender() !== user.userId &&
-        document.hidden
+        data?.liveEvent
       ) {
-        if ('Notification' in window && Notification.permission === 'granted') {
+        // Play sound regardless of tab visibility
+        playNotificationSound()
+
+        // Show browser notification only when tab is hidden
+        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
           const senderName = room.getMember(event.getSender()!)?.name || event.getSender()
           const clearContent = (event as any).getClearContent?.()
           const content = clearContent || event.getContent()
