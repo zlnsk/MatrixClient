@@ -307,6 +307,7 @@ export function restoreSession(): sdk.MatrixClient | null {
       deviceId: session.deviceId,
       logger: filteredLogger,
       cryptoCallbacks,
+      timelineSupport: true,
     })
     return matrixClient
   } catch {
@@ -323,6 +324,7 @@ export async function startSync(): Promise<void> {
 
   await matrixClient.startClient({
     initialSyncLimit: 50,
+    lazyLoadMembers: true,
   })
 
   // Wait for initial sync
