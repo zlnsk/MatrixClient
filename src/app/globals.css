@@ -179,5 +179,5 @@ body {
 
 /* Layout isolation on message bubbles to prevent reflow propagation */
 .message-bubble-container {
-  contain: content;
+  contain: layout style;
 }

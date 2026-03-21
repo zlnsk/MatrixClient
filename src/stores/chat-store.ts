@@ -376,7 +376,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   loadMessages: async (roomId) => {
     set({ isLoadingMessages: true })
     const client = getMatrixClient()
-    if (!client) return
+    if (!client) {
+      set({ isLoadingMessages: false })
+      return
+    }
 
     const room = client.getRoom(roomId)
     if (!room) {
@@ -384,49 +387,66 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return
     }
 
-    // Paginate backwards to load more history if the timeline is small
-    const timelineSet = room.getLiveTimeline()
-    const events = timelineSet.getEvents()
-    if (events.length < 50) {
-      try {
-        await client.scrollback(room, 50)
-      } catch {
-        // Pagination may fail for some rooms, that's ok
-      }
-    }
-
-    const timeline = room.getLiveTimeline().getEvents()
-    const newMessages = timeline
-      .map((e) => eventToMatrixMessage(e, room))
-      .filter((m): m is MatrixMessage => m !== null)
-
-    // Quick equality check: skip setState if messages haven't actually changed.
-    // Compare by length, then key fields of each message to avoid unnecessary re-renders.
-    const existing = get().messages
-    let changed = existing.length !== newMessages.length
-    if (!changed) {
-      for (let i = 0; i < newMessages.length; i++) {
-        const a = existing[i]
-        const b = newMessages[i]
-        if (
-          a.eventId !== b.eventId ||
-          a.timestamp !== b.timestamp ||
-          a.content !== b.content ||
-          a.isEdited !== b.isEdited ||
-          a.isRedacted !== b.isRedacted ||
-          a.reactions.size !== b.reactions.size ||
-          a.readBy.length !== b.readBy.length ||
-          a.status !== b.status
-        ) {
-          changed = true
-          break
+    try {
+      // Paginate backwards to load more history if the timeline is small
+      const timelineSet = room.getLiveTimeline()
+      const events = timelineSet.getEvents()
+      if (events.length < 50) {
+        try {
+          await client.scrollback(room, 50)
+        } catch {
+          // Pagination may fail for some rooms, that's ok
         }
       }
-    }
 
-    if (changed) {
-      set({ messages: newMessages, isLoadingMessages: false })
-    } else {
+      // Re-check active room: if user switched rooms during scrollback, bail out
+      if (get().activeRoom?.roomId !== roomId) {
+        set({ isLoadingMessages: false })
+        return
+      }
+
+      const timeline = room.getLiveTimeline().getEvents()
+      const newMessages: MatrixMessage[] = []
+      for (const e of timeline) {
+        try {
+          const msg = eventToMatrixMessage(e, room)
+          if (msg) newMessages.push(msg)
+        } catch {
+          // Skip events that fail to convert rather than losing all messages
+        }
+      }
+
+      // Quick equality check: skip setState if messages haven't actually changed.
+      // Compare by length, then key fields of each message to avoid unnecessary re-renders.
+      const existing = get().messages
+      let changed = existing.length !== newMessages.length
+      if (!changed) {
+        for (let i = 0; i < newMessages.length; i++) {
+          const a = existing[i]
+          const b = newMessages[i]
+          if (
+            a.eventId !== b.eventId ||
+            a.timestamp !== b.timestamp ||
+            a.content !== b.content ||
+            a.isEdited !== b.isEdited ||
+            a.isRedacted !== b.isRedacted ||
+            a.reactions.size !== b.reactions.size ||
+            a.readBy.length !== b.readBy.length ||
+            a.status !== b.status
+          ) {
+            changed = true
+            break
+          }
+        }
+      }
+
+      if (changed) {
+        set({ messages: newMessages, isLoadingMessages: false })
+      } else {
+        set({ isLoadingMessages: false })
+      }
+    } catch (err) {
+      console.error('Failed to load messages for room', roomId, err)
       set({ isLoadingMessages: false })
     }
   },
