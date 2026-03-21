@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useCallStore } from '@/stores/call-store'
 import {
   answerCall,
@@ -18,6 +18,8 @@ import {
   VideoOff,
   Maximize,
   Minimize,
+  Minimize2,
+  Maximize2,
   X,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
@@ -33,6 +35,163 @@ function formatDuration(seconds: number): string {
   return parts.join(':')
 }
 
+function PipOverlay() {
+  const {
+    callInfo,
+    status,
+    audioMuted,
+    remoteStream,
+    duration,
+    setIsMinimized,
+  } = useCallStore()
+
+  const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const pipRef = useRef<HTMLDivElement>(null)
+  const dragState = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream
+    }
+  }, [remoteStream])
+
+  const isVideo = callInfo?.isVideo
+  const isConnected = status === 'connected'
+
+  const statusText = status === 'ringing'
+    ? callInfo?.isIncoming ? 'Incoming...' : 'Ringing...'
+    : status === 'connecting'
+      ? 'Connecting...'
+      : isConnected
+        ? formatDuration(duration)
+        : status === 'ended'
+          ? 'Ended'
+          : ''
+
+  // Drag handling
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    const el = pipRef.current
+    if (!el) return
+    el.setPointerCapture(e.pointerId)
+    const rect = el.getBoundingClientRect()
+    dragState.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: rect.left,
+      origY: rect.top,
+    }
+  }, [])
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragState.current) return
+    const dx = e.clientX - dragState.current.startX
+    const dy = e.clientY - dragState.current.startY
+    setPosition({
+      x: dragState.current.origX + dx,
+      y: dragState.current.origY + dy,
+    })
+  }, [])
+
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!dragState.current || !pipRef.current) {
+      dragState.current = null
+      return
+    }
+    // Snap to nearest corner
+    const el = pipRef.current
+    const rect = el.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const margin = 16
+
+    const snapX = cx < vw / 2 ? margin : vw - rect.width - margin
+    const snapY = cy < vh / 2 ? margin + 60 : vh - rect.height - margin // 60 for top bar clearance
+
+    setPosition({ x: snapX, y: snapY })
+    dragState.current = null
+  }, [])
+
+  const posStyle = position
+    ? { left: position.x, top: position.y, right: 'auto' as const, bottom: 'auto' as const }
+    : {}
+
+  return (
+    <div
+      ref={pipRef}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      className={`fixed z-50 cursor-grab overflow-hidden rounded-2xl border border-white/20 shadow-2xl active:cursor-grabbing ${
+        position ? '' : 'bottom-24 right-4'
+      }`}
+      style={{
+        width: isVideo && remoteStream ? 160 : 200,
+        height: isVideo && remoteStream ? 220 : 'auto',
+        touchAction: 'none',
+        ...posStyle,
+      }}
+    >
+      {/* Video or avatar background */}
+      {isVideo && remoteStream ? (
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex flex-col items-center gap-2 bg-gray-900 px-4 py-5">
+          <Avatar
+            src={callInfo?.opponentAvatarUrl}
+            name={callInfo?.opponentName || ''}
+            size="md"
+          />
+          <p className="max-w-full truncate text-xs font-medium text-white">
+            {callInfo?.opponentName}
+          </p>
+        </div>
+      )}
+
+      {/* Status bar */}
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent px-2 py-1.5">
+        <span className={`text-[10px] font-medium ${status === 'ringing' ? 'animate-pulse text-green-400' : 'text-white/80'}`}>
+          {statusText}
+        </span>
+        <button
+          onClick={(e) => { e.stopPropagation(); setIsMinimized(false) }}
+          className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/40"
+          title="Expand"
+        >
+          <Maximize2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Bottom controls */}
+      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 bg-gradient-to-t from-black/70 to-transparent px-2 py-2">
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleAudioMute() }}
+          className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+            audioMuted ? 'bg-white text-gray-900' : 'bg-white/20 text-white hover:bg-white/30'
+          }`}
+          title={audioMuted ? 'Unmute' : 'Mute'}
+        >
+          {audioMuted ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); hangupCall() }}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white transition-colors hover:bg-red-500"
+          title="Hang up"
+        >
+          <PhoneOff className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function CallOverlay() {
   const {
     callInfo,
@@ -43,7 +202,9 @@ export function CallOverlay() {
     remoteStream,
     duration,
     isFullscreen,
+    isMinimized,
     setIsFullscreen,
+    setIsMinimized,
   } = useCallStore()
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -74,6 +235,11 @@ export function CallOverlay() {
 
   if (!callInfo || status === 'idle') return null
 
+  // Show PiP overlay when minimized (only for active/connected calls, not ringing incoming)
+  if (isMinimized && status !== 'ended') {
+    return <PipOverlay />
+  }
+
   const isVideo = callInfo.isVideo
   const isIncoming = callInfo.isIncoming
   const isRinging = status === 'ringing'
@@ -87,6 +253,14 @@ export function CallOverlay() {
     } else {
       overlayRef.current.requestFullscreen()
     }
+  }
+
+  const handleMinimize = () => {
+    // Exit fullscreen first if needed
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    }
+    setIsMinimized(true)
   }
 
   const statusText = isRinging
@@ -211,6 +385,15 @@ export function CallOverlay() {
                     {videoMuted ? <VideoOff className="h-6 w-6" /> : <Video className="h-6 w-6" />}
                   </button>
                 )}
+
+                {/* Minimize to PiP */}
+                <button
+                  onClick={handleMinimize}
+                  className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-white shadow-lg transition-transform hover:scale-110 hover:bg-white/30"
+                  title="Minimize to picture-in-picture"
+                >
+                  <Minimize2 className="h-6 w-6" />
+                </button>
 
                 {/* Fullscreen toggle */}
                 <button

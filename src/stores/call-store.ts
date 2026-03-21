@@ -33,6 +33,9 @@ interface CallState {
   // Fullscreen
   isFullscreen: boolean
 
+  // Minimized (PiP mode)
+  isMinimized: boolean
+
   // Actions
   setCallInfo: (info: CallInfo | null) => void
   setStatus: (status: CallStatus) => void
@@ -42,6 +45,7 @@ interface CallState {
   setRemoteStream: (stream: MediaStream | null) => void
   setDuration: (duration: number) => void
   setIsFullscreen: (fullscreen: boolean) => void
+  setIsMinimized: (minimized: boolean) => void
   reset: () => void
 }
 
@@ -54,6 +58,7 @@ const initialState = {
   remoteStream: null,
   duration: 0,
   isFullscreen: false,
+  isMinimized: false,
 }
 
 export const useCallStore = create<CallState>((set) => ({
@@ -67,5 +72,6 @@ export const useCallStore = create<CallState>((set) => ({
   setRemoteStream: (stream) => set({ remoteStream: stream }),
   setDuration: (duration) => set({ duration }),
   setIsFullscreen: (fullscreen) => set({ isFullscreen: fullscreen }),
+  setIsMinimized: (minimized) => set({ isMinimized: minimized }),
   reset: () => set(initialState),
 }))
