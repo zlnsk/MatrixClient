@@ -34,6 +34,10 @@ const SUPPRESSED_PATTERNS = [
   'olm_internal_error',
   'megolm session not yet available',
   'Received megolm session for',
+  'Not checking key backup for session',
+  'Adding default global',
+  'is not trusted',
+  'already queued',
   // Rust WASM crypto module patterns (these bypass the JS SDK logger)
   'matrix_sdk_crypto',
   "Can't find the room key",
@@ -53,11 +57,15 @@ function isSuppressed(args: any[]): boolean {
 if (typeof window !== 'undefined') {
   const originalWarn = console.warn
   const originalError = console.error
+  const originalTrace = console.trace
   console.warn = (...args: any[]) => {
     if (!isSuppressed(args)) originalWarn.apply(console, args)
   }
   console.error = (...args: any[]) => {
     if (!isSuppressed(args)) originalError.apply(console, args)
+  }
+  console.trace = (...args: any[]) => {
+    if (!isSuppressed(args)) originalTrace.apply(console, args)
   }
 }
 
