@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
 import { decryptMediaAttachment } from '@/lib/matrix/media'
+import { placeCall } from '@/lib/matrix/voip'
 
 function MediaThumbnail({ message }: { message: MatrixMessage }) {
   const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null)
@@ -105,22 +106,17 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const [savingTopic, setSavingTopic] = useState(false)
   const [inviting, setInviting] = useState(false)
   const [notifSetting, setNotifSetting] = useState<'all' | 'mentions' | 'mute'>('all')
-  const [pinnedEventIds, setPinnedEventIds] = useState<string[]>([])
   const [showPinnedBanner, setShowPinnedBanner] = useState(true)
 
-  // Load pinned events from room state
-  useEffect(() => {
-    if (!activeRoom) {
-      setPinnedEventIds([])
-      return
-    }
+  // Memoize pinned event IDs - only recompute when activeRoom or messages change
+  const pinnedEventIds = useMemo(() => {
+    if (!activeRoom) return []
     const client = getMatrixClient()
-    if (!client) return
+    if (!client) return []
     const room = client.getRoom(activeRoom.roomId)
-    if (!room) return
+    if (!room) return []
     const pinEvent = room.currentState.getStateEvents('m.room.pinned_events', '')
-    const pinned: string[] = pinEvent?.getContent()?.pinned || []
-    setPinnedEventIds(pinned)
+    return (pinEvent?.getContent()?.pinned || []) as string[]
   }, [activeRoom, messages])
 
   const scrollToBottom = useCallback(() => {
@@ -156,27 +152,32 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     }
   }
 
-  const filteredMessages = chatSearch
-    ? messages.filter(m => m.content.toLowerCase().includes(chatSearch.toLowerCase()))
-    : messages
+  const filteredMessages = useMemo(() => {
+    return chatSearch
+      ? messages.filter(m => m.content.toLowerCase().includes(chatSearch.toLowerCase()))
+      : messages
+  }, [messages, chatSearch])
 
-  // Group messages by date
-  const groupedMessages: { date: string; messages: MatrixMessage[] }[] = []
-  let currentDate = ''
-  for (const msg of filteredMessages) {
-    const msgDate = new Date(msg.timestamp).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-    if (msgDate !== currentDate) {
-      currentDate = msgDate
-      groupedMessages.push({ date: msgDate, messages: [msg] })
-    } else {
-      groupedMessages[groupedMessages.length - 1].messages.push(msg)
+  // Memoize date-grouped messages to avoid recalculating on every render
+  const groupedMessages = useMemo(() => {
+    const groups: { date: string; messages: MatrixMessage[] }[] = []
+    let currentDate = ''
+    for (const msg of filteredMessages) {
+      const msgDate = new Date(msg.timestamp).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+      if (msgDate !== currentDate) {
+        currentDate = msgDate
+        groups.push({ date: msgDate, messages: [msg] })
+      } else {
+        groups[groups.length - 1].messages.push(msg)
+      }
     }
-  }
+    return groups
+  }, [filteredMessages])
 
   return (
     <div className="relative flex flex-1 flex-col min-h-0 bg-gray-50 dark:bg-gray-950">
@@ -251,10 +252,18 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           >
             <LogOut className="h-5 w-5" />
           </button>
-          <button className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white">
+          <button
+            onClick={() => placeCall(activeRoom.roomId, false)}
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            title="Voice call"
+          >
             <Phone className="h-5 w-5" />
           </button>
-          <button className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white">
+          <button
+            onClick={() => placeCall(activeRoom.roomId, true)}
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            title="Video call"
+          >
             <Video className="h-5 w-5" />
           </button>
         </div>

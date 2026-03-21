@@ -1,0 +1,285 @@
+'use client'
+
+import { createNewMatrixCall, CallEvent } from 'matrix-js-sdk'
+import type { MatrixCall } from 'matrix-js-sdk'
+import { CallState, CallType, CallErrorCode } from 'matrix-js-sdk/lib/webrtc/call'
+import { CallFeedEvent } from 'matrix-js-sdk/lib/webrtc/callFeed'
+import { CallEventHandlerEvent } from 'matrix-js-sdk/lib/webrtc/callEventHandler'
+import { getMatrixClient, getAvatarUrl } from './client'
+import { useCallStore } from '@/stores/call-store'
+import type { CallInfo } from '@/stores/call-store'
+
+let currentCall: MatrixCall | null = null
+let durationInterval: ReturnType<typeof setInterval> | null = null
+
+function clearDurationInterval(): void {
+  if (durationInterval) {
+    clearInterval(durationInterval)
+    durationInterval = null
+  }
+}
+
+function startDurationTimer(): void {
+  clearDurationInterval()
+  const startTime = Date.now()
+  useCallStore.getState().setDuration(0)
+  durationInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000)
+    useCallStore.getState().setDuration(elapsed)
+  }, 1000)
+}
+
+function updateStreamsFromCall(call: MatrixCall): void {
+  const store = useCallStore.getState()
+
+  const localFeed = call.localUsermediaFeed
+  if (localFeed?.stream) {
+    store.setLocalStream(localFeed.stream)
+  }
+
+  const remoteFeed = call.remoteUsermediaFeed
+  if (remoteFeed?.stream) {
+    store.setRemoteStream(remoteFeed.stream)
+  }
+}
+
+function getOpponentInfo(call: MatrixCall, roomId: string): Pick<CallInfo, 'opponentName' | 'opponentAvatarUrl' | 'opponentUserId'> {
+  const client = getMatrixClient()
+  const member = call.getOpponentMember()
+  const room = client?.getRoom(roomId)
+
+  if (member) {
+    return {
+      opponentName: member.name || member.userId,
+      opponentAvatarUrl: getAvatarUrl(member.getMxcAvatarUrl()) || null,
+      opponentUserId: member.userId,
+    }
+  }
+
+  // Fallback: use room name
+  return {
+    opponentName: room?.name || roomId,
+    opponentAvatarUrl: null,
+    opponentUserId: '',
+  }
+}
+
+function attachCallListeners(call: MatrixCall): void {
+  const store = useCallStore.getState()
+
+  call.on(CallEvent.State, (state: CallState, _oldState: CallState) => {
+    const s = useCallStore.getState()
+
+    switch (state) {
+      case CallState.Ringing:
+        s.setStatus('ringing')
+        break
+      case CallState.InviteSent:
+        s.setStatus('ringing')
+        break
+      case CallState.Connecting:
+      case CallState.CreateOffer:
+      case CallState.CreateAnswer:
+      case CallState.WaitLocalMedia:
+        s.setStatus('connecting')
+        break
+      case CallState.Connected:
+        s.setStatus('connected')
+        startDurationTimer()
+        updateStreamsFromCall(call)
+        break
+      case CallState.Ended:
+        endCallCleanup()
+        break
+    }
+  })
+
+  call.on(CallEvent.FeedsChanged, () => {
+    updateStreamsFromCall(call)
+  })
+
+  call.on(CallEvent.Hangup, () => {
+    endCallCleanup()
+  })
+
+  call.on(CallEvent.Error, (error: any) => {
+    console.error('Call error:', error)
+    endCallCleanup()
+  })
+}
+
+function endCallCleanup(): void {
+  clearDurationInterval()
+  const store = useCallStore.getState()
+  store.setStatus('ended')
+
+  // Brief delay to show "ended" state, then reset
+  setTimeout(() => {
+    useCallStore.getState().reset()
+  }, 2000)
+
+  currentCall = null
+}
+
+/**
+ * Place an outgoing call (audio or video) to a room.
+ */
+export async function placeCall(roomId: string, isVideo: boolean): Promise<void> {
+  const client = getMatrixClient()
+  if (!client) {
+    console.error('Matrix client not initialized')
+    return
+  }
+
+  if (currentCall) {
+    console.warn('A call is already in progress')
+    return
+  }
+
+  const call = createNewMatrixCall(client, roomId)
+  if (!call) {
+    console.error('Failed to create call - WebRTC may not be supported')
+    return
+  }
+
+  currentCall = call
+
+  const opponentInfo = getOpponentInfo(call, roomId)
+
+  useCallStore.getState().setCallInfo({
+    callId: call.callId,
+    roomId,
+    isVideo,
+    isIncoming: false,
+    ...opponentInfo,
+  })
+  useCallStore.getState().setStatus('connecting')
+
+  // Attach error listener before placing the call (required by the SDK)
+  call.on(CallEvent.Error, (error: any) => {
+    console.error('Call error:', error)
+    endCallCleanup()
+  })
+
+  attachCallListeners(call)
+
+  try {
+    if (isVideo) {
+      await call.placeVideoCall()
+    } else {
+      await call.placeVoiceCall()
+    }
+  } catch (err) {
+    console.error('Failed to place call:', err)
+    endCallCleanup()
+  }
+}
+
+/**
+ * Handle an incoming call from the CallEventHandler.
+ */
+export function handleIncomingCall(call: MatrixCall): void {
+  if (currentCall) {
+    // Already in a call, reject the incoming one
+    call.reject()
+    return
+  }
+
+  currentCall = call
+  const roomId = call.roomId
+  const isVideo = call.type === CallType.Video
+  const opponentInfo = getOpponentInfo(call, roomId)
+
+  useCallStore.getState().setCallInfo({
+    callId: call.callId,
+    roomId,
+    isVideo,
+    isIncoming: true,
+    ...opponentInfo,
+  })
+  useCallStore.getState().setStatus('ringing')
+
+  attachCallListeners(call)
+}
+
+/**
+ * Answer an incoming call.
+ */
+export async function answerCall(): Promise<void> {
+  if (!currentCall) return
+
+  try {
+    useCallStore.getState().setStatus('connecting')
+    await currentCall.answer()
+  } catch (err) {
+    console.error('Failed to answer call:', err)
+    endCallCleanup()
+  }
+}
+
+/**
+ * Reject an incoming call.
+ */
+export function rejectCall(): void {
+  if (!currentCall) return
+  currentCall.reject()
+  endCallCleanup()
+}
+
+/**
+ * Hang up the current call.
+ */
+export function hangupCall(): void {
+  if (!currentCall) return
+  currentCall.hangup(CallErrorCode.UserHangup, false)
+  endCallCleanup()
+}
+
+/**
+ * Toggle microphone mute.
+ */
+export async function toggleAudioMute(): Promise<void> {
+  if (!currentCall) return
+
+  const isMuted = currentCall.isMicrophoneMuted()
+  await currentCall.setMicrophoneMuted(!isMuted)
+  useCallStore.getState().setAudioMuted(!isMuted)
+}
+
+/**
+ * Toggle video mute.
+ */
+export async function toggleVideoMute(): Promise<void> {
+  if (!currentCall) return
+
+  const isMuted = currentCall.isLocalVideoMuted()
+  await currentCall.setLocalVideoMuted(!isMuted)
+  useCallStore.getState().setVideoMuted(!isMuted)
+}
+
+/**
+ * Get the current MatrixCall object.
+ */
+export function getCurrentCall(): MatrixCall | null {
+  return currentCall
+}
+
+/**
+ * Initialize incoming call listener on the Matrix client.
+ * Should be called once after the client starts syncing.
+ */
+export function setupIncomingCallListener(): (() => void) | undefined {
+  const client = getMatrixClient()
+  if (!client) return
+
+  const onIncomingCall = (call: MatrixCall) => {
+    console.log('Incoming call from:', call.getOpponentMember()?.userId)
+    handleIncomingCall(call)
+  }
+
+  client.on(CallEventHandlerEvent.Incoming as any, onIncomingCall)
+
+  return () => {
+    client.removeListener(CallEventHandlerEvent.Incoming as any, onIncomingCall)
+  }
+}
