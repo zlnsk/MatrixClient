@@ -244,7 +244,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
         if (!showEmojiPicker && !showContextMenu) setShowActions(false)
       }}
     >
-      <div className={`flex max-w-xs md:max-w-sm lg:max-w-md ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-end gap-2`}>
+      <div className={`flex max-w-sm md:max-w-md lg:max-w-lg ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-end gap-2`}>
         {/* Avatar */}
         <div className="w-8 flex-shrink-0">
           {showAvatar && !isOwn && (
@@ -318,11 +318,13 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   effectiveMediaUrl ? (
                     <img
                       src={effectiveMediaUrl}
-                      alt="Shared image"
-                      className="max-h-64 rounded-xl object-cover shadow-sm"
+                      alt={message.content || 'Shared image'}
+                      className="max-w-full rounded-xl object-contain shadow-sm cursor-pointer"
                       style={{
+                        maxHeight: 480,
                         width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
                       }}
+                      onClick={() => window.open(effectiveMediaUrl, '_blank')}
                     />
                   ) : (
                     <div className="flex h-32 w-48 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700">
@@ -331,7 +333,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   )
                 ) : message.type === 'm.video' ? (
                   effectiveMediaUrl ? (
-                    <video controls className="max-h-64 rounded-xl shadow-sm">
+                    <video controls className="max-w-full rounded-xl shadow-sm" style={{ maxHeight: 480 }}>
                       <source src={effectiveMediaUrl} type={message.mediaInfo?.mimetype} />
                     </video>
                   ) : (
