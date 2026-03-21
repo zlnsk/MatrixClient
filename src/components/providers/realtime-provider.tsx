@@ -214,12 +214,29 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     // Set up incoming VoIP call listener
     const cleanupCallListener = setupIncomingCallListener()
 
+    // Auto-archive inactive conversations every 5 minutes.
+    // Rooms with no message activity for 3 hours get archived,
+    // unless the user is currently viewing them.
+    const AUTO_ARCHIVE_INACTIVITY_MS = 3 * 60 * 60 * 1000 // 3 hours
+    const AUTO_ARCHIVE_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
+    const autoArchiveInterval = setInterval(() => {
+      const { rooms, activeRoom, archiveRoom } = useChatStore.getState()
+      const now = Date.now()
+      for (const room of rooms) {
+        if (room.roomId === activeRoom?.roomId) continue // skip active room
+        if (room.lastMessageTs > 0 && now - room.lastMessageTs > AUTO_ARCHIVE_INACTIVITY_MS) {
+          archiveRoom(room.roomId)
+        }
+      }
+    }, AUTO_ARCHIVE_CHECK_INTERVAL)
+
     return () => {
       // Clean up debounce timers
       if (loadRoomsTimer) clearTimeout(loadRoomsTimer)
       if (loadMessagesTimer) clearTimeout(loadMessagesTimer)
       if (syncCycleResetTimer) clearTimeout(syncCycleResetTimer)
       clearTimeout(csTimer)
+      clearInterval(autoArchiveInterval)
 
       // Clean up call listener
       cleanupCallListener?.()
