@@ -130,24 +130,35 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const prevRoomIdRef = useRef<string | null>(null)
 
   const scrollToBottom = useCallback((instant?: boolean) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' })
+    // Double-rAF ensures the browser has painted the new content before scrolling
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' })
+      })
+    })
   }, [])
 
   // Scroll instantly to bottom when switching rooms
   useEffect(() => {
     if (activeRoom && activeRoom.roomId !== prevRoomIdRef.current) {
       prevRoomIdRef.current = activeRoom.roomId
-      // Use requestAnimationFrame to ensure DOM has rendered the new messages
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
-      })
+      scrollToBottom(true)
     }
-  }, [activeRoom])
+  }, [activeRoom, scrollToBottom])
 
   // Scroll smoothly for new messages in the same room
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
+
+  // Re-scroll when mobile keyboard opens/closes (viewport resize)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const onResize = () => scrollToBottom(true)
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [scrollToBottom])
 
   if (!activeRoom || !user) return null
 
@@ -361,7 +372,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       )}
 
       {/* Messages */}
-      <div className="message-scroll-container flex-1 overflow-y-auto px-4 py-4 md:px-6">
+      <div className="message-scroll-container flex-1 overflow-y-auto px-4 pt-4 pb-2 md:px-6 md:pb-4">
         {isLoadingMessages ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
@@ -416,7 +427,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
               </div>
             )}
 
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} className="h-1" />
           </div>
         )}
       </div>
