@@ -731,6 +731,25 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                 </div>
               )}
             </div>
+
+            {/* Leave Room */}
+            <div className="pt-2 border-t border-gray-200 dark:border-gray-800">
+              <button
+                onClick={async () => {
+                  if (!confirm(`Leave ${activeRoom.isDirect ? 'this conversation' : activeRoom.name}?`)) return
+                  try {
+                    await leaveRoom(activeRoom.roomId)
+                    setShowRoomInfo(false)
+                  } catch (err) {
+                    console.error('Failed to leave room:', err)
+                  }
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+              >
+                <LogOut className="h-4 w-4" />
+                {activeRoom.isDirect ? 'Leave Conversation' : 'Leave Room'}
+              </button>
+            </div>
           </div>
         </div>
       )}
