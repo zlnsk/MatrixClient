@@ -84,6 +84,11 @@ export function ChatLayout() {
         )}
       </div>
 
+      {/* Build version */}
+      <span className="fixed bottom-1 right-2 text-[10px] text-gray-300 dark:text-gray-700 pointer-events-none select-none z-10">
+        v{process.env.NEXT_PUBLIC_BUILD_VERSION}
+      </span>
+
       {/* Settings overlay — lazy loaded */}
       {showSettings && (
         <Suspense fallback={null}>

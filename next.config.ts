@@ -4,16 +4,14 @@ import { readFileSync } from "fs";
 
 const isTauri = process.env.TAURI_ENV === '1'
 
-// Build version: <package version>+<git short hash>.<YYYYMMDD-HHmmss>
+// Build version: <package version> (build <number>)
 function getBuildVersion(): string {
   const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
-  let gitHash = 'unknown'
+  let commitCount = '0'
   try {
-    gitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
+    commitCount = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim()
   } catch { /* not a git repo */ }
-  const now = new Date()
-  const ts = now.toISOString().replace(/[-:T]/g, '').slice(0, 15) // YYYYMMDDHHmmss
-  return `${pkg.version}+${gitHash}.${ts}`
+  return `${pkg.version} build ${commitCount}`
 }
 
 const nextConfig: NextConfig = {
