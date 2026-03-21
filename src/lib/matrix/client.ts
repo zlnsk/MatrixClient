@@ -259,6 +259,8 @@ export async function loginWithPassword(
     deviceId: response.device_id,
     logger: filteredLogger,
     cryptoCallbacks,
+    fallbackICEServerAllowed: true,
+    iceCandidatePoolSize: 20,
   })
 
   await initCrypto(matrixClient)
@@ -311,6 +313,8 @@ export function restoreSession(): sdk.MatrixClient | null {
       logger: filteredLogger,
       cryptoCallbacks,
       timelineSupport: true,
+      fallbackICEServerAllowed: true,
+      iceCandidatePoolSize: 20,
     })
     return matrixClient
   } catch {
