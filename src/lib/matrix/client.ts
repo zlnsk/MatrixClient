@@ -16,8 +16,10 @@ const cryptoCallbacks: CryptoCallbacks = {
   getSecretStorageKey: async ({ keys }: { keys: Record<string, any> }, _name: string): Promise<[string, Uint8Array<ArrayBuffer>] | null> => {
     if (pendingSecretStorageKey) {
       const keyId = Object.keys(keys)[0]
+      // Don't clear pendingSecretStorageKey here — the SDK calls this callback
+      // multiple times during restoration (for cross-signing keys + backup key).
+      // It's cleared in restoreFromRecoveryKey after the process completes.
       const key = new Uint8Array(pendingSecretStorageKey) as Uint8Array<ArrayBuffer>
-      pendingSecretStorageKey = null
       return [keyId, key]
     }
     return null
@@ -180,6 +182,7 @@ export async function restoreFromRecoveryKey(input: string): Promise<{ total: nu
         console.log('Key restore progress:', progress)
       },
     })
+    pendingSecretStorageKey = null
     return result
   } catch (err) {
     console.log('Secret Storage flow failed, trying direct backup key:', err)
