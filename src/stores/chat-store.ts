@@ -53,6 +53,7 @@ export interface MatrixMessage {
   reactions: Map<string, { count: number; users: string[]; includesMe: boolean }>
   mediaUrl: string | null
   mediaInfo: { w?: number; h?: number; mimetype?: string; size?: number } | null
+  encryptedFile: { url: string; key: { k: string; alg: string; key_ops: string[]; kty: string; ext: boolean }; iv: string; hashes: Record<string, string>; v: string } | null
   readBy: ReadReceipt[]
   status: 'sending' | 'sent' | 'delivered' | 'read'
 }
@@ -237,13 +238,17 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     }
   }
 
-  // Media
+  // Media - handle both unencrypted (url) and encrypted (file.url) attachments
   let mediaUrl: string | null = null
   let mediaInfo = null
+  let encryptedFile = null
   if (displayContent.msgtype === 'm.image' || displayContent.msgtype === 'm.video' || displayContent.msgtype === 'm.audio' || displayContent.msgtype === 'm.file') {
-    const mxcUrl = displayContent.url
+    const mxcUrl = displayContent.url || displayContent.file?.url
     if (mxcUrl && client) {
       mediaUrl = client.mxcUrlToHttp(mxcUrl) || null
+    }
+    if (displayContent.file) {
+      encryptedFile = displayContent.file
     }
     mediaInfo = displayContent.info || null
   }
@@ -312,6 +317,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     reactions,
     mediaUrl,
     mediaInfo,
+    encryptedFile,
     readBy,
     status,
   }

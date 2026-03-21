@@ -20,8 +20,52 @@ import {
   Send,
   Pin,
   Forward,
+  Loader2,
 } from 'lucide-react'
 import { LinkPreview } from './link-preview'
+
+/**
+ * Decrypt an encrypted Matrix media attachment using Web Crypto API.
+ */
+async function decryptMediaAttachment(
+  url: string,
+  encryptedFile: NonNullable<MatrixMessage['encryptedFile']>,
+  mimetype?: string
+): Promise<string> {
+  const response = await fetch(url)
+  const ciphertext = await response.arrayBuffer()
+
+  // Import the AES key from JWK
+  const cryptoKey = await crypto.subtle.importKey(
+    'jwk',
+    {
+      kty: encryptedFile.key.kty,
+      alg: 'A256CTR',
+      k: encryptedFile.key.k,
+      key_ops: ['decrypt'],
+      ext: true,
+    },
+    { name: 'AES-CTR', length: 256 },
+    false,
+    ['decrypt']
+  )
+
+  // Decode the IV from unpadded base64
+  const ivBase64 = encryptedFile.iv.replace(/-/g, '+').replace(/_/g, '/')
+  const ivPadded = ivBase64 + '='.repeat((4 - (ivBase64.length % 4)) % 4)
+  const ivBytes = Uint8Array.from(atob(ivPadded), c => c.charCodeAt(0))
+
+  // Decrypt
+  const plaintext = await crypto.subtle.decrypt(
+    { name: 'AES-CTR', counter: ivBytes, length: 64 },
+    cryptoKey,
+    ciphertext
+  )
+
+  // Create blob URL
+  const blob = new Blob([plaintext], { type: mimetype || 'application/octet-stream' })
+  return URL.createObjectURL(blob)
+}
 
 /**
  * Render rich text from Matrix formatted_body (HTML) or parse markdown from plain text.
@@ -97,7 +141,30 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isP
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
   const [copied, setCopied] = useState(false)
+  const [decryptedMediaUrl, setDecryptedMediaUrl] = useState<string | null>(null)
   const actionsRef = useRef<HTMLDivElement>(null)
+
+  // Decrypt encrypted media attachments
+  useEffect(() => {
+    if (!message.encryptedFile || !message.mediaUrl) return
+    let cancelled = false
+    decryptMediaAttachment(
+      message.mediaUrl,
+      message.encryptedFile,
+      message.mediaInfo?.mimetype
+    ).then(url => {
+      if (!cancelled) setDecryptedMediaUrl(url)
+    }).catch(err => {
+      console.error('Failed to decrypt media:', err)
+    })
+    return () => {
+      cancelled = true
+      if (decryptedMediaUrl) URL.revokeObjectURL(decryptedMediaUrl)
+    }
+  }, [message.eventId, message.encryptedFile, message.mediaUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Use decrypted URL for encrypted media, otherwise use direct URL
+  const effectiveMediaUrl = message.encryptedFile ? decryptedMediaUrl : message.mediaUrl
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -267,33 +334,51 @@ export function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isP
                   <X className="h-4 w-4" />
                 </button>
               </div>
-            ) : message.mediaUrl ? (
+            ) : (message.mediaUrl || effectiveMediaUrl) ? (
               <div>
                 {message.type === 'm.image' ? (
-                  <img
-                    src={message.mediaUrl}
-                    alt="Shared image"
-                    className="max-h-64 rounded-xl object-cover shadow-sm"
-                    style={{
-                      width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
-                    }}
-                  />
+                  effectiveMediaUrl ? (
+                    <img
+                      src={effectiveMediaUrl}
+                      alt="Shared image"
+                      className="max-h-64 rounded-xl object-cover shadow-sm"
+                      style={{
+                        width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
+                      }}
+                    />
+                  ) : (
+                    <div className="flex h-32 w-48 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700">
+                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                    </div>
+                  )
                 ) : message.type === 'm.video' ? (
-                  <video controls className="max-h-64 rounded-xl shadow-sm">
-                    <source src={message.mediaUrl} type={message.mediaInfo?.mimetype} />
-                  </video>
+                  effectiveMediaUrl ? (
+                    <video controls className="max-h-64 rounded-xl shadow-sm">
+                      <source src={effectiveMediaUrl} type={message.mediaInfo?.mimetype} />
+                    </video>
+                  ) : (
+                    <div className="flex h-32 w-48 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700">
+                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                    </div>
+                  )
                 ) : message.type === 'm.audio' ? (
-                  <audio controls className="w-full">
-                    <source src={message.mediaUrl} type={message.mediaInfo?.mimetype} />
-                  </audio>
+                  effectiveMediaUrl ? (
+                    <audio controls className="w-full">
+                      <source src={effectiveMediaUrl} type={message.mediaInfo?.mimetype} />
+                    </audio>
+                  ) : (
+                    <div className="flex h-8 w-48 items-center justify-center">
+                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                    </div>
+                  )
                 ) : (
                   <a
-                    href={message.mediaUrl}
+                    href={effectiveMediaUrl || message.mediaUrl || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm underline"
                   >
-                    📎 {message.content}
+                    {message.content}
                   </a>
                 )}
                 {message.content && message.type === 'm.image' && (
