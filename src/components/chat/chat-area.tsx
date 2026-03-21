@@ -31,6 +31,54 @@ import {
   FileText,
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
+import { decryptMediaAttachment } from '@/lib/matrix/media'
+
+function MediaThumbnail({ message }: { message: MatrixMessage }) {
+  const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!message.encryptedFile || !message.mediaUrl) {
+      setDecryptedUrl(message.mediaUrl)
+      return
+    }
+    let cancelled = false
+    decryptMediaAttachment(
+      message.mediaUrl,
+      message.encryptedFile,
+      message.mediaInfo?.mimetype
+    ).then(url => {
+      if (!cancelled) setDecryptedUrl(url)
+    }).catch(err => {
+      console.error('Failed to decrypt media thumbnail:', err)
+    })
+    return () => {
+      cancelled = true
+      if (decryptedUrl && decryptedUrl.startsWith('blob:')) URL.revokeObjectURL(decryptedUrl)
+    }
+  }, [message.eventId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!decryptedUrl) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gray-200 dark:bg-gray-700">
+        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+      </div>
+    )
+  }
+
+  if (message.type === 'm.image') {
+    return (
+      <a href={decryptedUrl} target="_blank" rel="noopener noreferrer" className="block h-full w-full">
+        <img src={decryptedUrl} alt="" className="h-full w-full object-cover transition-transform hover:scale-110" />
+      </a>
+    )
+  }
+
+  return (
+    <a href={decryptedUrl} target="_blank" rel="noopener noreferrer" className="flex h-full w-full items-center justify-center">
+      <Video className="h-6 w-6 text-gray-400" />
+    </a>
+  )
+}
 
 interface ChatAreaProps {
   onBackClick: () => void
@@ -648,21 +696,12 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                   .slice(-30)
                   .reverse()
                   .map(m => (
-                    <a
+                    <div
                       key={m.eventId}
-                      href={m.mediaUrl!}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className="aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
                     >
-                      {m.type === 'm.image' ? (
-                        <img src={m.mediaUrl!} alt="" className="h-full w-full object-cover transition-transform hover:scale-110" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <Video className="h-6 w-6 text-gray-400" />
-                        </div>
-                      )}
-                    </a>
+                      <MediaThumbnail message={m} />
+                    </div>
                   ))}
                 {messages.filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video')).length === 0 && (
                   <p className="col-span-3 py-4 text-center text-xs text-gray-400">No shared media yet</p>
