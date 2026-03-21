@@ -1,9 +1,14 @@
 import type { NextConfig } from "next";
 
+const isTauri = process.env.TAURI_ENV === '1'
+
 const nextConfig: NextConfig = {
+  // Static export for Tauri desktop builds
+  ...(isTauri && { output: 'export' }),
   // Turbopack config (default bundler in Next.js 16)
   turbopack: {},
   images: {
+    ...(isTauri && { unoptimized: true }),
     remotePatterns: [
       {
         protocol: 'https',

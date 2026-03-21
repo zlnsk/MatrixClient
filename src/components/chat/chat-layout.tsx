@@ -37,10 +37,10 @@ export function ChatLayout() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  // Cmd/Ctrl+1-9 to switch between chats
+  // Alt+1-9 to switch between chats (Alt avoids overriding browser/OS shortcuts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return
+      if (!e.altKey || e.metaKey || e.ctrlKey) return
       const num = parseInt(e.key, 10)
       if (num < 1 || num > 9 || isNaN(num)) return
 
