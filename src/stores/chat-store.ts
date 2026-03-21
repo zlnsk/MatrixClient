@@ -594,7 +594,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const room = client.getRoom(roomId)
     if (!room) return
 
-    const lastEvent = room.getLiveTimeline().getEvents().pop()
+    const events = room.getLiveTimeline().getEvents()
+    const lastEvent = events[events.length - 1]
     if (lastEvent) {
       await client.sendReadReceipt(lastEvent)
     }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface AvatarProps {
   src?: string | null
@@ -65,6 +65,13 @@ function InitialsFallback({ name, size }: { name: string; size: 'sm' | 'md' | 'l
 
 export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
   const [imgError, setImgError] = useState(false)
+  const [lastSrc, setLastSrc] = useState(src)
+
+  // Reset error state when src changes so new URLs get a chance to load
+  if (src !== lastSrc) {
+    setLastSrc(src)
+    setImgError(false)
+  }
 
   return (
     <div className="relative flex-shrink-0">
