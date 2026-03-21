@@ -50,9 +50,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }, 150)
     }
 
-    // Track whether timeline events fired during this sync cycle
+    // Track whether timeline events fired for the ACTIVE room during this sync cycle
     // so onSync doesn't redundantly reload messages
-    let timelineEventFiredThisCycle = false
+    let activeRoomTimelineEventFired = false
     let syncCycleResetTimer: ReturnType<typeof setTimeout> | null = null
 
     // Listen for new timeline events (messages, reactions, redactions)
@@ -65,11 +65,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     ) => {
       if (!room) return
 
-      timelineEventFiredThisCycle = true
       // Reset the flag after a short window (sync events come in bursts)
       if (syncCycleResetTimer) clearTimeout(syncCycleResetTimer)
       syncCycleResetTimer = setTimeout(() => {
-        timelineEventFiredThisCycle = false
+        activeRoomTimelineEventFired = false
       }, 500)
 
       // If a new message arrives in an archived room, unarchive it
@@ -90,6 +89,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       // If this is the active room, reload messages (debounced)
       const currentActiveRoom = useChatStore.getState().activeRoom
       if (currentActiveRoom?.roomId === room.roomId) {
+        activeRoomTimelineEventFired = true
         debouncedLoadMessages(room.roomId)
       }
 
@@ -132,7 +132,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const onSync = (state: string) => {
       if (state === 'SYNCING') {
         debouncedLoadRooms()
-        if (!timelineEventFiredThisCycle) {
+        if (!activeRoomTimelineEventFired) {
           const currentActiveRoom = useChatStore.getState().activeRoom
           if (currentActiveRoom) {
             debouncedLoadMessages(currentActiveRoom.roomId)

@@ -427,6 +427,7 @@ export async function loginWithPassword(
     deviceId: response.device_id,
     logger: filteredLogger,
     cryptoCallbacks,
+    timelineSupport: true,
     fallbackICEServerAllowed: true,
     iceCandidatePoolSize: 20,
   })
