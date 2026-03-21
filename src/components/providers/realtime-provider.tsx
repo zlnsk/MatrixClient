@@ -217,7 +217,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     // Auto-archive inactive conversations every 5 minutes.
     // Rooms with no message activity for 3 hours get archived,
     // unless the user is currently viewing them.
-    const AUTO_ARCHIVE_INACTIVITY_MS = 3 * 60 * 60 * 1000 // 3 hours
+    const AUTO_ARCHIVE_INACTIVITY_MS = 24 * 60 * 60 * 1000 // 24 hours
     const AUTO_ARCHIVE_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
     const autoArchiveInterval = setInterval(() => {
       const { rooms, activeRoom, archiveRoom } = useChatStore.getState()

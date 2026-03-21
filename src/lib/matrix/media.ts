@@ -32,6 +32,7 @@ function parseMxcUrl(mxcUrl: string): { serverName: string; mediaId: string } | 
 
 /**
  * Fetch media from authenticated Matrix endpoint and return a blob URL.
+ * Falls back to legacy /_matrix/media/v3/ endpoint if v1 fails.
  */
 export async function fetchAuthenticatedMedia(mxcUrl: string, mimetype?: string): Promise<string> {
   const parsed = parseMxcUrl(mxcUrl)
@@ -40,8 +41,26 @@ export async function fetchAuthenticatedMedia(mxcUrl: string, mimetype?: string)
   const accessToken = getAccessToken()
   if (!accessToken) throw new Error('Not authenticated')
 
-  const url = `${getHomeserverUrl()}/_matrix/client/v1/media/download/${encodeURIComponent(parsed.serverName)}/${encodeURIComponent(parsed.mediaId)}`
-  const response = await fetch(url, {
+  const hs = getHomeserverUrl()
+  const server = encodeURIComponent(parsed.serverName)
+  const media = encodeURIComponent(parsed.mediaId)
+
+  // Try authenticated v1 endpoint first
+  try {
+    const v1Url = `${hs}/_matrix/client/v1/media/download/${server}/${media}`
+    const res = await fetch(v1Url, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    })
+    if (res.ok) {
+      const data = await res.arrayBuffer()
+      const blob = new Blob([data], { type: mimetype || res.headers.get('content-type') || 'application/octet-stream' })
+      return URL.createObjectURL(blob)
+    }
+  } catch { /* fall through to legacy */ }
+
+  // Fallback: legacy endpoint
+  const legacyUrl = `${hs}/_matrix/media/v3/download/${server}/${media}`
+  const response = await fetch(legacyUrl, {
     headers: { 'Authorization': `Bearer ${accessToken}` },
   })
   if (!response.ok) throw new Error(`Media fetch failed: ${response.status}`)
@@ -53,6 +72,8 @@ export async function fetchAuthenticatedMedia(mxcUrl: string, mimetype?: string)
 
 /**
  * Fetch a thumbnail from authenticated Matrix endpoint and return a blob URL.
+ * Falls back to the legacy /_matrix/media/v3/ endpoint if the v1 authenticated
+ * endpoint fails (some homeservers don't support it yet).
  */
 export async function fetchAuthenticatedThumbnail(
   mxcUrl: string,
@@ -65,13 +86,31 @@ export async function fetchAuthenticatedThumbnail(
   const accessToken = getAccessToken()
   if (!accessToken) throw new Error('Not authenticated')
 
-  const url = `${getHomeserverUrl()}/_matrix/client/v1/media/thumbnail/${encodeURIComponent(parsed.serverName)}/${encodeURIComponent(parsed.mediaId)}?width=${width}&height=${height}&method=crop`
-  const response = await fetch(url, {
+  const hs = getHomeserverUrl()
+  const server = encodeURIComponent(parsed.serverName)
+  const media = encodeURIComponent(parsed.mediaId)
+  const qs = `width=${width}&height=${height}&method=crop`
+
+  // Try authenticated v1 endpoint first
+  try {
+    const v1Url = `${hs}/_matrix/client/v1/media/thumbnail/${server}/${media}?${qs}`
+    const res = await fetch(v1Url, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    })
+    if (res.ok) {
+      const blob = await res.blob()
+      return URL.createObjectURL(blob)
+    }
+  } catch { /* fall through to legacy */ }
+
+  // Fallback: legacy unauthenticated endpoint
+  const legacyUrl = `${hs}/_matrix/media/v3/thumbnail/${server}/${media}?${qs}`
+  const res = await fetch(legacyUrl, {
     headers: { 'Authorization': `Bearer ${accessToken}` },
   })
-  if (!response.ok) throw new Error(`Thumbnail fetch failed: ${response.status}`)
+  if (!res.ok) throw new Error(`Thumbnail fetch failed: ${res.status}`)
 
-  const blob = await response.blob()
+  const blob = await res.blob()
   return URL.createObjectURL(blob)
 }
 

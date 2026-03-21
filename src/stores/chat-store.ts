@@ -417,15 +417,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       const timeline = room.getLiveTimeline().getEvents()
+      const seen = new Set<string>()
       const newMessages: MatrixMessage[] = []
       for (const e of timeline) {
         try {
+          const id = e.getId()
+          if (id && seen.has(id)) continue // deduplicate
+          if (id) seen.add(id)
           const msg = eventToMatrixMessage(e, room)
           if (msg) newMessages.push(msg)
         } catch {
           // Skip events that fail to convert rather than losing all messages
         }
       }
+      // Ensure chronological order (bridged/decrypted events can arrive out of order)
+      newMessages.sort((a, b) => a.timestamp - b.timestamp)
 
       // Quick equality check: skip setState if messages haven't actually changed.
       // Compare by length, then key fields of each message to avoid unnecessary re-renders.
