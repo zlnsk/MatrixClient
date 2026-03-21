@@ -6,7 +6,55 @@ import type { CryptoCallbacks } from 'matrix-js-sdk/lib/crypto-api'
 
 let matrixClient: sdk.MatrixClient | null = null
 
-const HOMESERVER_URL = 'https://lukasz.com'
+/**
+ * Get the homeserver URL from the current session or return null.
+ */
+export function getHomeserverUrl(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const session = localStorage.getItem('matrix_session')
+    if (session) {
+      return JSON.parse(session).homeserverUrl || null
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
+/**
+ * Get the homeserver domain (hostname) from the current session.
+ */
+export function getHomeserverDomain(): string | null {
+  const url = getHomeserverUrl()
+  if (!url) return null
+  try {
+    return new URL(url).hostname
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Resolve a Matrix server name to a homeserver base URL.
+ * Tries .well-known discovery first, then falls back to https://server.
+ */
+export async function resolveHomeserver(server: string): Promise<string> {
+  // If user typed a full URL, use it directly
+  if (server.startsWith('http://') || server.startsWith('https://')) {
+    return server.replace(/\/+$/, '')
+  }
+
+  // Try .well-known discovery
+  try {
+    const res = await fetch(`https://${server}/.well-known/matrix/client`)
+    if (res.ok) {
+      const data = await res.json()
+      const base = data?.['m.homeserver']?.base_url
+      if (base) return base.replace(/\/+$/, '')
+    }
+  } catch { /* discovery failed, fall back */ }
+
+  return `https://${server}`
+}
 
 // Pending secret storage key for the getSecretStorageKey callback
 let pendingSecretStorageKey: Uint8Array | null = null
@@ -242,9 +290,10 @@ export async function deleteOtherDevice(
 
 export async function loginWithPassword(
   username: string,
-  password: string
+  password: string,
+  homeserverUrl: string
 ): Promise<sdk.MatrixClient> {
-  const tmpClient = sdk.createClient({ baseUrl: HOMESERVER_URL })
+  const tmpClient = sdk.createClient({ baseUrl: homeserverUrl })
 
   const response = await tmpClient.login('m.login.password', {
     user: username,
@@ -253,7 +302,7 @@ export async function loginWithPassword(
   })
 
   matrixClient = sdk.createClient({
-    baseUrl: HOMESERVER_URL,
+    baseUrl: homeserverUrl,
     accessToken: response.access_token,
     userId: response.user_id,
     deviceId: response.device_id,
@@ -272,7 +321,7 @@ export async function loginWithPassword(
       accessToken: response.access_token,
       userId: response.user_id,
       deviceId: response.device_id,
-      homeserverUrl: HOMESERVER_URL,
+      homeserverUrl,
     })
   )
 
@@ -292,14 +341,9 @@ export function restoreSession(): sdk.MatrixClient | null {
       return null
     }
 
-    // Validate homeserver URL matches expected server
+    // Validate homeserver URL is a valid URL
     try {
-      const url = new URL(session.homeserverUrl)
-      if (!url.hostname.endsWith('lukasz.com') && url.hostname !== 'lukasz.com') {
-        console.warn('Session homeserver does not match expected domain')
-        localStorage.removeItem('matrix_session')
-        return null
-      }
+      new URL(session.homeserverUrl)
     } catch {
       localStorage.removeItem('matrix_session')
       return null
@@ -374,4 +418,3 @@ export function getUserId(): string | null {
   return matrixClient?.getUserId() || null
 }
 
-export { HOMESERVER_URL }

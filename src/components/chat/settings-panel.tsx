@@ -5,7 +5,7 @@ import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
-import { HOMESERVER_URL, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient } from '@/lib/matrix/client'
+import { getHomeserverUrl, getHomeserverDomain, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient } from '@/lib/matrix/client'
 import {
   X,
   Sun,
@@ -144,7 +144,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     router.push('/login')
   }
 
-  const homeserverDomain = new URL(HOMESERVER_URL).hostname
+  const homeserverDomain = getHomeserverDomain() || 'unknown'
 
   const sections = [
     { id: 'profile' as const, label: 'Profile', icon: User },
@@ -347,7 +347,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Homeserver URL</h4>
-                <p className="mt-1 font-mono text-xs text-gray-500">{HOMESERVER_URL}</p>
+                <p className="mt-1 font-mono text-xs text-gray-500">{getHomeserverUrl() || 'Not connected'}</p>
               </div>
 
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">

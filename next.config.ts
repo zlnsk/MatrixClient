@@ -9,16 +9,7 @@ const nextConfig: NextConfig = {
   turbopack: {},
   images: {
     ...(isTauri && { unoptimized: true }),
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'lukasz.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.lukasz.com',
-      },
-    ],
+    unoptimized: true,
   },
   // WASM support for matrix-sdk-crypto
   webpack: (config) => {
@@ -65,9 +56,9 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' https://lukasz.com https://*.lukasz.com blob: data:",
-              "media-src 'self' https://lukasz.com https://*.lukasz.com blob:",
-              "connect-src 'self' https://lukasz.com https://*.lukasz.com wss://lukasz.com wss://*.lukasz.com",
+              "img-src 'self' https: blob: data:",
+              "media-src 'self' https: blob:",
+              "connect-src 'self' https: wss:",
               "font-src 'self'",
               "object-src 'none'",
               "base-uri 'self'",

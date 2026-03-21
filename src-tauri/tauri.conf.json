@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https://lukasz.com https://*.lukasz.com blob: data: asset: http://asset.localhost; media-src 'self' https://lukasz.com https://*.lukasz.com blob: mediastream:; connect-src 'self' https://lukasz.com https://*.lukasz.com wss://lukasz.com wss://*.lukasz.com; font-src 'self'"
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https: blob: data: asset: http://asset.localhost; media-src 'self' https: blob: mediastream:; connect-src 'self' https: wss:; font-src 'self'"
     }
   },
   "bundle": {

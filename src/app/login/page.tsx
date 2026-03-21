@@ -1,26 +1,54 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
-import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react'
-import { HOMESERVER_URL } from '@/lib/matrix/client'
+import { resolveHomeserver } from '@/lib/matrix/client'
+import { Shield, Eye, EyeOff, Loader2, Server } from 'lucide-react'
 
 export default function LoginPage() {
+  const [server, setServer] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
+  const [isResolving, setIsResolving] = useState(false)
   const { signIn } = useAuthStore()
   const router = useRouter()
+
+  const handleServerBlur = useCallback(async () => {
+    const s = server.trim()
+    if (!s) {
+      setResolvedUrl(null)
+      return
+    }
+    setIsResolving(true)
+    try {
+      const url = await resolveHomeserver(s)
+      setResolvedUrl(url)
+    } catch {
+      setResolvedUrl(null)
+    } finally {
+      setIsResolving(false)
+    }
+  }, [server])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    const s = server.trim()
+    if (!s) {
+      setError('Please enter a homeserver address')
+      return
+    }
+
     setIsLoading(true)
     try {
-      await signIn(username, password)
+      const homeserverUrl = resolvedUrl || await resolveHomeserver(s)
+      await signIn(username, password, homeserverUrl)
       router.push('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in')
@@ -29,8 +57,7 @@ export default function LoginPage() {
     }
   }
 
-  // Extract homeserver domain for display
-  const homeserverDomain = new URL(HOMESERVER_URL).hostname
+  const serverDomain = server.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '') || null
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
@@ -45,19 +72,8 @@ export default function LoginPage() {
             </div>
             <h1 className="mt-4 text-3xl font-bold text-gray-900 dark:text-white">Matrix Client</h1>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Sign in to <span className="text-indigo-400">{homeserverDomain}</span>
+              Sign in to any Matrix homeserver
             </p>
-          </div>
-
-          {/* Homeserver info */}
-          <div className="mb-6 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800/50">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/50">
-              <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Homeserver</p>
-              <p className="text-xs text-gray-500">{HOMESERVER_URL}</p>
-            </div>
           </div>
 
           {/* Form */}
@@ -68,6 +84,35 @@ export default function LoginPage() {
               </div>
             )}
 
+            {/* Homeserver */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
+                Homeserver
+              </label>
+              <div className="relative">
+                <Server className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={server}
+                  onChange={e => { setServer(e.target.value); setResolvedUrl(null) }}
+                  onBlur={handleServerBlur}
+                  placeholder="matrix.org"
+                  required
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                />
+                {isResolving && (
+                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
+                )}
+              </div>
+              {resolvedUrl && (
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
+                  {resolvedUrl}
+                </p>
+              )}
+            </div>
+
+            {/* Username */}
             <div>
               <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
                 Username
@@ -83,11 +128,14 @@ export default function LoginPage() {
                   className="w-full rounded-lg border border-gray-200 bg-gray-50 py-3 pl-8 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-600">
-                e.g. lca for @lca:{homeserverDomain}
-              </p>
+              {serverDomain && (
+                <p className="mt-1 text-xs text-gray-600">
+                  e.g. user for @user:{serverDomain}
+                </p>
+              )}
             </div>
 
+            {/* Password */}
             <div>
               <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
                 Password

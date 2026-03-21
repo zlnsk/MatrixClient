@@ -21,7 +21,7 @@ interface AuthState {
   isAuthenticated: boolean
 
   initialize: () => Promise<void>
-  signIn: (username: string, password: string) => Promise<void>
+  signIn: (username: string, password: string, homeserverUrl: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: { displayName?: string; avatarUrl?: string }) => void
 }
@@ -57,8 +57,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  signIn: async (username, password) => {
-    const client = await loginWithPassword(username, password)
+  signIn: async (username, password, homeserverUrl) => {
+    const client = await loginWithPassword(username, password, homeserverUrl)
     await startSync()
     const userId = getUserId()
     const matrixUser = client.getUser(userId!)

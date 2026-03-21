@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useChatStore } from '@/stores/chat-store'
+import { getHomeserverDomain } from '@/lib/matrix/client'
 import {
   X,
   MessageSquare,
@@ -29,6 +30,8 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
 
+  const domain = getHomeserverDomain() || 'matrix.org'
+
   const handleDirectChat = async () => {
     if (!userId.trim()) return
     setError('')
@@ -40,7 +43,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
         fullUserId = `@${fullUserId}`
       }
       if (!fullUserId.includes(':')) {
-        fullUserId = `${fullUserId}:lukasz.com`
+        fullUserId = `${fullUserId}:${domain}`
       }
 
       // Validate Matrix user ID format: @localpart:domain
@@ -72,7 +75,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
         .map(m => {
           let id = m.trim()
           if (!id.startsWith('@')) id = `@${id}`
-          if (!id.includes(':')) id = `${id}:lukasz.com`
+          if (!id.includes(':')) id = `${id}:${domain}`
           return id
         })
         .filter(Boolean)
@@ -149,7 +152,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                   <AtSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                   <input
                     type="text"
-                    placeholder="username:lukasz.com"
+                    placeholder={`username:${domain}`}
                     value={userId}
                     onChange={e => setUserId(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleDirectChat()}
@@ -157,7 +160,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                   />
                 </div>
                 <p className="mt-1 text-xs text-gray-600">
-                  e.g. lca:lukasz.com or @lca:lukasz.com
+                  e.g. user:{domain} or @user:{domain}
                 </p>
               </div>
 
@@ -188,7 +191,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                   Members (comma-separated Matrix IDs)
                 </label>
                 <textarea
-                  placeholder="@user1:lukasz.com, @user2:lukasz.com"
+                  placeholder={`@user1:${domain}, @user2:${domain}`}
                   value={groupMembers}
                   onChange={e => setGroupMembers(e.target.value)}
                   rows={3}

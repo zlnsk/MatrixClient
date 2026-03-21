@@ -3,17 +3,25 @@
  * Uses /_matrix/client/v1/media/ endpoints which require auth headers.
  */
 
-const HOMESERVER_URL = 'https://lukasz.com'
-
-function getAccessToken(): string | null {
+function getSession(): { accessToken: string; homeserverUrl: string } | null {
   if (typeof window === 'undefined') return null
-  const session = localStorage.getItem('matrix_session')
-  if (!session) return null
+  const raw = localStorage.getItem('matrix_session')
+  if (!raw) return null
   try {
-    return JSON.parse(session).accessToken
+    const s = JSON.parse(raw)
+    if (s.accessToken && s.homeserverUrl) return s
+    return null
   } catch {
     return null
   }
+}
+
+function getAccessToken(): string | null {
+  return getSession()?.accessToken ?? null
+}
+
+function getHomeserverUrl(): string {
+  return getSession()?.homeserverUrl ?? ''
 }
 
 function parseMxcUrl(mxcUrl: string): { serverName: string; mediaId: string } | null {
@@ -32,7 +40,7 @@ export async function fetchAuthenticatedMedia(mxcUrl: string, mimetype?: string)
   const accessToken = getAccessToken()
   if (!accessToken) throw new Error('Not authenticated')
 
-  const url = `${HOMESERVER_URL}/_matrix/client/v1/media/download/${encodeURIComponent(parsed.serverName)}/${encodeURIComponent(parsed.mediaId)}`
+  const url = `${getHomeserverUrl()}/_matrix/client/v1/media/download/${encodeURIComponent(parsed.serverName)}/${encodeURIComponent(parsed.mediaId)}`
   const response = await fetch(url, {
     headers: { 'Authorization': `Bearer ${accessToken}` },
   })
@@ -57,7 +65,7 @@ export async function fetchAuthenticatedThumbnail(
   const accessToken = getAccessToken()
   if (!accessToken) throw new Error('Not authenticated')
 
-  const url = `${HOMESERVER_URL}/_matrix/client/v1/media/thumbnail/${encodeURIComponent(parsed.serverName)}/${encodeURIComponent(parsed.mediaId)}?width=${width}&height=${height}&method=crop`
+  const url = `${getHomeserverUrl()}/_matrix/client/v1/media/thumbnail/${encodeURIComponent(parsed.serverName)}/${encodeURIComponent(parsed.mediaId)}?width=${width}&height=${height}&method=crop`
   const response = await fetch(url, {
     headers: { 'Authorization': `Bearer ${accessToken}` },
   })
@@ -88,7 +96,7 @@ export async function decryptMediaAttachment(
   const accessToken = getAccessToken()
   if (!accessToken) throw new Error('Not authenticated')
 
-  const url = `${HOMESERVER_URL}/_matrix/client/v1/media/download/${encodeURIComponent(parsed.serverName)}/${encodeURIComponent(parsed.mediaId)}`
+  const url = `${getHomeserverUrl()}/_matrix/client/v1/media/download/${encodeURIComponent(parsed.serverName)}/${encodeURIComponent(parsed.mediaId)}`
   const response = await fetch(url, {
     headers: { 'Authorization': `Bearer ${accessToken}` },
   })
