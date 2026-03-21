@@ -91,6 +91,8 @@ function escapeHtml(text: string): string {
 }
 
 function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  const [loaded, setLoaded] = useState(false)
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -108,16 +110,22 @@ function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
     >
       <button
         onClick={onClose}
-        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+        className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
         aria-label="Close preview"
       >
         <X className="h-6 w-6" />
       </button>
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-white/60" />
+        </div>
+      )}
       <img
         src={src}
         alt={alt}
-        className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+        className={`max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
         onClick={e => e.stopPropagation()}
+        onLoad={() => setLoaded(true)}
       />
     </div>,
     document.body
