@@ -332,7 +332,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6">
+      <div className="message-scroll-container flex-1 overflow-y-auto px-4 py-4 md:px-6">
         {isLoadingMessages ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
