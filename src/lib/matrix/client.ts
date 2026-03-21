@@ -34,11 +34,31 @@ const SUPPRESSED_PATTERNS = [
   'olm_internal_error',
   'megolm session not yet available',
   'Received megolm session for',
+  // Rust WASM crypto module patterns (these bypass the JS SDK logger)
+  'matrix_sdk_crypto',
+  "Can't find the room key",
+  'Failed to decrypt a room event',
+  'WARN matrix_sdk',
+  'ERROR matrix_sdk',
 ]
 
 function isSuppressed(args: any[]): boolean {
   const msg = args.map(a => (typeof a === 'string' ? a : a?.message || '')).join(' ')
   return SUPPRESSED_PATTERNS.some(p => msg.includes(p))
+}
+
+// Monkey-patch global console.warn and console.error to suppress Rust WASM crypto noise.
+// The Rust crypto module (matrix_sdk_crypto) compiled to WASM calls console.warn/error
+// directly, bypassing the JS SDK's logger interface.
+if (typeof window !== 'undefined') {
+  const originalWarn = console.warn
+  const originalError = console.error
+  console.warn = (...args: any[]) => {
+    if (!isSuppressed(args)) originalWarn.apply(console, args)
+  }
+  console.error = (...args: any[]) => {
+    if (!isSuppressed(args)) originalError.apply(console, args)
+  }
 }
 
 /**
