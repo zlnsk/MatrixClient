@@ -36,6 +36,9 @@ interface CallState {
   // Minimized (PiP mode)
   isMinimized: boolean
 
+  // HD quality mode
+  hdQuality: boolean
+
   // Actions
   setCallInfo: (info: CallInfo | null) => void
   setStatus: (status: CallStatus) => void
@@ -46,6 +49,7 @@ interface CallState {
   setDuration: (duration: number) => void
   setIsFullscreen: (fullscreen: boolean) => void
   setIsMinimized: (minimized: boolean) => void
+  setHdQuality: (hd: boolean) => void
   reset: () => void
 }
 
@@ -59,6 +63,7 @@ const initialState = {
   duration: 0,
   isFullscreen: false,
   isMinimized: false,
+  hdQuality: false,
 }
 
 export const useCallStore = create<CallState>((set) => ({
@@ -73,5 +78,6 @@ export const useCallStore = create<CallState>((set) => ({
   setDuration: (duration) => set({ duration }),
   setIsFullscreen: (fullscreen) => set({ isFullscreen: fullscreen }),
   setIsMinimized: (minimized) => set({ isMinimized: minimized }),
+  setHdQuality: (hd) => set({ hdQuality: hd }),
   reset: () => set(initialState),
 }))

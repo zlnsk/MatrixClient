@@ -8,6 +8,7 @@ import {
   hangupCall,
   toggleAudioMute,
   toggleVideoMute,
+  toggleHdQuality,
 } from '@/lib/matrix/voip'
 import {
   Phone,
@@ -21,6 +22,7 @@ import {
   Minimize2,
   Maximize2,
   X,
+  Sparkles,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 
@@ -203,6 +205,7 @@ export function CallOverlay() {
     duration,
     isFullscreen,
     isMinimized,
+    hdQuality,
     setIsFullscreen,
     setIsMinimized,
   } = useCallStore()
@@ -383,6 +386,21 @@ export function CallOverlay() {
                     title={videoMuted ? 'Turn on camera' : 'Turn off camera'}
                   >
                     {videoMuted ? <VideoOff className="h-6 w-6" /> : <Video className="h-6 w-6" />}
+                  </button>
+                )}
+
+                {/* HD quality toggle */}
+                {isConnected && (
+                  <button
+                    onClick={toggleHdQuality}
+                    className={`flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 ${
+                      hdQuality
+                        ? 'bg-indigo-500 text-white'
+                        : 'bg-white/20 text-white hover:bg-white/30'
+                    }`}
+                    title={hdQuality ? 'Switch to standard quality' : 'Switch to HD quality'}
+                  >
+                    <Sparkles className="h-6 w-6" />
                   </button>
                 )}
 

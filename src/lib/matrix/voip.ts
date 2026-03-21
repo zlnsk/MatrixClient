@@ -108,6 +108,126 @@ function attachCallListeners(call: MatrixCall): void {
   })
 }
 
+/**
+ * Apply HD quality constraints to the call's local video/audio tracks
+ * and boost bitrate via RTCRtpSender parameters.
+ */
+async function applyHdConstraints(call: MatrixCall, isVideo: boolean): Promise<void> {
+  const localFeed = call.localUsermediaFeed
+  if (!localFeed?.stream) return
+
+  // Upgrade video track constraints to HD
+  if (isVideo) {
+    const videoTrack = localFeed.stream.getVideoTracks()[0]
+    if (videoTrack) {
+      try {
+        await videoTrack.applyConstraints({
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 },
+        })
+      } catch (e) {
+        console.warn('Could not apply HD video constraints:', e)
+      }
+    }
+  }
+
+  // Boost audio quality
+  const audioTrack = localFeed.stream.getAudioTracks()[0]
+  if (audioTrack) {
+    try {
+      await audioTrack.applyConstraints({
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: { ideal: 48000 },
+        channelCount: { ideal: 1 },
+      })
+    } catch (e) {
+      console.warn('Could not apply HD audio constraints:', e)
+    }
+  }
+
+  // Boost max bitrate via RTCRtpSender
+  const pc = (call as any).peerConn as RTCPeerConnection | undefined
+  if (pc) {
+    for (const sender of pc.getSenders()) {
+      const params = sender.getParameters()
+      if (!params.encodings || params.encodings.length === 0) {
+        params.encodings = [{}]
+      }
+      if (sender.track?.kind === 'video') {
+        params.encodings[0].maxBitrate = 2_500_000 // 2.5 Mbps
+      } else if (sender.track?.kind === 'audio') {
+        params.encodings[0].maxBitrate = 128_000 // 128 kbps
+      }
+      try {
+        await sender.setParameters(params)
+      } catch (e) {
+        console.warn('Could not set sender bitrate:', e)
+      }
+    }
+  }
+}
+
+/**
+ * Remove HD constraints — revert to standard quality.
+ */
+async function applyStandardConstraints(call: MatrixCall, isVideo: boolean): Promise<void> {
+  const localFeed = call.localUsermediaFeed
+  if (!localFeed?.stream) return
+
+  if (isVideo) {
+    const videoTrack = localFeed.stream.getVideoTracks()[0]
+    if (videoTrack) {
+      try {
+        await videoTrack.applyConstraints({
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 24 },
+        })
+      } catch (e) {
+        console.warn('Could not revert video constraints:', e)
+      }
+    }
+  }
+
+  const pc = (call as any).peerConn as RTCPeerConnection | undefined
+  if (pc) {
+    for (const sender of pc.getSenders()) {
+      const params = sender.getParameters()
+      if (!params.encodings || params.encodings.length === 0) continue
+      if (sender.track?.kind === 'video') {
+        params.encodings[0].maxBitrate = 800_000 // 800 kbps
+      } else if (sender.track?.kind === 'audio') {
+        params.encodings[0].maxBitrate = 64_000 // 64 kbps
+      }
+      try {
+        await sender.setParameters(params)
+      } catch (e) {
+        console.warn('Could not revert sender bitrate:', e)
+      }
+    }
+  }
+}
+
+/**
+ * Toggle HD quality on the current call.
+ */
+export async function toggleHdQuality(): Promise<void> {
+  if (!currentCall) return
+  const store = useCallStore.getState()
+  const newHd = !store.hdQuality
+  store.setHdQuality(newHd)
+
+  const isVideo = store.callInfo?.isVideo ?? false
+  if (newHd) {
+    await applyHdConstraints(currentCall, isVideo)
+  } else {
+    await applyStandardConstraints(currentCall, isVideo)
+  }
+}
+
 function endCallCleanup(): void {
   clearDurationInterval()
   const store = useCallStore.getState()

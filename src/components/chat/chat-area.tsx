@@ -97,6 +97,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const user = useAuthStore(s => s.user)
   const { activeRoom, messages, isLoadingMessages, sendMessage, typingUsers, archiveRoom, unarchiveRoom, setActiveRoom, leaveRoom, setRoomName, setRoomTopic, inviteMember } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [replyTo, setReplyTo] = useState<MatrixMessage | null>(null)
   const [showSearch, setShowSearch] = useState(false)
   const [chatSearch, setChatSearch] = useState('')
@@ -133,7 +134,13 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     // Double-rAF ensures the browser has painted the new content before scrolling
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' })
+        const el = scrollContainerRef.current
+        if (!el) return
+        if (instant) {
+          el.scrollTop = el.scrollHeight
+        } else {
+          el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+        }
       })
     })
   }, [])
@@ -372,7 +379,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       )}
 
       {/* Messages */}
-      <div className="message-scroll-container flex-1 overflow-y-auto px-4 pt-4 pb-2 md:px-6 md:pb-4">
+      <div ref={scrollContainerRef} className="message-scroll-container min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-2 md:px-6 md:pb-4">
         {isLoadingMessages ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
