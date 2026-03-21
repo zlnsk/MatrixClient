@@ -1,14 +1,18 @@
 'use client'
 
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { getMatrixClient } from '@/lib/matrix/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore } from '@/stores/chat-store'
 import * as sdk from 'matrix-js-sdk'
+import { CryptoEvent } from 'matrix-js-sdk/lib/crypto-api/CryptoEvent'
+import type { VerificationRequest } from 'matrix-js-sdk/lib/crypto-api/verification'
+import { VerificationDialog } from '@/components/chat/verification-dialog'
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
   const { loadRooms, activeRoom, loadMessages, unarchiveRoom } = useChatStore()
+  const [verificationRequest, setVerificationRequest] = useState<VerificationRequest | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -111,12 +115,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       loadRooms()
     }
 
+    // Listen for incoming verification requests
+    const onVerificationRequest = (request: VerificationRequest) => {
+      console.log('Verification request received:', request.otherUserId, 'phase:', request.phase)
+      setVerificationRequest(request)
+    }
+
     client.on(sdk.RoomEvent.Timeline, onTimelineEvent)
     client.on(sdk.RoomEvent.TimelineReset, onTimelineReset)
     client.on(sdk.RoomEvent.MyMembership, onRoomMembership)
     client.on(sdk.RoomEvent.Receipt, onReceipt)
     client.on(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
     client.on('RoomMember.typing' as any, onRoomTyping)
+    client.on(CryptoEvent.VerificationRequestReceived as any, onVerificationRequest)
 
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
@@ -130,8 +141,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       client.removeListener(sdk.RoomEvent.Receipt, onReceipt)
       client.removeListener(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
       client.removeListener('RoomMember.typing' as any, onRoomTyping)
+      client.removeListener(CryptoEvent.VerificationRequestReceived as any, onVerificationRequest)
     }
   }, [user, activeRoom, loadRooms, loadMessages, unarchiveRoom])
 
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      {verificationRequest && (
+        <VerificationDialog
+          request={verificationRequest}
+          onClose={() => setVerificationRequest(null)}
+        />
+      )}
+    </>
+  )
 }
