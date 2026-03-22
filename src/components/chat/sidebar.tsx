@@ -429,10 +429,10 @@ const RoomListItem = memo(function RoomListItem({
   return (
     <button
       onClick={onClick}
-      className={`group flex w-full items-center gap-3 rounded-xl p-3 text-left transition-all ${
+      className={`group flex w-full items-center gap-3 rounded-xl p-3 text-left transition-all duration-150 ${
         isActive
-          ? 'bg-indigo-50 shadow-md shadow-indigo-100/50 dark:bg-gray-800 dark:shadow-black/20'
-          : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'
+          ? 'bg-indigo-50 shadow-[0_2px_8px_rgba(99,102,241,0.15)] ring-1 ring-indigo-200/50 dark:bg-gray-800 dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)] dark:ring-gray-700/50'
+          : 'hover:bg-gray-50 hover:shadow-[0_1px_4px_rgba(0,0,0,0.06)] dark:hover:bg-gray-800/60 dark:hover:shadow-[0_1px_4px_rgba(0,0,0,0.2)]'
       }`}
     >
       <Avatar

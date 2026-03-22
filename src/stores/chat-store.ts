@@ -2,6 +2,22 @@ import { create } from 'zustand'
 import { getMatrixClient, getAvatarUrl, getUserId } from '@/lib/matrix/client'
 import type { Room, MatrixEvent, RoomMember } from 'matrix-js-sdk'
 
+/**
+ * Strip Matrix ID disambiguation from display names.
+ * The SDK appends " (@user:server)" when multiple members share a display name.
+ * e.g. "Łukasz (@signal_52c1d86e-...:lukasz.com)" → "Łukasz"
+ */
+function cleanDisplayName(name: string): string {
+  // Strip trailing " (@user:server.com)" disambiguation
+  const match = name.match(/^(.+?)\s*\(@[^)]+\)$/)
+  if (match) return match[1].trim()
+  // If the name IS a raw Matrix ID, extract the localpart
+  if (name.startsWith('@') && name.includes(':')) {
+    return name.slice(1).split(':')[0]
+  }
+  return name
+}
+
 export interface MatrixRoom {
   roomId: string
   name: string
@@ -167,7 +183,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     isDirect,
     lastMessage,
     lastMessageTs: lastEvent?.getTs() || room.getLastActiveTimestamp() || 0,
-    lastSenderName: lastEvent ? (room.getMember(lastEvent.getSender()!)?.name || lastEvent.getSender() || null) : null,
+    lastSenderName: lastEvent ? cleanDisplayName(room.getMember(lastEvent.getSender()!)?.name || lastEvent.getSender() || '') || null : null,
     unreadCount: (room as any).getUnreadNotificationCount('total') || 0,
     members,
     encrypted: room.hasEncryptionStateEvent(),
@@ -216,7 +232,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
       replyToEvent = {
         eventId: replyEvt.getId()!,
         senderId: replySender,
-        senderName: replyMember?.name || replySender,
+        senderName: cleanDisplayName(replyMember?.name || replySender),
         content: replyContent?.body || '',
       }
     }
@@ -320,7 +336,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     eventId: event.getId()!,
     roomId: room.roomId,
     senderId: sender,
-    senderName: member?.name || sender,
+    senderName: cleanDisplayName(member?.name || sender),
     senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
     type: displayContent.msgtype || 'm.text',
     msgtype: displayContent.msgtype || 'm.text',

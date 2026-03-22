@@ -47,6 +47,28 @@ const PURIFY_CONFIG_PLAIN = {
   ALLOW_DATA_ATTR: false,
 }
 
+/**
+ * Extract the clean display name, stripping any Matrix ID disambiguation
+ * that the SDK appends (e.g. "Łukasz (@signal_xxx:server.com)" → "Łukasz").
+ * Returns { displayName, matrixId } where matrixId is the raw @user:server part if present.
+ */
+function parseDisplayName(senderName: string, senderId: string): { displayName: string; matrixId: string | null } {
+  // If name contains " (@user:server)", strip it
+  const match = senderName.match(/^(.+?)\s*\(@[^)]+\)$/)
+  if (match) {
+    return { displayName: match[1].trim(), matrixId: senderId }
+  }
+  // If name is just the raw Matrix ID, show it shortened
+  if (senderName === senderId || senderName.startsWith('@')) {
+    const localpart = senderId.replace(/^@/, '').split(':')[0]
+    // Show clean localpart, full ID as subtitle
+    return { displayName: localpart, matrixId: senderId }
+  }
+  // Clean name, only show Matrix ID if it's a bridged/bot user (contains UUID-like patterns)
+  const hasUuid = /[0-9a-f]{8}-[0-9a-f]{4}/.test(senderId)
+  return { displayName: senderName, matrixId: hasUuid ? senderId : null }
+}
+
 function renderRichContent(content: string, formattedContent: string | null): string {
   // If Matrix HTML formatted_body is available, sanitize and use it
   if (formattedContent) {
@@ -273,7 +295,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   if (message.isRedacted) {
     return (
       <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-3' : 'mt-0.5'}`}>
-        <div className={`${isOwn ? 'mr-12' : 'ml-12'} rounded-2xl bg-gray-100 dark:bg-gray-800/50 px-4 py-2 shadow-sm`}>
+        <div className={`${isOwn ? 'mr-12' : 'ml-12'} rounded-2xl bg-gray-100 dark:bg-gray-800/50 px-4 py-2 shadow-[0_1px_4px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_4px_rgba(0,0,0,0.3)]`}>
           <p className="text-sm italic text-gray-400 dark:text-gray-500">This message was deleted</p>
         </div>
       </div>
@@ -314,11 +336,21 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           )}
 
           {/* Sender name */}
-          {showAvatar && !isOwn && (
-            <p className="mb-1 ml-1 text-sm font-semibold text-gray-600 dark:text-gray-400">
-              {message.senderName}
-            </p>
-          )}
+          {showAvatar && !isOwn && (() => {
+            const { displayName, matrixId } = parseDisplayName(message.senderName, message.senderId)
+            return (
+              <div className="mb-1 ml-1 flex items-baseline gap-2">
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  {displayName}
+                </span>
+                {matrixId && (
+                  <span className="text-[10px] font-normal text-gray-400/70 dark:text-gray-600 truncate max-w-[180px]" title={matrixId}>
+                    {matrixId}
+                  </span>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Pin indicator */}
           {isPinned && (
@@ -330,10 +362,10 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
           {/* Bubble */}
           <div
-            className={`rounded-2xl px-4 py-3 ${
+            className={`rounded-2xl px-4 py-3 transition-all duration-200 ${
               isOwn
-                ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30'
-                : 'bg-white text-gray-900 shadow-lg shadow-gray-200/60 dark:bg-gray-800 dark:text-gray-100 dark:shadow-black/30'
+                ? 'bg-gradient-to-br from-indigo-500 via-indigo-500 to-indigo-600 text-white shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_3px_rgba(99,102,241,0.2)] ring-1 ring-indigo-400/20 group-hover:shadow-[0_4px_12px_rgba(99,102,241,0.4),0_2px_4px_rgba(99,102,241,0.25)]'
+                : 'bg-white text-gray-900 shadow-[0_2px_8px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-gray-200/50 group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_2px_4px_rgba(0,0,0,0.08)] group-hover:bg-gray-50/80 dark:bg-gray-800 dark:text-gray-100 dark:shadow-[0_2px_8px_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] dark:ring-gray-700/50 dark:group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.5),0_2px_4px_rgba(0,0,0,0.35)] dark:group-hover:bg-gray-750'
             }`}
           >
             {isEditing ? (
@@ -462,10 +494,10 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 <button
                   key={emoji}
                   onClick={() => handleReaction(emoji)}
-                  className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs shadow-sm transition-all hover:scale-105 ${
+                  className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all hover:scale-105 ${
                     data.includesMe
-                      ? 'border-indigo-400/50 bg-indigo-100 text-indigo-600 dark:border-indigo-500/50 dark:bg-indigo-900/30 dark:text-indigo-300'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-gray-600'
+                      ? 'border-indigo-400/50 bg-indigo-100 text-indigo-600 shadow-[0_1px_3px_rgba(99,102,241,0.2)] dark:border-indigo-500/50 dark:bg-indigo-900/30 dark:text-indigo-300'
+                      : 'border-gray-200 bg-white text-gray-600 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-gray-300 hover:shadow-[0_2px_6px_rgba(0,0,0,0.1)] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:shadow-[0_1px_3px_rgba(0,0,0,0.3)] dark:hover:border-gray-600'
                   }`}
                   title={data.users.join(', ')}
                 >
@@ -493,7 +525,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           )}
 
           {/* Action buttons — floating above the bubble */}
-          <div className={`absolute -top-8 z-10 flex items-center gap-0.5 rounded-xl border border-gray-200 bg-white p-0.5 shadow-lg dark:border-gray-700 dark:bg-gray-800 transition-opacity duration-150 ${isOwn ? 'right-0' : 'left-0'} ${showActions && !isEditing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <div className={`absolute -top-8 z-10 flex items-center gap-0.5 rounded-xl border border-gray-200/80 bg-white p-0.5 shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:border-gray-700 dark:bg-gray-800 dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all duration-150 ${isOwn ? 'right-0' : 'left-0'} ${showActions && !isEditing ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-white"
