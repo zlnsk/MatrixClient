@@ -323,18 +323,6 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
         </div>
 
         <div className="relative flex flex-col" ref={actionsRef}>
-          {/* Reply reference */}
-          {message.replyToEvent && (
-            <div className={`mb-1 rounded-xl px-3 py-1.5 text-xs shadow-sm ${
-              isOwn
-                ? 'border-r-2 border-indigo-400 bg-indigo-900/30 dark:bg-indigo-900/30'
-                : 'border-l-2 border-gray-400 bg-gray-100 dark:border-gray-600 dark:bg-gray-800/60'
-            }`}>
-              <p className="font-medium text-indigo-400 dark:text-gray-400">{message.replyToEvent.senderName}</p>
-              <p className="truncate text-gray-500 dark:text-gray-500">{message.replyToEvent.content}</p>
-            </div>
-          )}
-
           {/* Sender name */}
           {showAvatar && !isOwn && (() => {
             const { displayName, matrixId } = parseDisplayName(message.senderName, message.senderId)
@@ -368,6 +356,22 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 : 'bg-white text-gray-900 shadow-[0_2px_8px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-gray-200/50 group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_2px_4px_rgba(0,0,0,0.08)] group-hover:bg-gray-50/80 dark:bg-gray-800 dark:text-gray-100 dark:shadow-[0_2px_8px_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] dark:ring-gray-700/50 dark:group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.5),0_2px_4px_rgba(0,0,0,0.35)] dark:group-hover:bg-gray-750'
             }`}
           >
+            {/* Inline reply quote */}
+            {message.replyToEvent && !isEditing && (
+              <div className={`mb-2 rounded-lg px-3 py-1.5 text-xs ${
+                isOwn
+                  ? 'border-l-2 border-indigo-300/60 bg-indigo-400/20'
+                  : 'border-l-2 border-gray-300 bg-gray-100/80 dark:border-gray-600 dark:bg-gray-700/50'
+              }`}>
+                <p className={`font-semibold ${isOwn ? 'text-indigo-100' : 'text-gray-700 dark:text-gray-300'}`}>
+                  {message.replyToEvent.senderName}
+                </p>
+                <p className={`truncate ${isOwn ? 'text-indigo-200/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {message.replyToEvent.content}
+                </p>
+              </div>
+            )}
+
             {isEditing ? (
               <div className="flex items-center gap-2">
                 <input
