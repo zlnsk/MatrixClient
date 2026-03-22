@@ -79,7 +79,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' https: blob: data:",
               "media-src 'self' https: blob:",
               "connect-src 'self' https: wss:",
-              "manifest-src 'self' https: blob:",
+              "manifest-src 'self'",
               "font-src 'self'",
               "object-src 'none'",
               "base-uri 'self'",

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { fetchCachedThumbnail } from '@/lib/matrix/media'
 
 interface AvatarProps {
@@ -64,43 +64,6 @@ function InitialsFallback({ name, size }: { name: string; size: 'sm' | 'md' | 'l
   )
 }
 
-/**
- * Detect low-complexity placeholder avatars (e.g. Signal's default dashed-circle
- * silhouette). Draws the image to a tiny canvas and checks color diversity.
- * Real photos have many distinct colors; placeholder icons have very few.
- */
-function isPlaceholderImage(img: HTMLImageElement): boolean {
-  try {
-    const canvas = document.createElement('canvas')
-    const s = 16
-    canvas.width = s
-    canvas.height = s
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })
-    if (!ctx) return false
-    ctx.drawImage(img, 0, 0, s, s)
-    const { data } = ctx.getImageData(0, 0, s, s)
-    const total = s * s
-
-    // Bucket each pixel's RGB into a 4×4×4 grid (64 possible buckets)
-    const buckets = new Map<number, number>()
-    for (let i = 0; i < data.length; i += 4) {
-      const key = ((data[i] >> 6) << 4) | ((data[i + 1] >> 6) << 2) | (data[i + 2] >> 6)
-      buckets.set(key, (buckets.get(key) || 0) + 1)
-    }
-
-    // Real photos at 16×16 typically produce 12+ distinct color buckets.
-    // Simple icons/placeholders (like Signal's dashed circle) produce ≤10.
-    if (buckets.size > 10) return false
-
-    // If the single most dominant color covers ≥50% of pixels, it's likely
-    // a simple icon on a solid background, not a real photo.
-    const sorted = [...buckets.values()].sort((a, b) => b - a)
-    return sorted[0] > total * 0.5
-  } catch {
-    return false
-  }
-}
-
 export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [imgError, setImgError] = useState(false)
@@ -132,12 +95,6 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
     setImgError(false)
   }, [src])
 
-  const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    if (isPlaceholderImage(e.currentTarget)) {
-      setImgError(true)
-    }
-  }, [])
-
   const displayUrl = blobUrl
 
   return (
@@ -147,7 +104,6 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
           src={displayUrl}
           alt={name}
           className={`${sizeMap[size]} rounded-full object-cover`}
-          onLoad={handleLoad}
           onError={() => setImgError(true)}
         />
       ) : (
