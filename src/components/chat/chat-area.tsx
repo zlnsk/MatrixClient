@@ -414,7 +414,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       )}
 
       {/* Messages */}
-      <div ref={scrollContainerRef} className="message-scroll-container min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-2 md:px-6 md:pb-4">
+      <div ref={scrollContainerRef} className="message-scroll-container min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-6 md:px-6 md:pb-8">
         {isLoadingMessages ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />

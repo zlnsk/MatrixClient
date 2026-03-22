@@ -404,7 +404,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         </div>
       )}
 
-      <div className="flex items-end gap-2">
+      <div className="flex items-center gap-2">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}

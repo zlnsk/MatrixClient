@@ -229,11 +229,20 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
       const replyMember = room.getMember(replySender)
       const replyClear = (replyEvt as any).getClearContent?.()
       const replyContent = replyClear || replyEvt.getContent()
+      let replyBody = replyContent?.body || ''
+      // Strip Matrix reply fallback (> <@user:server> prefix lines)
+      if (replyBody.startsWith('> ')) {
+        const lines = replyBody.split('\n')
+        const firstNonQuote = lines.findIndex((l: string) => !l.startsWith('> ') && l !== '')
+        if (firstNonQuote > 0) {
+          replyBody = lines.slice(firstNonQuote).join('\n').trim()
+        }
+      }
       replyToEvent = {
         eventId: replyEvt.getId()!,
         senderId: replySender,
         senderName: cleanDisplayName(replyMember?.name || replySender),
-        content: replyContent?.body || '',
+        content: replyBody,
       }
     }
   }
