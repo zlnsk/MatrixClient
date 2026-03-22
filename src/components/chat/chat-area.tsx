@@ -129,54 +129,71 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   }, [activeRoom, messages])
 
   const prevRoomIdRef = useRef<string | null>(null)
-  const justSwitchedRef = useRef(false)
+  const stickyRef = useRef(true) // true = user is at the bottom, auto-scroll on changes
 
-  const scrollToBottom = useCallback((instant?: boolean) => {
-    const doScroll = () => {
-      const el = scrollContainerRef.current
-      if (!el) return
-      if (instant) {
-        el.scrollTop = el.scrollHeight
-      } else {
-        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-      }
-    }
-    // Double-rAF ensures the browser has painted the new content before scrolling
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        doScroll()
-        // Safety net: scroll again after a short delay to catch late layout shifts
-        // (encrypted media decrypting, images loading, etc.)
-        if (instant) {
-          setTimeout(doScroll, 150)
-        }
-      })
-    })
+  const isAtBottom = useCallback(() => {
+    const el = scrollContainerRef.current
+    if (!el) return true
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 80
   }, [])
 
-  // Track room switches
+  const scrollToBottom = useCallback((instant?: boolean) => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    if (instant) {
+      el.scrollTop = el.scrollHeight
+    } else {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    }
+  }, [])
+
+  // Track user scroll — if they scroll up, stop auto-scrolling
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const onScroll = () => { stickyRef.current = isAtBottom() }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [isAtBottom])
+
+  // On room switch: reset sticky and scroll instantly after messages render
   useEffect(() => {
     if (activeRoom && activeRoom.roomId !== prevRoomIdRef.current) {
       prevRoomIdRef.current = activeRoom.roomId
-      justSwitchedRef.current = true
+      stickyRef.current = true
     }
   }, [activeRoom])
 
-  // Scroll after messages are rendered — instant on room switch, smooth for new messages
+  // Scroll when messages change (new message or room switch)
   useEffect(() => {
-    if (justSwitchedRef.current) {
-      justSwitchedRef.current = false
+    if (!stickyRef.current) return
+    // Use rAF to wait for DOM update, then scroll
+    requestAnimationFrame(() => {
       scrollToBottom(true)
-    } else {
-      scrollToBottom()
-    }
+    })
   }, [messages, scrollToBottom])
+
+  // Watch for layout shifts (images loading, media decrypting) and re-scroll if sticky
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => {
+      if (stickyRef.current) {
+        el.scrollTop = el.scrollHeight
+      }
+    })
+    // Observe the inner content, not the scroll container itself
+    for (const child of el.children) {
+      ro.observe(child)
+    }
+    return () => ro.disconnect()
+  }, [messages]) // re-attach when messages change (DOM children change)
 
   // Re-scroll when mobile keyboard opens/closes (viewport resize)
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const onResize = () => scrollToBottom(true)
+    const onResize = () => { if (stickyRef.current) scrollToBottom(true) }
     vv.addEventListener('resize', onResize)
     return () => vv.removeEventListener('resize', onResize)
   }, [scrollToBottom])
@@ -403,7 +420,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="flex min-h-full flex-col justify-end space-y-4">
             {activeRoom.topic && (
               <div className="flex items-center justify-center py-2">
                 <span className="rounded-full bg-gray-200 px-4 py-1.5 text-sm text-gray-500 shadow-sm dark:bg-gray-800 dark:text-gray-400">
