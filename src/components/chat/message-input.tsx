@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
 import { getMatrixClient } from '@/lib/matrix/client'
 import {
@@ -389,12 +389,33 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
     return <FileText className="h-4 w-4" />
   }
 
-  const getFilePreview = (file: File) => {
-    if (file.type.startsWith('image/')) {
-      return URL.createObjectURL(file)
+  // Memoize file preview blob URLs to avoid creating new ones on every render.
+  // Revoke stale URLs when files are removed or component unmounts.
+  const previewUrlsRef = useRef<Map<File, string>>(new Map())
+  const filePreviewUrls = useMemo(() => {
+    const prev = previewUrlsRef.current
+    const next = new Map<File, string>()
+    for (const file of pendingFiles) {
+      if (file.type.startsWith('image/')) {
+        next.set(file, prev.get(file) || URL.createObjectURL(file))
+      }
     }
-    return null
-  }
+    // Revoke URLs for removed files
+    for (const [file, url] of prev) {
+      if (!next.has(file)) URL.revokeObjectURL(url)
+    }
+    previewUrlsRef.current = next
+    return next
+  }, [pendingFiles])
+
+  // Revoke all preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      for (const url of previewUrlsRef.current.values()) URL.revokeObjectURL(url)
+    }
+  }, [])
+
+  const getFilePreview = (file: File) => filePreviewUrls.get(file) ?? null
 
   return (
     <div className="border-t border-m3-outline-variant bg-m3-surface-container-lowest px-3 py-2.5 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4 md:py-3" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>

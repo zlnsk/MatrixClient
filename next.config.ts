@@ -1,28 +1,22 @@
 import type { NextConfig } from "next";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
+import { execSync } from "child_process";
 
-// Build version: <package version> (build <number>) — auto-increments each build
+// Build version from package.json + git metadata (no file mutation).
+// Format: "<version> (<short-sha> <date>)" e.g. "0.1.0 (a1b2c3d 2026-03-22)"
+// CI can override via BUILD_VERSION env var.
 function getBuildVersion(): string {
+  if (process.env.BUILD_VERSION) return process.env.BUILD_VERSION
+
   const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
-
-  // Read and increment persistent build counter
-  let meta = { build: 0, date: '', dailyBuilds: 0 }
+  let gitInfo = ''
   try {
-    meta = JSON.parse(readFileSync('./build-meta.json', 'utf-8'))
-  } catch { /* first build */ }
+    const sha = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
+    const date = execSync('git log -1 --format=%cs', { encoding: 'utf-8' }).trim()
+    gitInfo = ` (${sha} ${date})`
+  } catch { /* not a git repo or git unavailable */ }
 
-  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-  meta.build += 1
-  if (meta.date === today) {
-    meta.dailyBuilds += 1
-  } else {
-    meta.date = today
-    meta.dailyBuilds = 1
-  }
-
-  writeFileSync('./build-meta.json', JSON.stringify(meta) + '\n')
-
-  return `${pkg.version} build ${meta.build} (${meta.dailyBuilds} today)`
+  return `${pkg.version}${gitInfo}`
 }
 
 const nextConfig: NextConfig = {
@@ -79,7 +73,8 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'",
+              // unsafe-eval is required by React/Next.js in development mode only
+              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''} 'wasm-unsafe-eval'`,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' https: blob: data:",
               "media-src 'self' https: blob:",

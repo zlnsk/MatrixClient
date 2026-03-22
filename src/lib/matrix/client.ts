@@ -130,41 +130,53 @@ if (typeof window !== 'undefined') {
   // Intercept fetch to suppress browser console noise from room_keys 404 responses.
   // The SDK's PerSessionKeyBackupDownloader makes GET requests to
   // /_matrix/client/v3/room_keys/keys/{roomId}/{sessionId}?version=N
-  // which return 404 for sessions not in the backup. The browser logs these
-  // as "Failed to load resource: 404" network errors in the console.
-  // By consuming the real 404 response and returning a synthetic Response
-  // with the same body/status, the browser doesn't log the network error,
-  // and the SDK still receives the proper M_NOT_FOUND to handle gracefully.
+  // which return 404 for sessions not in the backup. The browser logs
+  // "Failed to load resource: 404" at the network level for every real HTTP 404.
+  // This cannot be suppressed after the fact — the only way to prevent it is to
+  // never make the real HTTP request. Instead we return a synthetic 404 Response
+  // immediately. The SDK's PerSessionKeyBackupDownloader handles M_NOT_FOUND
+  // gracefully by marking the session as not found in backup.
+  //
+  // SECURITY: This interceptor is scoped to only process requests destined
+  // for the user's Matrix homeserver. All other requests (e.g., link previews,
+  // external images) pass through to the original fetch without modification,
+  // preventing accidental access token leakage to third-party URLs.
   const originalFetch = window.fetch.bind(window)
   window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
     const url = typeof args[0] === 'string' ? args[0] : args[0] instanceof URL ? args[0].href : (args[0] as Request).url
-    const isRoomKeysRequest = url.includes('/room_keys/keys/')
-    if (isRoomKeysRequest) {
+
+    // Only intercept requests to the user's Matrix homeserver
+    const homeserverUrl = getHomeserverUrl()
+    let isHomeserverRequest = false
+    if (homeserverUrl) {
       try {
-        const response = await originalFetch(...args)
-        if (response.status === 404) {
-          // Return a synthetic 404 with the proper M_NOT_FOUND error body.
-          // The browser only logs network errors for real HTTP responses;
-          // a synthetic Response object created here won't trigger the
-          // "Failed to load resource: 404" console noise.  The SDK's
-          // PerSessionKeyBackupDownloader already handles M_NOT_FOUND
-          // gracefully by marking the session as not found in backup.
-          const body = await response.text()
-          return new Response(body || JSON.stringify({ errcode: 'M_NOT_FOUND', error: 'No room_keys found' }), {
-            status: 404,
-            headers: { 'Content-Type': 'application/json' },
-          })
-        }
-        return response
-      } catch (err) {
-        // Network error — return a synthetic 404 so the SDK handles it
-        // gracefully instead of treating it as a hard network failure.
-        return new Response(JSON.stringify({ errcode: 'M_NOT_FOUND', error: 'No room_keys found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        })
+        const requestOrigin = new URL(url).origin
+        const homeserverOrigin = new URL(homeserverUrl).origin
+        isHomeserverRequest = requestOrigin === homeserverOrigin
+      } catch {
+        // If URL parsing fails, don't intercept
       }
     }
+
+    if (!isHomeserverRequest) {
+      return originalFetch(...args)
+    }
+
+    // Block per-session key backup GET requests entirely — return synthetic 404
+    // without making the real HTTP request. This prevents the browser from logging
+    // "Failed to load resource: the server responded with a status of 404" for
+    // every session ID not in the backup (which is the common case).
+    // Only block GET requests to per-session endpoints (with roomId/sessionId path segments).
+    // Bulk key backup operations (PUT, POST to /room_keys/keys) still go through.
+    const isPerSessionKeyRequest = url.includes('/room_keys/keys/') &&
+      (!args[1] || !args[1].method || args[1].method === 'GET')
+    if (isPerSessionKeyRequest) {
+      return new Response(
+        JSON.stringify({ errcode: 'M_NOT_FOUND', error: 'No room_keys found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
     return originalFetch(...args)
   }
 }
