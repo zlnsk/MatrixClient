@@ -32,7 +32,8 @@ javac -source 1.8 -target 1.8 -Xlint:-options -d "$BUILD_DIR/obj" \
   "$APP_SRC/java/com/lukasz/matrix/BootReceiver.java"
 
 echo "=== Convert to DEX ==="
-dalvik-exchange --dex --min-sdk-version=26 --output="$BUILD_DIR/apk/classes.dex" "$BUILD_DIR/obj"
+# Use build-tools dx directly (not system dalvik-exchange) for reliable dexing
+"$BUILD_TOOLS/dx" --dex --output="$BUILD_DIR/apk/classes.dex" "$BUILD_DIR/obj"
 
 echo "=== Create unsigned APK ==="
 aapt package -f \
@@ -62,11 +63,11 @@ echo "=== Sign APK ==="
   --min-sdk-version 26 \
   --v1-signing-enabled true \
   --v2-signing-enabled true \
-  --out "$SCRIPT_DIR/szept-v2.1-debug.apk" \
+  --out "$SCRIPT_DIR/szept-v2.2-debug.apk" \
   "$BUILD_DIR/matrix-aligned.apk"
 
 echo ""
 echo "=== APK built successfully ==="
-ls -lh "$SCRIPT_DIR/szept-v2.1-debug.apk"
+ls -lh "$SCRIPT_DIR/szept-v2.2-debug.apk"
 echo ""
 echo "Transfer to your Android phone and install (enable 'Install unknown apps')."

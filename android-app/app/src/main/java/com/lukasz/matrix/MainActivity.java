@@ -412,7 +412,7 @@ public class MainActivity extends Activity {
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         String baseUA = settings.getUserAgentString();
-        settings.setUserAgentString(baseUA + " SzeptAndroid/2.0");
+        settings.setUserAgentString(baseUA + " SzeptAndroid/2.2");
 
         // Viewport — perfect phone fit, no zoom
         settings.setUseWideViewPort(false);
