@@ -171,6 +171,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   const [mediaBlobUrl, setMediaBlobUrl] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const actionsRef = useRef<HTMLDivElement>(null)
+  const touchMenuRef = useRef<HTMLDivElement>(null)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchMoved = useRef(false)
 
@@ -207,13 +208,16 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent | TouchEvent) {
-      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      // Don't close desktop menus if click is inside actions area
+      if (actionsRef.current && !actionsRef.current.contains(target)) {
         setShowActions(false)
         setShowEmojiPicker(false)
         setShowContextMenu(false)
         setShowForwardPicker(false)
-        setShowTouchMenu(false)
       }
+      // Touch menu is a portal — check its own ref separately
+      // Don't close it here; it has its own backdrop dismiss handler
     }
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('touchstart', handleClickOutside)
@@ -230,7 +234,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
       if (!touchMoved.current) {
         e.preventDefault()
         setShowTouchMenu(true)
-        // Haptic feedback if available
+        // Haptic feedback — native Android bridge or Web Vibration API
+        try { (window as any).Android?.hapticHeavy() } catch (_) {}
         if (navigator.vibrate) navigator.vibrate(30)
       }
     }, 500)
@@ -655,13 +660,15 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           {/* Touch-friendly action menu (long-press on mobile) */}
           {showTouchMenu && createPortal(
             <div
+              ref={touchMenuRef}
               className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 animate-fade-in"
-              onClick={closeTouchMenu}
+              onClick={(e) => { if (e.target === e.currentTarget) closeTouchMenu() }}
               onTouchEnd={(e) => { if (e.target === e.currentTarget) closeTouchMenu() }}
             >
               <div
-                className="w-full max-w-lg animate-slide-in rounded-t-2xl bg-white pb-8 pt-2 dark:bg-gray-800"
+                className="w-full max-w-md mx-2 mb-2 animate-slide-in rounded-2xl bg-white pb-4 pt-2 shadow-2xl dark:bg-gray-800"
                 onClick={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
               >
                 {/* Drag handle */}
                 <div className="mb-3 flex justify-center">

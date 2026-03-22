@@ -27,7 +27,9 @@ javac -source 1.8 -target 1.8 -Xlint:-options -d "$BUILD_DIR/obj" \
   -classpath "$PLATFORM" \
   -sourcepath "$BUILD_DIR/gen:$APP_SRC/java" \
   "$BUILD_DIR/gen/com/lukasz/matrix/R.java" \
-  "$APP_SRC/java/com/lukasz/matrix/MainActivity.java"
+  "$APP_SRC/java/com/lukasz/matrix/MainActivity.java" \
+  "$APP_SRC/java/com/lukasz/matrix/MatrixService.java" \
+  "$APP_SRC/java/com/lukasz/matrix/BootReceiver.java"
 
 echo "=== Convert to DEX ==="
 dalvik-exchange --dex --min-sdk-version=26 --output="$BUILD_DIR/apk/classes.dex" "$BUILD_DIR/obj"
