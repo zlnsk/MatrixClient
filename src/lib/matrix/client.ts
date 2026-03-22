@@ -39,8 +39,15 @@ export function getHomeserverDomain(): string | null {
  */
 export async function resolveHomeserver(server: string): Promise<string> {
   // If user typed a full URL, use it directly
-  if (server.startsWith('http://') || server.startsWith('https://')) {
+  if (server.startsWith('https://')) {
     return server.replace(/\/+$/, '')
+  }
+  // Block insecure http:// in production — only allow in development
+  if (server.startsWith('http://')) {
+    if (process.env.NODE_ENV === 'development') {
+      return server.replace(/\/+$/, '')
+    }
+    throw new Error('Insecure homeserver URLs (http://) are not allowed. Use https:// instead.')
   }
 
   // Try .well-known discovery

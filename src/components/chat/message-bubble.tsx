@@ -201,7 +201,13 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
     }
     loadMedia()
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      // Revoke blob URL to free memory when component unmounts or media changes
+      if (mediaBlobUrl && mediaBlobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaBlobUrl)
+      }
+    }
   }, [message.eventId, message.encryptedFile, message.mediaUrl]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const effectiveMediaUrl = mediaBlobUrl

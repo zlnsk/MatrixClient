@@ -271,20 +271,14 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     }
   }
 
-  // Collect reactions
+  // Collect reactions from pre-built index (O(1) per message)
   const reactions = new Map<string, { count: number; users: string[]; includesMe: boolean }>()
-  const relatedEvents = room.getLiveTimeline().getEvents()
-  for (const e of relatedEvents) {
-    if (e.getType() === 'm.reaction') {
-      const rel = e.getContent()['m.relates_to']
-      if (rel?.event_id === event.getId() && rel?.key) {
-        const emoji = rel.key
-        const existing = reactions.get(emoji) || { count: 0, users: [], includesMe: false }
-        existing.count++
-        const senderName = room.getMember(e.getSender()!)?.name || e.getSender()!
-        existing.users.push(senderName)
-        if (e.getSender() === userId) existing.includesMe = true
-        reactions.set(emoji, existing)
+  const reactionIndex = (room as any).__reactionIndex as Map<string, Map<string, { count: number; users: string[]; includesMe: boolean }>> | undefined
+  if (reactionIndex) {
+    const msgReactions = reactionIndex.get(event.getId()!)
+    if (msgReactions) {
+      for (const [emoji, data] of msgReactions) {
+        reactions.set(emoji, { ...data, users: [...data.users] })
       }
     }
   }
@@ -503,6 +497,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       const timeline = room.getLiveTimeline().getEvents()
+
+      // Build reaction index once: Map<targetEventId, Map<emoji, summary>>
+      // This avoids O(messages × timeline) scanning inside eventToMatrixMessage.
+      const reactionIndex = new Map<string, Map<string, { count: number; users: string[]; includesMe: boolean }>>()
+      const userId = getUserId()
+      for (const e of timeline) {
+        if (e.getType() !== 'm.reaction') continue
+        const rel = e.getContent()['m.relates_to']
+        if (!rel?.event_id || !rel?.key) continue
+        let msgReactions = reactionIndex.get(rel.event_id)
+        if (!msgReactions) {
+          msgReactions = new Map()
+          reactionIndex.set(rel.event_id, msgReactions)
+        }
+        const emoji = rel.key
+        const existing = msgReactions.get(emoji) || { count: 0, users: [], includesMe: false }
+        existing.count++
+        const senderName = room.getMember(e.getSender()!)?.name || e.getSender()!
+        existing.users.push(senderName)
+        if (e.getSender() === userId) existing.includesMe = true
+        msgReactions.set(emoji, existing)
+      }
+      // Attach index to room object for eventToMatrixMessage to read
+      ;(room as any).__reactionIndex = reactionIndex
+
       const seen = new Set<string>()
       const newMessages: MatrixMessage[] = []
       for (const e of timeline) {
@@ -609,22 +628,46 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const client = getMatrixClient()
     if (!client) return
 
-    // Check if user already reacted with this emoji
     const userId = getUserId()
     const room = client.getRoom(roomId)
     if (!room) return
 
-    const events = room.getLiveTimeline().getEvents()
-    const existing = events.find(
-      (e) =>
-        e.getType() === 'm.reaction' &&
-        e.getSender() === userId &&
-        e.getContent()['m.relates_to']?.event_id === eventId &&
-        e.getContent()['m.relates_to']?.key === emoji
-    )
+    // Use the pre-built reaction index if available to find existing reaction
+    // in O(1), falling back to timeline scan only if needed.
+    let existingEventId: string | null = null
+    const reactionIndex = (room as any).__reactionIndex as Map<string, Map<string, { count: number; users: string[]; includesMe: boolean }>> | undefined
+    if (reactionIndex) {
+      const msgReactions = reactionIndex.get(eventId)
+      if (msgReactions?.get(emoji)?.includesMe) {
+        // Find the actual event ID to redact — need to scan only reaction events
+        const events = room.getLiveTimeline().getEvents()
+        for (const e of events) {
+          if (
+            e.getType() === 'm.reaction' &&
+            e.getSender() === userId &&
+            e.getContent()['m.relates_to']?.event_id === eventId &&
+            e.getContent()['m.relates_to']?.key === emoji
+          ) {
+            existingEventId = e.getId()!
+            break
+          }
+        }
+      }
+    } else {
+      // Fallback: scan timeline
+      const events = room.getLiveTimeline().getEvents()
+      const existing = events.find(
+        (e) =>
+          e.getType() === 'm.reaction' &&
+          e.getSender() === userId &&
+          e.getContent()['m.relates_to']?.event_id === eventId &&
+          e.getContent()['m.relates_to']?.key === emoji
+      )
+      if (existing) existingEventId = existing.getId()!
+    }
 
-    if (existing) {
-      await client.redactEvent(roomId, existing.getId()!)
+    if (existingEventId) {
+      await client.redactEvent(roomId, existingEventId)
     } else {
       await (client as any).sendEvent(roomId, 'm.reaction', {
         'm.relates_to': {

@@ -4,6 +4,16 @@ import { useState, useEffect } from 'react'
 import { getMatrixClient } from '@/lib/matrix/client'
 import { ExternalLink } from 'lucide-react'
 
+// Session-scoped in-memory cache for link previews — prevents redundant
+// homeserver requests when the same URL appears multiple times or the
+// component remounts during scrolling.
+const previewCache = new Map<string, {
+  title?: string
+  description?: string
+  imageUrl?: string
+  siteName?: string
+} | null>()
+
 interface LinkPreviewProps {
   url: string
 }
@@ -14,10 +24,18 @@ export function LinkPreview({ url }: LinkPreviewProps) {
     description?: string
     imageUrl?: string
     siteName?: string
-  } | null>(null)
+  } | null>(() => previewCache.get(url) ?? null)
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    // If already cached, use it immediately
+    if (previewCache.has(url)) {
+      const cached = previewCache.get(url)!
+      setPreview(cached)
+      if (!cached) setError(true)
+      return
+    }
+
     let cancelled = false
 
     async function fetchPreview() {
@@ -40,14 +58,19 @@ export function LinkPreview({ url }: LinkPreviewProps) {
             }
           }
 
-          setPreview({
+          const result = {
             title: data['og:title'] as string | undefined,
             description: data['og:description'] as string | undefined,
             imageUrl,
             siteName: data['og:site_name'] as string | undefined,
-          })
+          }
+          previewCache.set(url, result)
+          setPreview(result)
+        } else {
+          previewCache.set(url, null)
         }
       } catch {
+        previewCache.set(url, null)
         if (!cancelled) setError(true)
       }
     }
