@@ -179,15 +179,17 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const tags = room.tags || {}
   const isArchived = 'm.lowpriority' in tags
 
-  // For DM rooms, prefer the other member's avatar over the room avatar
-  // (bridges like mautrix-signal often set the room avatar to a generic logo)
+  // For DM rooms, prefer the other member's avatar over the room avatar.
+  // Bridges like mautrix-signal often set the room avatar to a generic placeholder
+  // (e.g. Signal's default dashed-circle silhouette), while the bridge puppet's
+  // member state has the actual contact photo. Always prefer member avatar.
   let roomAvatarMxc = room.getMxcAvatarUrl()
   if (isDirect && client) {
     const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
     const memberAvatar = otherMember?.getMxcAvatarUrl()
     if (memberAvatar) {
       roomAvatarMxc = memberAvatar
-    } else if (!roomAvatarMxc) {
+    } else {
       // With lazy-loaded members, getJoinedMembers() may not include the
       // bridged user yet. getAvatarFallbackMember() uses room summary heroes
       // which are available even before full member loading completes.
@@ -424,15 +426,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ rooms, pendingInvites })
 
     // With lazyLoadMembers, room member state events (including avatars) aren't
-    // loaded until the room's timeline is viewed. For DM rooms missing avatars,
-    // proactively load members so the avatar URLs become available.
-    // After members load, re-run loadRooms to pick up the now-available avatars.
+    // loaded until the room's timeline is viewed. For DM rooms, proactively load
+    // members so the bridge puppet's actual avatar becomes available (the room-level
+    // avatar is often a generic bridge placeholder like Signal's default silhouette).
     const joinedRooms = allRooms.filter(r => r.getMyMembership() === 'join')
     const roomsNeedingMembers: Room[] = []
     for (const sdkRoom of joinedRooms) {
       const matrixRoom = rooms.find(r => r.roomId === sdkRoom.roomId)
-      if (matrixRoom?.isDirect && !matrixRoom.avatarUrl) {
-        roomsNeedingMembers.push(sdkRoom)
+      if (matrixRoom?.isDirect) {
+        // Check if we already have the other member loaded
+        const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
+        if (!otherMember) {
+          roomsNeedingMembers.push(sdkRoom)
+        }
       }
     }
     if (roomsNeedingMembers.length > 0) {
