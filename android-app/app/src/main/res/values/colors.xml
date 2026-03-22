@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="dark_bg">#111827</color>
+    <!-- szept brand colors -->
+    <color name="dark_bg">#0a0a0c</color>
+    <color name="surface_container">#121215</color>
+    <color name="surface_container_high">#1c1c22</color>
+    <color name="primary">#6359dc</color>
+    <color name="primary_container">#463aa6</color>
+    <color name="on_primary">#ffffff</color>
+    <color name="on_surface">#f0efeb</color>
+    <color name="on_surface_variant">#9ca3af</color>
 </resources>

@@ -6,8 +6,8 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Matrix Client — Secure Messaging',
-  description: 'End-to-end encrypted messaging client for Matrix protocol',
+  title: 'szept — Secure Messaging',
+  description: 'End-to-end encrypted messaging powered by the Matrix protocol',
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
@@ -22,7 +22,7 @@ export const viewport = {
   userScalable: false,
   interactiveWidget: 'resizes-content',
   viewportFit: 'cover',
-  themeColor: '#111827',
+  themeColor: '#0a0a0c',
 }
 
 export default function RootLayout({

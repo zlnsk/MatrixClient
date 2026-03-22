@@ -6,6 +6,19 @@
   --color-surface-primary: var(--surface-primary);
   --color-surface-secondary: var(--surface-secondary);
   --color-surface-tertiary: var(--surface-tertiary);
+
+  /* szept brand palette — overrides Tailwind indigo */
+  --color-indigo-50: #f0eefb;
+  --color-indigo-100: #ddd9f6;
+  --color-indigo-200: #bfb8ee;
+  --color-indigo-300: #9d92e4;
+  --color-indigo-400: #8278d8;
+  --color-indigo-500: #6359dc;
+  --color-indigo-600: #5548c4;
+  --color-indigo-700: #463aa6;
+  --color-indigo-800: #372e85;
+  --color-indigo-900: #2a2366;
+  --color-indigo-950: #1a1540;
 }
 
 html {
@@ -20,9 +33,9 @@ html {
 }
 
 .dark {
-  --surface-primary: #030712;
-  --surface-secondary: #111827;
-  --surface-tertiary: #1f2937;
+  --surface-primary: #0a0a0c;
+  --surface-secondary: #121215;
+  --surface-tertiary: #1c1c22;
   color-scheme: dark;
 }
 
@@ -144,17 +157,17 @@ body {
 }
 
 .rich-content a {
-  color: #818cf8;
+  color: #8278d8;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .rich-content a:hover {
-  color: #6366f1;
+  color: #6359dc;
 }
 
 .rich-content blockquote {
-  border-left: 3px solid #6366f1;
+  border-left: 3px solid #6359dc;
   padding-left: 0.75em;
   margin: 0.5em 0;
   opacity: 0.85;

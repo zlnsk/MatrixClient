@@ -15,7 +15,7 @@ import java.lang.reflect.Method;
 
 public class MatrixService extends Service {
 
-    private static final String CHANNEL_ID = "matrix_service";
+    private static final String CHANNEL_ID = "szept_service";
     private static final int NOTIFICATION_ID = 1;
     private PowerManager.WakeLock wakeLock;
 
@@ -38,7 +38,7 @@ public class MatrixService extends Service {
         try {
             Constructor<Notification.Builder> ctor = Notification.Builder.class.getConstructor(Context.class, String.class);
             notification = ctor.newInstance(this, CHANNEL_ID)
-                .setContentTitle("Matrix")
+                .setContentTitle("szept")
                 .setContentText("Connected and receiving messages")
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentIntent(pendingIntent)
@@ -47,7 +47,7 @@ public class MatrixService extends Service {
         } catch (Exception e) {
             // Fallback for compile — should not happen at runtime with API 26+
             notification = new Notification.Builder(this)
-                .setContentTitle("Matrix")
+                .setContentTitle("szept")
                 .setContentText("Connected and receiving messages")
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentIntent(pendingIntent)
@@ -59,7 +59,7 @@ public class MatrixService extends Service {
 
         // Partial wake lock
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Matrix::BackgroundSync");
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "szept::BackgroundSync");
         wakeLock.acquire();
 
         return START_STICKY;
@@ -70,9 +70,9 @@ public class MatrixService extends Service {
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             Class<?> channelClass = Class.forName("android.app.NotificationChannel");
             Constructor<?> ctor = channelClass.getConstructor(String.class, CharSequence.class, int.class);
-            Object channel = ctor.newInstance(CHANNEL_ID, "Matrix Background", 2); // IMPORTANCE_LOW = 2
+            Object channel = ctor.newInstance(CHANNEL_ID, "szept Background", 2); // IMPORTANCE_LOW = 2
             Method setDesc = channelClass.getMethod("setDescription", String.class);
-            setDesc.invoke(channel, "Keeps Matrix connected in the background");
+            setDesc.invoke(channel, "Keeps szept connected in the background");
             Method setShowBadge = channelClass.getMethod("setShowBadge", boolean.class);
             setShowBadge.invoke(channel, false);
             Method createChannel = NotificationManager.class.getMethod("createNotificationChannel", channelClass);
