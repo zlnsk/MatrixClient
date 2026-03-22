@@ -434,9 +434,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     for (const sdkRoom of joinedRooms) {
       const matrixRoom = rooms.find(r => r.roomId === sdkRoom.roomId)
       if (matrixRoom?.isDirect) {
-        // Check if we already have the other member loaded
+        // Load members if the other member isn't available yet, or if they
+        // exist but don't have an avatar (member state may be incomplete
+        // from the room summary — full state includes the avatar_url).
         const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
-        if (!otherMember) {
+        if (!otherMember || !otherMember.getMxcAvatarUrl()) {
           roomsNeedingMembers.push(sdkRoom)
         }
       }
@@ -444,21 +446,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (roomsNeedingMembers.length > 0) {
       Promise.allSettled(
         roomsNeedingMembers.map(r => r.loadMembersIfNeeded())
-      ).then((results) => {
-        // Only refresh if at least one room actually loaded new members
-        if (results.some(r => r.status === 'fulfilled' && r.value)) {
-          // Rebuild rooms with now-loaded member data
-          const updatedRooms = allRooms
-            .filter(r => r.getMyMembership() === 'join')
-            .map(roomToMatrixRoom)
-            .sort((a, b) => b.lastMessageTs - a.lastMessageTs)
-          set((state) => ({
-            rooms: updatedRooms,
-            activeRoom: state.activeRoom
-              ? updatedRooms.find(r => r.roomId === state.activeRoom!.roomId) || state.activeRoom
-              : null,
-          }))
-        }
+      ).then(() => {
+        // Always rebuild — loadMembersIfNeeded() returns false if members
+        // were already loaded by a previous call (e.g. opening a chat), but
+        // the room list may have been built before that load completed.
+        const updatedRooms = allRooms
+          .filter(r => r.getMyMembership() === 'join')
+          .map(roomToMatrixRoom)
+          .sort((a, b) => b.lastMessageTs - a.lastMessageTs)
+        set((state) => ({
+          rooms: updatedRooms,
+          activeRoom: state.activeRoom
+            ? updatedRooms.find(r => r.roomId === state.activeRoom!.roomId) || state.activeRoom
+            : null,
+        }))
       })
     }
   },
