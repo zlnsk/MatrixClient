@@ -225,15 +225,17 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const cleanupCallListener = setupIncomingCallListener()
 
     // Auto-archive inactive conversations every 5 minutes.
-    // Rooms with no message activity for 3 hours get archived,
-    // unless the user is currently viewing them.
-    const AUTO_ARCHIVE_INACTIVITY_MS = 24 * 60 * 60 * 1000 // 24 hours
+    // Rooms with no message activity for 2 hours get archived,
+    // unless the user is currently viewing them or they have unread messages.
+    const AUTO_ARCHIVE_INACTIVITY_MS = 2 * 60 * 60 * 1000 // 2 hours
     const AUTO_ARCHIVE_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
     const autoArchiveInterval = setInterval(() => {
       const { rooms, activeRoom, archiveRoom } = useChatStore.getState()
       const now = Date.now()
       for (const room of rooms) {
-        if (room.roomId === activeRoom?.roomId) continue // skip active room
+        if (room.isArchived) continue
+        if (room.roomId === activeRoom?.roomId) continue
+        if (room.unreadCount > 0) continue
         if (room.lastMessageTs > 0 && now - room.lastMessageTs > AUTO_ARCHIVE_INACTIVITY_MS) {
           archiveRoom(room.roomId)
         }
