@@ -9,7 +9,7 @@ const APP_SHELL = [
   '/login',
   '/icon-192.png',
   '/icon-512.png',
-  '/favicon.svg',
+  '/favicon.ico',
 ]
 
 self.addEventListener('install', (event) => {
