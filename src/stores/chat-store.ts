@@ -142,13 +142,28 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     else lastMessage = null
   }
 
-  const members = room.getJoinedMembers().map((m: RoomMember) => ({
+  const joinedMembers = room.getJoinedMembers()
+  const members = joinedMembers.map((m: RoomMember) => ({
     userId: m.userId,
     displayName: m.name || m.userId,
     avatarUrl: getAvatarUrl(m.getMxcAvatarUrl()),
     membership: m.membership || 'join',
     presence: (client?.getUser(m.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
   }))
+
+  // With lazy-loaded members, the bridged user may not appear in getJoinedMembers().
+  // Include the avatar fallback member (from room summary heroes) so the sidebar
+  // can resolve presence and avatar for Signal-bridged DM rooms.
+  const fallbackMember = room.getAvatarFallbackMember()
+  if (fallbackMember && !joinedMembers.some((m: RoomMember) => m.userId === fallbackMember.userId)) {
+    members.push({
+      userId: fallbackMember.userId,
+      displayName: fallbackMember.name || fallbackMember.userId,
+      avatarUrl: getAvatarUrl(fallbackMember.getMxcAvatarUrl()),
+      membership: fallbackMember.membership || 'join',
+      presence: (client?.getUser(fallbackMember.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
+    })
+  }
 
   // Check if direct message
   const dmMap = (client as any)?.getAccountData('m.direct')?.getContent() || {}
@@ -172,6 +187,15 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     const memberAvatar = otherMember?.getMxcAvatarUrl()
     if (memberAvatar) {
       roomAvatarMxc = memberAvatar
+    } else if (!roomAvatarMxc) {
+      // With lazy-loaded members, getJoinedMembers() may not include the
+      // bridged user yet. getAvatarFallbackMember() uses room summary heroes
+      // which are available even before full member loading completes.
+      const fallbackMember = room.getAvatarFallbackMember()
+      const fallbackAvatar = fallbackMember?.getMxcAvatarUrl()
+      if (fallbackAvatar) {
+        roomAvatarMxc = fallbackAvatar
+      }
     }
   }
 

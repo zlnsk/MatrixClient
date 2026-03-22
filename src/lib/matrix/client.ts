@@ -100,6 +100,9 @@ const SUPPRESSED_PATTERNS = [
   'ERROR matrix_sdk',
   // to-device decryption errors (expected after crypto store reset / new device)
   'to-device event was not decrypted',
+  // Per-session key backup download errors (expected for sessions not in backup)
+  'Error while decrypting and importing key backup',
+  'key backup for session',
 ]
 
 function isSuppressed(args: any[]): boolean {
@@ -124,13 +127,14 @@ if (typeof window !== 'undefined') {
     if (!isSuppressed(args)) originalTrace.apply(console, args)
   }
 
-  // Intercept fetch to silently handle room_keys 404 responses.
-  // The SDK's requestRoomKeyFromBackup makes GET requests to
+  // Intercept fetch to suppress browser console noise from room_keys 404 responses.
+  // The SDK's PerSessionKeyBackupDownloader makes GET requests to
   // /_matrix/client/v3/room_keys/keys/{roomId}/{sessionId}?version=N
   // which return 404 for sessions not in the backup. The browser logs these
-  // as network errors in the console, which we can't suppress via console patching.
-  // By returning a successful empty response, the SDK handles it gracefully
-  // and the browser doesn't log a network error.
+  // as "Failed to load resource: 404" network errors in the console.
+  // By consuming the real 404 response and returning a synthetic Response
+  // with the same body/status, the browser doesn't log the network error,
+  // and the SDK still receives the proper M_NOT_FOUND to handle gracefully.
   const originalFetch = window.fetch.bind(window)
   window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
     const url = typeof args[0] === 'string' ? args[0] : args[0] instanceof URL ? args[0].href : (args[0] as Request).url
@@ -139,16 +143,24 @@ if (typeof window !== 'undefined') {
       try {
         const response = await originalFetch(...args)
         if (response.status === 404) {
-          // Return a fake 200 with the empty keys structure the SDK expects
-          return new Response(JSON.stringify({}), {
-            status: 200,
+          // Return a synthetic 404 with the proper M_NOT_FOUND error body.
+          // The browser only logs network errors for real HTTP responses;
+          // a synthetic Response object created here won't trigger the
+          // "Failed to load resource: 404" console noise.  The SDK's
+          // PerSessionKeyBackupDownloader already handles M_NOT_FOUND
+          // gracefully by marking the session as not found in backup.
+          const body = await response.text()
+          return new Response(body || JSON.stringify({ errcode: 'M_NOT_FOUND', error: 'No room_keys found' }), {
+            status: 404,
             headers: { 'Content-Type': 'application/json' },
           })
         }
         return response
       } catch (err) {
-        return new Response(JSON.stringify({}), {
-          status: 200,
+        // Network error — return a synthetic 404 so the SDK handles it
+        // gracefully instead of treating it as a hard network failure.
+        return new Response(JSON.stringify({ errcode: 'M_NOT_FOUND', error: 'No room_keys found' }), {
+          status: 404,
           headers: { 'Content-Type': 'application/json' },
         })
       }

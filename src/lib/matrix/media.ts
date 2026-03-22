@@ -169,6 +169,22 @@ export async function decryptMediaAttachment(
   if (!response.ok) throw new Error(`Media fetch failed: ${response.status}`)
   const ciphertext = await response.arrayBuffer()
 
+  // Verify SHA-256 hash of ciphertext before trusting it
+  if (encryptedFile.hashes?.sha256) {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', ciphertext)
+    const hashBytes = new Uint8Array(hashBuffer)
+    // Encode as unpadded base64 to match Matrix spec format
+    let hashBase64 = btoa(String.fromCharCode(...hashBytes))
+    hashBase64 = hashBase64.replace(/=+$/, '')
+    // Also normalise the expected hash by stripping any trailing padding
+    const expectedHash = encryptedFile.hashes.sha256.replace(/=+$/, '')
+    if (hashBase64 !== expectedHash) {
+      throw new Error(
+        'Hash mismatch for encrypted media: ciphertext has been tampered with or corrupted'
+      )
+    }
+  }
+
   // Import the AES key from JWK
   const cryptoKey = await crypto.subtle.importKey(
     'jwk',
