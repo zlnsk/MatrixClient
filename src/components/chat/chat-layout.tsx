@@ -78,10 +78,10 @@ export function ChatLayout() {
     <div className="relative h-dvh overflow-hidden bg-m3-surface-container-low dark:bg-m3-surface">
 
       {/* Sidebar — always visible behind the overlay */}
-      <div className={`absolute inset-0 flex bg-transparent transition-[filter] duration-150 ${
+      <div className={`absolute inset-0 flex bg-transparent transition-[filter] duration-150 p-2 md:p-4 ${
         activeRoom ? 'blur-[2px] brightness-[0.85] dark:brightness-75 pointer-events-none' : ''
       }`}>
-        <div className="flex w-full max-w-md flex-col bg-m3-surface-container-lowest dark:bg-m3-surface-container border-r border-m3-outline-variant dark:border-m3-outline-variant">
+        <div className="flex w-full max-w-md flex-col bg-m3-surface-container-lowest dark:bg-m3-surface-container rounded-2xl overflow-hidden">
           <Sidebar
             onSettingsClick={() => setShowSettings(true)}
             onChatSelect={handleChatSelect}
