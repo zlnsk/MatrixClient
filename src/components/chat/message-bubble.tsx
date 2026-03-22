@@ -322,7 +322,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           )}
         </div>
 
-        <div className="relative flex flex-col" ref={actionsRef}>
+        <div className="flex flex-col" ref={actionsRef}>
           {/* Sender name */}
           {showAvatar && !isOwn && (() => {
             const { displayName, matrixId } = parseDisplayName(message.senderName, message.senderId)
@@ -348,7 +348,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             </div>
           )}
 
-          {/* Bubble */}
+          {/* Bubble wrapper — action buttons positioned relative to this */}
+          <div className="relative">
           <div
             onDoubleClick={() => {
               if (isOwn && !isEditing && message.type !== 'm.image' && message.type !== 'm.video' && message.type !== 'm.audio') {
@@ -497,52 +498,6 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             </div>
           </div>
 
-          {/* Reactions */}
-          {message.reactions.size > 0 && (
-            <div className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-              {Array.from(message.reactions.entries()).map(([emoji, data]) => (
-                <div key={emoji} className="group/reaction relative">
-                  <button
-                    onClick={() => handleReaction(emoji)}
-                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all hover:scale-105 ${
-                      data.includesMe
-                        ? 'border-indigo-400/50 bg-indigo-100 text-indigo-600 shadow-[0_1px_3px_rgba(99,102,241,0.2)] dark:border-indigo-500/50 dark:bg-indigo-900/30 dark:text-indigo-300'
-                        : 'border-gray-200 bg-white text-gray-600 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-gray-300 hover:shadow-[0_2px_6px_rgba(0,0,0,0.1)] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:shadow-[0_1px_3px_rgba(0,0,0,0.3)] dark:hover:border-gray-600'
-                    }`}
-                  >
-                    <span>{emoji}</span>
-                    <span>{data.count}</span>
-                  </button>
-                  {/* Hover tooltip showing who reacted */}
-                  <div className={`absolute bottom-full mb-1.5 hidden group-hover/reaction:block z-30 ${isOwn ? 'right-0' : 'left-0'}`}>
-                    <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 shadow-lg dark:border-gray-700 dark:bg-gray-800 whitespace-nowrap">
-                      <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">{emoji} {data.count > 1 ? `${data.count} people` : '1 person'}</p>
-                      {data.users.map((userName, i) => (
-                        <p key={i} className="text-xs text-gray-700 dark:text-gray-300">{userName}</p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Read receipts (avatars of people who read) */}
-          {isOwn && message.readBy.length > 0 && (
-            <div className={`mt-1 flex justify-end -space-x-1.5`}>
-              {message.readBy.slice(0, 5).map(r => (
-                <div key={r.userId} title={`Seen by ${r.displayName}`}>
-                  <Avatar src={r.avatarUrl} name={r.displayName} size="sm" />
-                </div>
-              ))}
-              {message.readBy.length > 5 && (
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-                  +{message.readBy.length - 5}
-                </span>
-              )}
-            </div>
-          )}
-
           {/* Action buttons — right side of bubble */}
           <div className={`absolute top-1/2 -translate-y-1/2 z-10 flex items-center gap-0.5 rounded-xl border border-gray-200/80 bg-white p-0.5 shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:border-gray-700 dark:bg-gray-800 dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all duration-150 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'} ${showActions && !isEditing ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none ' + (isOwn ? 'translate-x-1' : '-translate-x-1')}`}>
               <button
@@ -658,6 +613,53 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 ))}
               {rooms.filter(r => r.roomId !== roomId).length === 0 && (
                 <p className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">No other rooms available</p>
+              )}
+            </div>
+          )}
+          </div>{/* end bubble wrapper */}
+
+          {/* Reactions */}
+          {message.reactions.size > 0 && (
+            <div className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+              {Array.from(message.reactions.entries()).map(([emoji, data]) => (
+                <div key={emoji} className="group/reaction relative">
+                  <button
+                    onClick={() => handleReaction(emoji)}
+                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all hover:scale-105 ${
+                      data.includesMe
+                        ? 'border-indigo-400/50 bg-indigo-100 text-indigo-600 shadow-[0_1px_3px_rgba(99,102,241,0.2)] dark:border-indigo-500/50 dark:bg-indigo-900/30 dark:text-indigo-300'
+                        : 'border-gray-200 bg-white text-gray-600 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-gray-300 hover:shadow-[0_2px_6px_rgba(0,0,0,0.1)] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:shadow-[0_1px_3px_rgba(0,0,0,0.3)] dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <span>{emoji}</span>
+                    <span>{data.count}</span>
+                  </button>
+                  {/* Hover tooltip showing who reacted */}
+                  <div className={`absolute bottom-full mb-1.5 hidden group-hover/reaction:block z-30 ${isOwn ? 'right-0' : 'left-0'}`}>
+                    <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 shadow-lg dark:border-gray-700 dark:bg-gray-800 whitespace-nowrap">
+                      <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">{emoji} {data.count > 1 ? `${data.count} people` : '1 person'}</p>
+                      {data.users.map((userName, i) => (
+                        <p key={i} className="text-xs text-gray-700 dark:text-gray-300">{userName}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Read receipts (avatars of people who read) */}
+          {isOwn && message.readBy.length > 0 && (
+            <div className={`mt-1 flex justify-end -space-x-1.5`}>
+              {message.readBy.slice(0, 5).map(r => (
+                <div key={r.userId} title={`Seen by ${r.displayName}`}>
+                  <Avatar src={r.avatarUrl} name={r.displayName} size="sm" />
+                </div>
+              ))}
+              {message.readBy.length > 5 && (
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                  +{message.readBy.length - 5}
+                </span>
               )}
             </div>
           )}
