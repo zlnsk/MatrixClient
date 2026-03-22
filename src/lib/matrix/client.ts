@@ -531,24 +531,9 @@ export async function startSync(): Promise<void> {
   // Init crypto before starting sync so decryption works
   await initCrypto(matrixClient)
 
-  // Delete untrusted key backup BEFORE startClient() to prevent the SDK's
-  // internal sync handler from auto-enabling it and spamming 404 requests
-  // for every missing session key.
-  try {
-    const crypto = matrixClient.getCrypto()
-    if (crypto) {
-      const backupInfo = await crypto.getKeyBackupInfo()
-      if (backupInfo) {
-        const trustInfo = await crypto.isKeyBackupTrusted(backupInfo)
-        if (!trustInfo.trusted) {
-          console.log(`Deleting untrusted key backup version ${backupInfo.version} to prevent 404 spam`)
-          await crypto.deleteKeyBackupVersion(backupInfo.version!)
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Pre-sync backup cleanup failed (non-fatal):', err)
-  }
+  // If the key backup is not trusted by this device, skip enabling it locally.
+  // We intentionally do NOT delete it from the server — it may be trusted by
+  // other verified sessions and deleting it would permanently destroy backed-up keys.
 
   await matrixClient.startClient({
     initialSyncLimit: 50,
