@@ -1,17 +1,30 @@
 import type { NextConfig } from "next";
-import { execSync } from "child_process";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 
 const isTauri = process.env.TAURI_ENV === '1'
 
-// Build version: <package version> (build <number>)
+// Build version: <package version> (build <number>) — auto-increments each build
 function getBuildVersion(): string {
   const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
-  let commitCount = '0'
+
+  // Read and increment persistent build counter
+  let meta = { build: 0, date: '', dailyBuilds: 0 }
   try {
-    commitCount = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim()
-  } catch { /* not a git repo */ }
-  return `${pkg.version} build ${commitCount}`
+    meta = JSON.parse(readFileSync('./build-meta.json', 'utf-8'))
+  } catch { /* first build */ }
+
+  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  meta.build += 1
+  if (meta.date === today) {
+    meta.dailyBuilds += 1
+  } else {
+    meta.date = today
+    meta.dailyBuilds = 1
+  }
+
+  writeFileSync('./build-meta.json', JSON.stringify(meta) + '\n')
+
+  return `${pkg.version} build ${meta.build} (${meta.dailyBuilds} today)`
 }
 
 const nextConfig: NextConfig = {

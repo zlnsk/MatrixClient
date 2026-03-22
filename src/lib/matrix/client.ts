@@ -88,12 +88,18 @@ const SUPPRESSED_PATTERNS = [
   'Adding default global',
   'is not trusted',
   'already queued',
+  // Key backup 404 spam for sessions that were never backed up
+  'No luck requesting key backup',
+  'No room_keys found',
+  'requestRoomKeyFromBackup',
   // Rust WASM crypto module patterns (these bypass the JS SDK logger)
   'matrix_sdk_crypto',
   "Can't find the room key",
   'Failed to decrypt a room event',
   'WARN matrix_sdk',
   'ERROR matrix_sdk',
+  // to-device decryption errors (expected after crypto store reset / new device)
+  'to-device event was not decrypted',
 ]
 
 function isSuppressed(args: any[]): boolean {
@@ -525,6 +531,25 @@ export async function startSync(): Promise<void> {
 
   // Init crypto before starting sync so decryption works
   await initCrypto(matrixClient)
+
+  // Delete untrusted key backup BEFORE startClient() to prevent the SDK's
+  // internal sync handler from auto-enabling it and spamming 404 requests
+  // for every missing session key.
+  try {
+    const crypto = matrixClient.getCrypto()
+    if (crypto) {
+      const backupInfo = await crypto.getKeyBackupInfo()
+      if (backupInfo) {
+        const trustInfo = await crypto.isKeyBackupTrusted(backupInfo)
+        if (!trustInfo.trusted) {
+          console.log(`Deleting untrusted key backup version ${backupInfo.version} to prevent 404 spam`)
+          await crypto.deleteKeyBackupVersion(backupInfo.version!)
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Pre-sync backup cleanup failed (non-fatal):', err)
+  }
 
   await matrixClient.startClient({
     initialSyncLimit: 50,
