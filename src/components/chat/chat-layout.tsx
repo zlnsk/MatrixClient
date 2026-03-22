@@ -71,13 +71,15 @@ export function ChatLayout() {
   return (
     <div className="relative h-dvh overflow-hidden bg-gray-50 dark:bg-gray-950">
       {/* Sidebar — always visible behind the overlay */}
-      <div className={`absolute inset-0 flex flex-col bg-white dark:bg-gray-900 transition-[filter] duration-300 ${
+      <div className={`absolute inset-0 flex bg-gray-50 dark:bg-gray-950 transition-[filter] duration-300 ${
         activeRoom ? 'blur-[2px] brightness-[0.85] dark:brightness-75 pointer-events-none' : ''
       }`}>
-        <Sidebar
-          onSettingsClick={() => setShowSettings(true)}
-          onChatSelect={handleChatSelect}
-        />
+        <div className="flex w-full max-w-md flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+          <Sidebar
+            onSettingsClick={() => setShowSettings(true)}
+            onChatSelect={handleChatSelect}
+          />
+        </div>
       </div>
 
       {/* Chat overlay */}
