@@ -50,6 +50,13 @@ html {
   font-size: 17px;
 }
 
+/* Slightly larger text on mobile / standalone PWA for better readability */
+@media (max-width: 767px), (display-mode: standalone) {
+  html {
+    font-size: 18px;
+  }
+}
+
 /* ---- M3 Light Scheme ---- */
 :root {
   --surface-primary: #faf8ff;
