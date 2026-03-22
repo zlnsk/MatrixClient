@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -189,7 +190,7 @@ public class MainActivity extends Activity {
         subtitle.setAlpha(0f);
         spinner.setAlpha(0f);
 
-        new Handler().postDelayed(() -> {
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
             // Icon entrance with overshoot
             ObjectAnimator iconAlpha = ObjectAnimator.ofFloat(icon, "alpha", 0f, 1f);
             ObjectAnimator iconScaleX = ObjectAnimator.ofFloat(icon, "scaleX", 0.6f, 1f);
@@ -201,7 +202,7 @@ public class MainActivity extends Activity {
             iconAnim.start();
 
             // Title entrance
-            new Handler().postDelayed(() -> {
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 ObjectAnimator nameAlpha = ObjectAnimator.ofFloat(appName, "alpha", 0f, 1f);
                 ObjectAnimator nameSlide = ObjectAnimator.ofFloat(appName, "translationY", dpToPx(20), 0f);
                 AnimatorSet nameAnim = new AnimatorSet();
@@ -240,7 +241,7 @@ public class MainActivity extends Activity {
         splashFade.setInterpolator(new AccelerateDecelerateInterpolator());
         splashFade.start();
 
-        new Handler().postDelayed(() -> {
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (splashView != null) {
                 rootLayout.removeView(splashView);
                 splashView = null;
@@ -289,7 +290,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 // Dismiss splash after first page load
-                new Handler().postDelayed(() -> dismissSplash(), 500);
+                new Handler(Looper.getMainLooper()).postDelayed(() -> dismissSplash(), 500);
             }
 
             @Override

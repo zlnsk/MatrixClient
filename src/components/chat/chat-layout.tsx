@@ -7,7 +7,13 @@ import { DotGrid } from '@/components/ui/dot-grid'
 import { useChatStore } from '@/stores/chat-store'
 
 // Lazy load heavy modal components — only fetched when opened
-const SettingsPanel = lazy(() => import('./settings-panel').then(m => ({ default: m.SettingsPanel })))
+// Retry with full page reload on chunk load failure (stale deployment)
+const SettingsPanel = lazy(() =>
+  import('./settings-panel').then(m => ({ default: m.SettingsPanel })).catch(() => {
+    window.location.reload()
+    return new Promise(() => {}) // never resolves — page is reloading
+  })
+)
 
 export function ChatLayout() {
   const [showSettings, setShowSettings] = useState(false)
@@ -75,7 +81,7 @@ export function ChatLayout() {
       <DotGrid />
 
       {/* Sidebar — always visible behind the overlay */}
-      <div className={`absolute inset-0 flex bg-transparent transition-[filter] duration-300 ${
+      <div className={`absolute inset-0 flex bg-transparent transition-[filter] duration-150 ${
         activeRoom ? 'blur-[2px] brightness-[0.85] dark:brightness-75 pointer-events-none' : ''
       }`}>
         <div className="flex w-full max-w-md flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">

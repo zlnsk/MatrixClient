@@ -11,6 +11,8 @@ export function DotGrid() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const mouseRef = useRef({ x: -9999, y: -9999 })
   const rafRef = useRef<number>(0)
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const animatingRef = useRef(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -29,16 +31,12 @@ export function DotGrid() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       cols = Math.ceil(canvas.offsetWidth / DOT_SPACING) + 1
       rows = Math.ceil(canvas.offsetHeight / DOT_SPACING) + 1
-    }
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect()
-      mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      drawOnce()
     }
 
     const isDark = () => document.documentElement.classList.contains('dark')
 
-    const draw = () => {
+    const drawOnce = () => {
       const w = canvas.offsetWidth
       const h = canvas.offsetHeight
       ctx.clearRect(0, 0, w, h)
@@ -74,18 +72,45 @@ export function DotGrid() {
           ctx.fill()
         }
       }
+    }
 
-      rafRef.current = requestAnimationFrame(draw)
+    const startAnimating = () => {
+      if (animatingRef.current) return
+      animatingRef.current = true
+      const loop = () => {
+        drawOnce()
+        if (animatingRef.current) {
+          rafRef.current = requestAnimationFrame(loop)
+        }
+      }
+      rafRef.current = requestAnimationFrame(loop)
+    }
+
+    const stopAnimating = () => {
+      animatingRef.current = false
+      cancelAnimationFrame(rafRef.current)
+      // Draw one final frame with mouse "gone"
+      mouseRef.current = { x: -9999, y: -9999 }
+      drawOnce()
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      startAnimating()
+      // Stop after 100ms of no movement
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+      idleTimerRef.current = setTimeout(stopAnimating, 100)
     }
 
     resize()
-    draw()
 
     window.addEventListener('resize', resize)
     window.addEventListener('mousemove', handleMouseMove)
 
     return () => {
       cancelAnimationFrame(rafRef.current)
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
       window.removeEventListener('resize', resize)
       window.removeEventListener('mousemove', handleMouseMove)
     }
