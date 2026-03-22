@@ -50,7 +50,29 @@ export default function RootLayout({
         </ErrorBoundary>
         <script
           dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{})`,
+            __html: [
+              // Inject PWA manifest as blob URL to avoid reverse proxy (Pangolin) CORS issues.
+              // The proxy redirects /manifest.webmanifest through its auth layer which lacks
+              // CORS headers, breaking the manifest fetch. A blob URL is local — no network request.
+              `(function(){var m=${JSON.stringify(JSON.stringify({
+                name: 'szept — Secure Messaging',
+                short_name: 'szept',
+                description: 'End-to-end encrypted messaging powered by the Matrix protocol',
+                start_url: '/',
+                display: 'standalone',
+                orientation: 'portrait',
+                background_color: '#131318',
+                theme_color: '#131318',
+                categories: ['social', 'communication'],
+                icons: [
+                  { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+                  { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                  { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+                ],
+              }))};var b=new Blob([m],{type:'application/manifest+json'});var l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(b);document.head.appendChild(l)})()`,
+              // Register service worker
+              `if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){})`,
+            ].join(';'),
           }}
         />
       </body>
