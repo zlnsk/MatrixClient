@@ -190,37 +190,43 @@ public class MainActivity extends Activity {
         subtitle.setAlpha(0f);
         spinner.setAlpha(0f);
 
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            // Icon entrance with overshoot
-            ObjectAnimator iconAlpha = ObjectAnimator.ofFloat(icon, "alpha", 0f, 1f);
-            ObjectAnimator iconScaleX = ObjectAnimator.ofFloat(icon, "scaleX", 0.6f, 1f);
-            ObjectAnimator iconScaleY = ObjectAnimator.ofFloat(icon, "scaleY", 0.6f, 1f);
-            AnimatorSet iconAnim = new AnimatorSet();
-            iconAnim.playTogether(iconAlpha, iconScaleX, iconScaleY);
-            iconAnim.setDuration(600);
-            iconAnim.setInterpolator(new OvershootInterpolator(1.2f));
-            iconAnim.start();
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                // Icon entrance with overshoot
+                ObjectAnimator iconAlpha = ObjectAnimator.ofFloat(icon, "alpha", 0f, 1f);
+                ObjectAnimator iconScaleX = ObjectAnimator.ofFloat(icon, "scaleX", 0.6f, 1f);
+                ObjectAnimator iconScaleY = ObjectAnimator.ofFloat(icon, "scaleY", 0.6f, 1f);
+                AnimatorSet iconAnim = new AnimatorSet();
+                iconAnim.playTogether(iconAlpha, iconScaleX, iconScaleY);
+                iconAnim.setDuration(600);
+                iconAnim.setInterpolator(new OvershootInterpolator(1.2f));
+                iconAnim.start();
 
-            // Title entrance
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                ObjectAnimator nameAlpha = ObjectAnimator.ofFloat(appName, "alpha", 0f, 1f);
-                ObjectAnimator nameSlide = ObjectAnimator.ofFloat(appName, "translationY", dpToPx(20), 0f);
-                AnimatorSet nameAnim = new AnimatorSet();
-                nameAnim.playTogether(nameAlpha, nameSlide);
-                nameAnim.setDuration(400);
-                nameAnim.setInterpolator(new DecelerateInterpolator());
-                nameAnim.start();
+                // Title entrance
+                new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        ObjectAnimator nameAlpha = ObjectAnimator.ofFloat(appName, "alpha", 0f, 1f);
+                        ObjectAnimator nameSlide = ObjectAnimator.ofFloat(appName, "translationY", dpToPx(20), 0f);
+                        AnimatorSet nameAnim = new AnimatorSet();
+                        nameAnim.playTogether(nameAlpha, nameSlide);
+                        nameAnim.setDuration(400);
+                        nameAnim.setInterpolator(new DecelerateInterpolator());
+                        nameAnim.start();
 
-                ObjectAnimator subAlpha = ObjectAnimator.ofFloat(subtitle, "alpha", 0f, 1f);
-                subAlpha.setStartDelay(150);
-                subAlpha.setDuration(400);
-                subAlpha.start();
+                        ObjectAnimator subAlpha = ObjectAnimator.ofFloat(subtitle, "alpha", 0f, 1f);
+                        subAlpha.setStartDelay(150);
+                        subAlpha.setDuration(400);
+                        subAlpha.start();
 
-                ObjectAnimator spinAlpha = ObjectAnimator.ofFloat(spinner, "alpha", 0f, 1f);
-                spinAlpha.setStartDelay(300);
-                spinAlpha.setDuration(400);
-                spinAlpha.start();
-            }, 200);
+                        ObjectAnimator spinAlpha = ObjectAnimator.ofFloat(spinner, "alpha", 0f, 1f);
+                        spinAlpha.setStartDelay(300);
+                        spinAlpha.setDuration(400);
+                        spinAlpha.start();
+                    }
+                }, 200);
+            }
         }, 100);
     }
 
@@ -241,10 +247,13 @@ public class MainActivity extends Activity {
         splashFade.setInterpolator(new AccelerateDecelerateInterpolator());
         splashFade.start();
 
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (splashView != null) {
-                rootLayout.removeView(splashView);
-                splashView = null;
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (splashView != null) {
+                    rootLayout.removeView(splashView);
+                    splashView = null;
+                }
             }
         }, 400);
     }
@@ -290,7 +299,12 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 // Dismiss splash after first page load
-                new Handler(Looper.getMainLooper()).postDelayed(() -> dismissSplash(), 500);
+                new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        dismissSplash();
+                    }
+                }, 500);
             }
 
             @Override
