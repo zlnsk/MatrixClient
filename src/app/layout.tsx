@@ -8,10 +8,17 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'szept — Secure Messaging',
   description: 'End-to-end encrypted messaging powered by the Matrix protocol',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'szept',
+  },
   other: {
     'mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+  },
+  icons: {
+    apple: '/apple-touch-icon.png',
   },
 }
 
@@ -42,6 +49,11 @@ export default function RootLayout({
             </AuthProvider>
           </ThemeProvider>
         </ErrorBoundary>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{})`,
+          }}
+        />
       </body>
     </html>
   )
