@@ -524,8 +524,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             </div>
           )}
 
-          {/* Action buttons — floating above the bubble */}
-          <div className={`absolute -top-8 z-10 flex items-center gap-0.5 rounded-xl border border-gray-200/80 bg-white p-0.5 shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:border-gray-700 dark:bg-gray-800 dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all duration-150 ${isOwn ? 'right-0' : 'left-0'} ${showActions && !isEditing ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}>
+          {/* Action buttons — below the bubble */}
+          <div className={`absolute -bottom-8 z-10 flex items-center gap-0.5 rounded-xl border border-gray-200/80 bg-white p-0.5 shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:border-gray-700 dark:bg-gray-800 dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all duration-150 ${isOwn ? 'right-0' : 'left-0'} ${showActions && !isEditing ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-white"
@@ -555,7 +555,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
           {/* Emoji picker */}
           {showEmojiPicker && (
-            <div className={`absolute -top-20 z-20 grid grid-cols-5 gap-0.5 rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-0' : 'left-0'}`}>
+            <div className={`absolute -bottom-[5.5rem] z-20 grid grid-cols-5 gap-0.5 rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-0' : 'left-0'}`}>
               {QUICK_EMOJIS.map(emoji => (
                 <button
                   key={emoji}
