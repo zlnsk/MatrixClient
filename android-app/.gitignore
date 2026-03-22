@@ -1,5 +1,6 @@
 *.apk
 *.keystore
+*.args
 build/
 .gradle/
 local.properties
