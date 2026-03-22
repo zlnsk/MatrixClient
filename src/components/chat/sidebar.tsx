@@ -3,11 +3,11 @@
 import { useEffect, useState, useCallback, useRef, useMemo, memo, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
+import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 
 // Lazy load modals — only fetched when opened
 const NewChatModal = lazy(() => import('./new-chat-modal').then(m => ({ default: m.NewChatModal })))
-const RoomDirectory = lazy(() => import('./room-directory').then(m => ({ default: m.RoomDirectory })))
 import { formatDistanceToNow } from 'date-fns'
 import {
   Search,
@@ -22,7 +22,8 @@ import {
   ArchiveRestore,
   Check,
   Mail,
-  Globe,
+  Sun,
+  Moon,
   Loader2,
   MessageSquareDashed,
 } from 'lucide-react'
@@ -35,12 +36,12 @@ interface SidebarProps {
 export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   const user = useAuthStore(s => s.user)
   const { rooms, pendingInvites, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom, acceptInvite, rejectInvite, searchMessages } = useChatStore()
+  const { theme, toggleTheme } = useTheme()
   const [searchFilter, setSearchFilter] = useState('')
   const [showNewChat, setShowNewChat] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [showInvites, setShowInvites] = useState(true)
   const [inviteError, setInviteError] = useState<string | null>(null)
-  const [showDirectory, setShowDirectory] = useState(false)
   const [messageResults, setMessageResults] = useState<{roomId: string, roomName: string, eventId: string, sender: string, body: string, timestamp: number}[]>([])
   const [isSearchingMessages, setIsSearchingMessages] = useState(false)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -143,12 +144,12 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             <Plus className="h-5 w-5" />
           </button>
           <button
-            onClick={() => setShowDirectory(true)}
+            onClick={toggleTheme}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
-            title="Browse rooms"
-            aria-label="Browse public rooms"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label="Toggle theme"
           >
-            <Globe className="h-5 w-5" />
+            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
           <button
             onClick={onSettingsClick}
@@ -391,18 +392,6 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
         </Suspense>
       )}
 
-      {/* Room Directory Modal — lazy loaded */}
-      {showDirectory && (
-        <Suspense fallback={null}>
-          <RoomDirectory
-            onClose={() => setShowDirectory(false)}
-            onRoomJoined={(roomId) => {
-              const room = rooms.find(r => r.roomId === roomId)
-              if (room) handleSelectRoom(room)
-            }}
-          />
-        </Suspense>
-      )}
     </>
   )
 }

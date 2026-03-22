@@ -1,19 +1,15 @@
 'use client'
 
 import { useAuthStore } from '@/stores/auth-store'
-import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { getHomeserverUrl, getHomeserverDomain, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient, generateSecurityKey } from '@/lib/matrix/client'
 import {
   X,
-  Sun,
-  Moon,
   LogOut,
   User,
   Shield,
-  Palette,
   Loader2,
   Server,
   Key,
@@ -32,10 +28,9 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { user, signOut, updateProfile } = useAuthStore()
-  const { theme, toggleTheme } = useTheme()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [activeSection, setActiveSection] = useState<'profile' | 'appearance' | 'security'>('profile')
+  const [activeSection, setActiveSection] = useState<'profile' | 'security'>('profile')
   const [recoveryKey, setRecoveryKey] = useState('')
   const [isRestoring, setIsRestoring] = useState(false)
   const [restoreResult, setRestoreResult] = useState<string | null>(null)
@@ -156,7 +151,6 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
   const sections = [
     { id: 'profile' as const, label: 'Profile', icon: User },
-    { id: 'appearance' as const, label: 'Appearance', icon: Palette },
     { id: 'security' as const, label: 'Security', icon: Shield },
   ]
 
@@ -306,38 +300,6 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Matrix User ID</h4>
                 <p className="mt-1 font-mono text-xs text-indigo-400">{user?.userId}</p>
-              </div>
-            </div>
-          )}
-
-          {activeSection === 'appearance' && (
-            <div className="space-y-6">
-              <div>
-                <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">Theme</label>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => { if (theme !== 'dark') toggleTheme() }}
-                    className={`flex flex-1 flex-col items-center gap-3 rounded-xl border p-4 shadow-sm transition-colors ${
-                      theme === 'dark'
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                        : 'border-gray-200 bg-gray-50 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    <Moon className={`h-6 w-6 ${theme === 'dark' ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400'}`} />
-                    <span className={`text-sm ${theme === 'dark' ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-400'}`}>Dark</span>
-                  </button>
-                  <button
-                    onClick={() => { if (theme !== 'light') toggleTheme() }}
-                    className={`flex flex-1 flex-col items-center gap-3 rounded-xl border p-4 shadow-sm transition-colors ${
-                      theme === 'light'
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                        : 'border-gray-200 bg-gray-50 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    <Sun className={`h-6 w-6 ${theme === 'light' ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400'}`} />
-                    <span className={`text-sm ${theme === 'light' ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-400'}`}>Light</span>
-                  </button>
-                </div>
               </div>
             </div>
           )}
