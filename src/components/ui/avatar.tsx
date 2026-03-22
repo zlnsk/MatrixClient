@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { fetchCachedThumbnail } from '@/lib/matrix/media'
 
 interface AvatarProps {
@@ -64,6 +64,34 @@ function InitialsFallback({ name, size }: { name: string; size: 'sm' | 'md' | 'l
   )
 }
 
+/**
+ * Detect simple placeholder/icon avatars like Signal's default dashed-circle.
+ * Very strict: only flags images with ≤4 distinct color buckets (real photos
+ * always have many more, even at 16×16).
+ */
+function isPlaceholderImage(img: HTMLImageElement): boolean {
+  try {
+    const canvas = document.createElement('canvas')
+    const s = 16
+    canvas.width = s
+    canvas.height = s
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return false
+    ctx.drawImage(img, 0, 0, s, s)
+    const { data } = ctx.getImageData(0, 0, s, s)
+
+    // Bucket each pixel's RGB into a 4×4×4 grid (64 possible buckets)
+    const buckets = new Set<number>()
+    for (let i = 0; i < data.length; i += 4) {
+      buckets.add(((data[i] >> 6) << 4) | ((data[i + 1] >> 6) << 2) | (data[i + 2] >> 6))
+      if (buckets.size > 4) return false // real photo — bail early
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [imgError, setImgError] = useState(false)
@@ -95,6 +123,12 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
     setImgError(false)
   }, [src])
 
+  const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    if (isPlaceholderImage(e.currentTarget)) {
+      setImgError(true)
+    }
+  }, [])
+
   const displayUrl = blobUrl
 
   return (
@@ -104,6 +138,7 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
           src={displayUrl}
           alt={name}
           className={`${sizeMap[size]} rounded-full object-cover`}
+          onLoad={handleLoad}
           onError={() => setImgError(true)}
         />
       ) : (

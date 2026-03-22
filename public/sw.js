@@ -1,7 +1,7 @@
 // szept PWA Service Worker
 // Provides: installability, app shell caching, offline fallback
 
-const CACHE_NAME = 'szept-v1'
+const CACHE_NAME = 'szept-v2'
 
 // App shell — cached on install for instant loads
 const APP_SHELL = [
