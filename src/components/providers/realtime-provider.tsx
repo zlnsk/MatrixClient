@@ -182,6 +182,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       setVerificationRequest(request)
     }
 
+    // Listen for room member changes (avatar, name updates from bridges)
+    const onRoomMemberChange = () => {
+      debouncedLoadRooms()
+    }
+
     client.on(sdk.RoomEvent.Timeline, onTimelineEvent)
     client.on(sdk.RoomEvent.TimelineReset, onTimelineReset)
     client.on(sdk.RoomEvent.MyMembership, onRoomMembership)
@@ -189,6 +194,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     client.on(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
     client.on(sdk.ClientEvent.Sync, onSync)
     client.on('RoomMember.typing' as any, onRoomTyping)
+    client.on(sdk.RoomMemberEvent.Membership as any, onRoomMemberChange)
+    client.on(sdk.RoomMemberEvent.Name as any, onRoomMemberChange)
+    client.on(sdk.RoomStateEvent.Events as any, onRoomMemberChange)
     client.on(CryptoEvent.VerificationRequestReceived as any, onVerificationRequest)
 
     // Request notification permission
@@ -250,6 +258,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       client.removeListener(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
       client.removeListener(sdk.ClientEvent.Sync, onSync)
       client.removeListener('RoomMember.typing' as any, onRoomTyping)
+      client.removeListener(sdk.RoomMemberEvent.Membership as any, onRoomMemberChange)
+      client.removeListener(sdk.RoomMemberEvent.Name as any, onRoomMemberChange)
+      client.removeListener(sdk.RoomStateEvent.Events as any, onRoomMemberChange)
       client.removeListener(CryptoEvent.VerificationRequestReceived as any, onVerificationRequest)
     }
   }, [user]) // Only re-run when user changes (login/logout). All handlers read current state from store.
