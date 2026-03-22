@@ -397,7 +397,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white/80 px-3 py-2.5 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/50 dark:shadow-[0_-2px_10px_rgba(0,0,0,0.3)] md:px-4 md:py-3" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>
+    <div className="border-t border-gray-200 bg-white px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900 md:px-4 md:py-3" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>
       {/* Command status */}
       {commandStatus && (
         <div
@@ -591,7 +591,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               placeholder="Type a message..."
               rows={1}
               enterKeyHint="send"
-              className="max-h-32 min-h-[42px] w-full resize-none rounded-full border border-gray-200 bg-gray-50 px-4 py-2.5 text-base text-gray-900 shadow-inner placeholder-gray-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 md:min-h-[44px] md:px-5 md:py-3 md:text-sm"
+              className="max-h-32 min-h-[42px] w-full resize-none rounded-full border border-gray-200 bg-gray-50 px-4 py-2.5 text-base text-gray-900 placeholder-gray-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 md:min-h-[44px] md:px-5 md:py-3 md:text-sm"
             />
           </div>
         )}

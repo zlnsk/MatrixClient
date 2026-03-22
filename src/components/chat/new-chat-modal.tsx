@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useChatStore } from '@/stores/chat-store'
 import { getHomeserverDomain } from '@/lib/matrix/client'
-import { DotGrid } from '@/components/ui/dot-grid'
 import {
   MessageSquare,
   Users,
@@ -98,7 +97,6 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="relative w-full max-w-md animate-slide-in rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900" onClick={e => e.stopPropagation()}>
-        <DotGrid />
         {/* Header */}
         <div className="border-b border-gray-200 p-4 dark:border-gray-800">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Conversation</h2>
@@ -151,7 +149,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                     value={userId}
                     onChange={e => setUserId(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleDirectChat()}
-                    className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                   />
                 </div>
                 <p className="mt-1 text-xs text-gray-600">
@@ -177,7 +175,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                   placeholder="My Group"
                   value={groupName}
                   onChange={e => setGroupName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                 />
               </div>
 
@@ -190,7 +188,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                   value={groupMembers}
                   onChange={e => setGroupMembers(e.target.value)}
                   rows={3}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                 />
               </div>
 
@@ -203,7 +201,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                   placeholder="What is this room about?"
                   value={groupTopic}
                   onChange={e => setGroupTopic(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                 />
               </div>
 

@@ -5,7 +5,6 @@ import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { getHomeserverUrl, getHomeserverDomain, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient, generateSecurityKey } from '@/lib/matrix/client'
-import { DotGrid } from '@/components/ui/dot-grid'
 import {
   LogOut,
   User,
@@ -157,7 +156,6 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="relative flex h-[500px] w-full max-w-2xl animate-slide-in overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900" onClick={e => e.stopPropagation()}>
-        <DotGrid />
         {/* Left nav */}
         <div className="w-48 flex-shrink-0 border-r border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
           <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Settings</h2>
@@ -244,7 +242,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                           if (e.key === 'Escape') setIsEditingName(false)
                         }}
                         autoFocus
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-900 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                       />
                       <button
                         onClick={handleSaveDisplayName}
@@ -362,7 +360,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                       value={generateKeyPassword}
                       onChange={e => { setGenerateKeyPassword(e.target.value); setGenerateKeyError(null) }}
                       placeholder="Account password (required for signing)"
-                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                     />
                     {generateKeyError && (
                       <p className="text-xs text-red-500">{generateKeyError}</p>
@@ -410,7 +408,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                   onChange={e => { setRecoveryKey(e.target.value); setRestoreError(null); setRestoreResult(null) }}
                   placeholder="Security key (EsTC j9gP noRq ...) or passphrase..."
                   rows={2}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                 />
                 {restoreError && (
                   <p className="mt-2 text-xs text-red-500">{restoreError}</p>
@@ -493,7 +491,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                                 onKeyDown={e => { if (e.key === 'Enter') handleDeleteDevice(device.deviceId) }}
                                 placeholder="Account password"
                                 autoFocus
-                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-900 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                               />
                               {deviceError && <p className="text-xs text-red-500">{deviceError}</p>}
                               <div className="flex gap-2">

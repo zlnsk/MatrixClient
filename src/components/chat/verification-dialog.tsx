@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { ShieldCheck, ShieldAlert, Loader2, CheckCircle2, XCircle } from 'lucide-react'
-import { DotGrid } from '@/components/ui/dot-grid'
 import type {
   VerificationRequest,
   ShowSasCallbacks,
@@ -169,7 +168,6 @@ export function VerificationDialog({ request, onClose }: VerificationDialogProps
         className="relative w-full max-w-md animate-slide-in overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900"
         onClick={e => e.stopPropagation()}
       >
-        <DotGrid />
         {/* Header */}
         <div className="flex items-center gap-2 p-4 border-b border-gray-200 dark:border-gray-800">
           <ShieldCheck className="w-5 h-5 text-indigo-500" />

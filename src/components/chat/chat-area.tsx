@@ -253,7 +253,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   return (
     <div className="relative flex flex-1 flex-col min-h-0 bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white/90 px-4 py-3 shadow-md shadow-gray-200/40 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90 dark:shadow-black/30">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
           <button
             onClick={onBackClick}
@@ -362,7 +362,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
               value={chatSearch}
               onChange={e => setChatSearch(e.target.value)}
               autoFocus
-              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
             />
           </div>
         </div>

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { Sidebar } from './sidebar'
 import { ChatArea } from './chat-area'
-import { DotGrid } from '@/components/ui/dot-grid'
 import { useChatStore } from '@/stores/chat-store'
 
 // Lazy load heavy modal components — only fetched when opened
@@ -77,8 +76,6 @@ export function ChatLayout() {
 
   return (
     <div className="relative h-dvh overflow-hidden bg-gray-50 dark:bg-gray-950">
-      {/* Interactive dot grid background */}
-      <DotGrid />
 
       {/* Sidebar — always visible behind the overlay */}
       <div className={`absolute inset-0 flex bg-transparent transition-[filter] duration-150 ${
@@ -103,8 +100,7 @@ export function ChatLayout() {
 
           {/* Chat window */}
           <div className="absolute inset-0 z-30 flex items-center justify-center p-0 md:p-8 lg:p-10 pointer-events-none">
-            <div className="pointer-events-auto relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-none bg-white shadow-none md:max-h-[85vh] md:rounded-2xl md:shadow-2xl md:shadow-black/40 dark:bg-gray-900 dark:md:shadow-black/60 md:border md:border-gray-200 dark:md:border-gray-800 animate-slide-in">
-              <DotGrid />
+            <div className="pointer-events-auto relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-none bg-white shadow-none md:max-h-[85vh] md:rounded-2xl md:shadow-xl dark:bg-gray-900 md:border md:border-gray-200 dark:md:border-gray-800 animate-slide-in">
               <ChatArea onBackClick={handleBackToSidebar} />
             </div>
           </div>

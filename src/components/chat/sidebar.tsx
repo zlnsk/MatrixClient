@@ -172,7 +172,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
             aria-label="Search rooms and messages"
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
           />
           {searchFilter && (
             <button
@@ -423,8 +423,8 @@ const RoomListItem = memo(function RoomListItem({
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
       className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl p-3 text-left transition-all duration-150 ${
         isActive
-          ? 'bg-indigo-50 shadow-[0_2px_8px_rgba(99,102,241,0.15)] ring-1 ring-indigo-200/50 dark:bg-gray-800 dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)] dark:ring-gray-700/50'
-          : 'hover:bg-gray-50 hover:shadow-[0_1px_4px_rgba(0,0,0,0.06)] dark:hover:bg-gray-800/60 dark:hover:shadow-[0_1px_4px_rgba(0,0,0,0.2)]'
+          ? 'bg-indigo-50 dark:bg-gray-800'
+          : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'
       }`}
     >
       <Avatar
@@ -451,7 +451,7 @@ const RoomListItem = memo(function RoomListItem({
           </p>
           <div className="ml-2 flex items-center gap-1">
             {room.unreadCount > 0 && (
-              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-xs font-medium text-white shadow-sm shadow-indigo-600/30">
+              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-xs font-medium text-white shadow-sm">
                 {room.unreadCount > 99 ? '99+' : room.unreadCount}
               </span>
             )}

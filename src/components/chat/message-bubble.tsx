@@ -333,7 +333,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   if (message.isRedacted) {
     return (
       <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-3' : 'mt-0.5'}`}>
-        <div className={`${isOwn ? 'mr-12' : 'ml-12'} rounded-2xl bg-gray-100 dark:bg-gray-800/50 px-4 py-2 shadow-[0_1px_4px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_4px_rgba(0,0,0,0.3)]`}>
+        <div className={`${isOwn ? 'mr-12' : 'ml-12'} rounded-2xl bg-gray-100 dark:bg-gray-800/50 px-4 py-2 shadow-sm`}>
           <p className="text-sm italic text-gray-400 dark:text-gray-500">This message was deleted</p>
         </div>
       </div>
@@ -400,8 +400,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             }}
             className={`rounded-2xl transition-shadow duration-150 ${message.type === 'm.image' || message.type === 'm.video' ? 'p-1 w-fit' : 'px-4 py-3'} ${isOwn ? 'cursor-pointer ' : ''}${
               isOwn
-                ? 'bg-gradient-to-br from-indigo-500 via-indigo-500 to-indigo-600 text-white shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_3px_rgba(99,102,241,0.2)] ring-1 ring-indigo-400/20 group-hover:shadow-[0_4px_12px_rgba(99,102,241,0.4),0_2px_4px_rgba(99,102,241,0.25)]'
-                : 'bg-white text-gray-900 shadow-[0_2px_8px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-gray-200/50 group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_2px_4px_rgba(0,0,0,0.08)] group-hover:bg-gray-50/80 dark:bg-gray-800 dark:text-gray-100 dark:shadow-[0_2px_8px_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] dark:ring-gray-700/50 dark:group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.5),0_2px_4px_rgba(0,0,0,0.35)] dark:group-hover:bg-gray-750'
+                ? 'bg-indigo-500 text-white shadow-sm'
+                : 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-gray-100'
             }`}
           >
             {/* Inline reply quote */}
@@ -540,7 +540,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           </div>
 
           {/* Action buttons — right side of bubble (desktop only, hidden on touch) */}
-          <div className={`absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center gap-0.5 rounded-xl border border-gray-200/80 bg-white p-0.5 shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:border-gray-700 dark:bg-gray-800 dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all duration-150 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'} ${showActions && !isEditing ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none ' + (isOwn ? 'translate-x-1' : '-translate-x-1')}`}>
+          <div className={`absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center gap-0.5 rounded-xl border border-gray-200/80 bg-white p-0.5 shadow-lg dark:border-gray-700 dark:bg-gray-800 transition-all duration-150 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'} ${showActions && !isEditing ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none ' + (isOwn ? 'translate-x-1' : '-translate-x-1')}`}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-white"
@@ -774,8 +774,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                     onClick={() => handleReaction(emoji)}
                     className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all hover:scale-105 ${
                       data.includesMe
-                        ? 'border-indigo-400/50 bg-indigo-100 text-indigo-600 shadow-[0_1px_3px_rgba(99,102,241,0.2)] dark:border-indigo-500/50 dark:bg-indigo-900/30 dark:text-indigo-300'
-                        : 'border-gray-200 bg-white text-gray-600 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-gray-300 hover:shadow-[0_2px_6px_rgba(0,0,0,0.1)] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:shadow-[0_1px_3px_rgba(0,0,0,0.3)] dark:hover:border-gray-600'
+                        ? 'border-indigo-400/50 bg-indigo-50 text-indigo-600 dark:border-indigo-500/50 dark:bg-indigo-900/30 dark:text-indigo-300'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-gray-600'
                     }`}
                   >
                     <span>{emoji}</span>
