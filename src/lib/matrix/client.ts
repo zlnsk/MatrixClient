@@ -123,6 +123,38 @@ if (typeof window !== 'undefined') {
   console.trace = (...args: any[]) => {
     if (!isSuppressed(args)) originalTrace.apply(console, args)
   }
+
+  // Intercept fetch to silently handle room_keys 404 responses.
+  // The SDK's requestRoomKeyFromBackup makes GET requests to
+  // /_matrix/client/v3/room_keys/keys/{roomId}/{sessionId}?version=N
+  // which return 404 for sessions not in the backup. The browser logs these
+  // as network errors in the console, which we can't suppress via console patching.
+  // By returning a successful empty response, the SDK handles it gracefully
+  // and the browser doesn't log a network error.
+  const originalFetch = window.fetch.bind(window)
+  window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
+    const url = typeof args[0] === 'string' ? args[0] : args[0] instanceof URL ? args[0].href : (args[0] as Request).url
+    const isRoomKeysRequest = url.includes('/room_keys/keys/')
+    if (isRoomKeysRequest) {
+      try {
+        const response = await originalFetch(...args)
+        if (response.status === 404) {
+          // Return a fake 200 with the empty keys structure the SDK expects
+          return new Response(JSON.stringify({}), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+        return response
+      } catch (err) {
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+    }
+    return originalFetch(...args)
+  }
 }
 
 /**
