@@ -534,8 +534,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             </div>
           </div>
 
-          {/* Action buttons — right side of bubble */}
-          <div className={`absolute top-1/2 -translate-y-1/2 z-10 flex items-center gap-0.5 rounded-xl border border-gray-200/80 bg-white p-0.5 shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:border-gray-700 dark:bg-gray-800 dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all duration-150 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'} ${showActions && !isEditing ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none ' + (isOwn ? 'translate-x-1' : '-translate-x-1')}`}>
+          {/* Action buttons — right side of bubble (desktop only, hidden on touch) */}
+          <div className={`absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center gap-0.5 rounded-xl border border-gray-200/80 bg-white p-0.5 shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:border-gray-700 dark:bg-gray-800 dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all duration-150 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'} ${showActions && !isEditing ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none ' + (isOwn ? 'translate-x-1' : '-translate-x-1')}`}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-white"
@@ -563,9 +563,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               </button>
             </div>
 
-          {/* Emoji picker */}
+          {/* Emoji picker (desktop only) */}
           {showEmojiPicker && (
-            <div className={`absolute bottom-full mb-1 z-20 grid grid-cols-5 gap-0.5 rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-0' : 'left-0'}`}>
+            <div className={`absolute bottom-full mb-1 z-20 hidden md:grid grid-cols-5 gap-0.5 rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-0' : 'left-0'}`}>
               {QUICK_EMOJIS.map(emoji => (
                 <button
                   key={emoji}
@@ -578,9 +578,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             </div>
           )}
 
-          {/* Context menu */}
+          {/* Context menu (desktop only) */}
           {showContextMenu && (
-            <div className={`absolute top-0 z-20 min-w-[160px] rounded-xl border border-gray-200 bg-white py-1 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'}`}>
+            <div className={`absolute top-0 z-20 hidden md:block min-w-[160px] rounded-xl border border-gray-200 bg-white py-1 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'}`}>
               <button
                 onClick={handleCopy}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -632,9 +632,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             </div>
           )}
 
-          {/* Forward room picker */}
-          {showForwardPicker && (
-            <div className={`absolute top-0 z-20 min-w-[200px] max-h-[240px] overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'}`}>
+          {/* Forward room picker (desktop only) */}
+          {showForwardPicker && !showTouchMenu && (
+            <div className={`absolute top-0 z-20 hidden md:block min-w-[200px] max-h-[240px] overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'}`}>
               <p className="px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">Forward to...</p>
               {rooms
                 .filter(r => r.roomId !== roomId)
