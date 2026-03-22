@@ -54,6 +54,11 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
     if (replyTo) inputRef.current?.focus()
   }, [replyTo])
 
+  // Auto-focus input when opening a chat
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [roomId])
+
   // Auto-dismiss command status after 4 seconds
   useEffect(() => {
     if (commandStatus) {
