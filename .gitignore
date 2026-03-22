@@ -41,3 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 out/
+
+# android build artifacts
+*.idsig
+android-app/matrix-debug.apk
