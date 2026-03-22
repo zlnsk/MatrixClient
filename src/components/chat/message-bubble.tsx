@@ -164,12 +164,15 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showForwardPicker, setShowForwardPicker] = useState(false)
+  const [showTouchMenu, setShowTouchMenu] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
   const [copied, setCopied] = useState(false)
   const [mediaBlobUrl, setMediaBlobUrl] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const actionsRef = useRef<HTMLDivElement>(null)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const touchMoved = useRef(false)
 
   // Fetch all media via authenticated endpoint (handles both encrypted and unencrypted)
   useEffect(() => {
@@ -203,16 +206,54 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   const effectiveMediaUrl = mediaBlobUrl
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
       if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
         setShowActions(false)
         setShowEmojiPicker(false)
         setShowContextMenu(false)
         setShowForwardPicker(false)
+        setShowTouchMenu(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [])
+
+  // Long-press handlers for touch devices
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchMoved.current = false
+    longPressTimer.current = setTimeout(() => {
+      if (!touchMoved.current) {
+        e.preventDefault()
+        setShowTouchMenu(true)
+        // Haptic feedback if available
+        if (navigator.vibrate) navigator.vibrate(30)
+      }
+    }, 500)
+  }, [])
+
+  const handleTouchMove = useCallback(() => {
+    touchMoved.current = true
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }, [])
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }, [])
+
+  const closeTouchMenu = useCallback(() => {
+    setShowTouchMenu(false)
+    setShowForwardPicker(false)
   }, [])
 
   const handleReaction = async (emoji: string) => {
@@ -343,6 +384,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           {/* Bubble wrapper — action buttons positioned relative to this */}
           <div className="relative">
           <div
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
             onDoubleClick={() => {
               if (isOwn && !isEditing && message.type !== 'm.image' && message.type !== 'm.video' && message.type !== 'm.audio') {
                 setIsEditing(true)
@@ -607,6 +651,110 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 <p className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">No other rooms available</p>
               )}
             </div>
+          )}
+          {/* Touch-friendly action menu (long-press on mobile) */}
+          {showTouchMenu && createPortal(
+            <div
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 animate-fade-in"
+              onClick={closeTouchMenu}
+              onTouchEnd={(e) => { if (e.target === e.currentTarget) closeTouchMenu() }}
+            >
+              <div
+                className="w-full max-w-lg animate-slide-in rounded-t-2xl bg-white pb-8 pt-2 dark:bg-gray-800"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Drag handle */}
+                <div className="mb-3 flex justify-center">
+                  <div className="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
+                </div>
+
+                {/* Quick reactions row */}
+                <div className="flex justify-center gap-1 px-4 pb-3">
+                  {QUICK_EMOJIS.map(emoji => (
+                    <button
+                      key={emoji}
+                      onClick={() => { handleReaction(emoji); closeTouchMenu() }}
+                      className="rounded-xl p-2.5 text-2xl transition-transform active:scale-90 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
+
+                {/* Action buttons */}
+                <div className="mt-1 px-2">
+                  <button
+                    onClick={() => { onReply(); closeTouchMenu() }}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-[15px] text-gray-700 active:bg-gray-100 dark:text-gray-200 dark:active:bg-gray-700"
+                  >
+                    <Reply className="h-5 w-5 text-gray-400" />
+                    Reply
+                  </button>
+                  <button
+                    onClick={() => { handleCopy(); closeTouchMenu() }}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-[15px] text-gray-700 active:bg-gray-100 dark:text-gray-200 dark:active:bg-gray-700"
+                  >
+                    <Copy className="h-5 w-5 text-gray-400" />
+                    Copy text
+                  </button>
+                  <button
+                    onClick={() => { handlePin(); closeTouchMenu() }}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-[15px] text-gray-700 active:bg-gray-100 dark:text-gray-200 dark:active:bg-gray-700"
+                  >
+                    <Pin className="h-5 w-5 text-gray-400" />
+                    {isPinned ? 'Unpin message' : 'Pin message'}
+                  </button>
+                  <button
+                    onClick={() => setShowForwardPicker(true)}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-[15px] text-gray-700 active:bg-gray-100 dark:text-gray-200 dark:active:bg-gray-700"
+                  >
+                    <Forward className="h-5 w-5 text-gray-400" />
+                    Forward
+                  </button>
+                  {showForwardPicker && (
+                    <div className="mb-2 ml-12 max-h-[160px] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+                      {rooms
+                        .filter(r => r.roomId !== roomId)
+                        .map(r => (
+                          <button
+                            key={r.roomId}
+                            onClick={() => { handleForward(r.roomId); closeTouchMenu() }}
+                            className="flex w-full items-center px-4 py-2.5 text-sm text-gray-700 active:bg-gray-200 dark:text-gray-200 dark:active:bg-gray-700"
+                          >
+                            <span className="truncate">{r.name}</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                  {isOwn && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setIsEditing(true)
+                          setEditContent(message.content)
+                          closeTouchMenu()
+                        }}
+                        className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-[15px] text-gray-700 active:bg-gray-100 dark:text-gray-200 dark:active:bg-gray-700"
+                      >
+                        <Pencil className="h-5 w-5 text-gray-400" />
+                        Edit message
+                      </button>
+                      <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
+                      <button
+                        onClick={() => { handleDelete(); closeTouchMenu() }}
+                        className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-[15px] text-red-500 active:bg-gray-100 dark:text-red-400 dark:active:bg-gray-700"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                        Delete message
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>,
+            document.body
           )}
           </div>{/* end bubble wrapper */}
 
