@@ -48,17 +48,20 @@ if [ ! -f "$BUILD_DIR/debug.keystore" ]; then
     -dname "CN=Debug, OU=Debug, O=Debug, L=Debug, S=Debug, C=US"
 fi
 
+echo "=== Zipalign ==="
+"$BUILD_TOOLS/zipalign" -f 4 "$BUILD_DIR/matrix-unsigned.apk" "$BUILD_DIR/matrix-aligned.apk"
+
 echo "=== Sign APK ==="
 "$BUILD_TOOLS/apksigner" sign \
   --ks "$BUILD_DIR/debug.keystore" \
   --ks-pass pass:android \
   --key-pass pass:android \
   --ks-key-alias androiddebugkey \
-  --out "$BUILD_DIR/matrix-debug.apk" \
-  "$BUILD_DIR/matrix-unsigned.apk"
-
-echo "=== Zipalign ==="
-"$BUILD_TOOLS/zipalign" -f 4 "$BUILD_DIR/matrix-debug.apk" "$SCRIPT_DIR/matrix-debug.apk"
+  --min-sdk-version 26 \
+  --v1-signing-enabled true \
+  --v2-signing-enabled true \
+  --out "$SCRIPT_DIR/matrix-debug.apk" \
+  "$BUILD_DIR/matrix-aligned.apk"
 
 echo ""
 echo "=== APK built successfully ==="
