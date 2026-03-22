@@ -248,7 +248,8 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
         const emoji = rel.key
         const existing = reactions.get(emoji) || { count: 0, users: [], includesMe: false }
         existing.count++
-        existing.users.push(e.getSender()!)
+        const senderName = room.getMember(e.getSender()!)?.name || e.getSender()!
+        existing.users.push(senderName)
         if (e.getSender() === userId) existing.includesMe = true
         reactions.set(emoji, existing)
       }

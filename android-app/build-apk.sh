@@ -23,15 +23,14 @@ aapt package -f -m \
   -I "$PLATFORM"
 
 echo "=== Compile Java ==="
-javac -source 1.8 -target 1.8 -d "$BUILD_DIR/obj" \
+javac -source 1.8 -target 1.8 -Xlint:-options -d "$BUILD_DIR/obj" \
   -classpath "$PLATFORM" \
   -sourcepath "$BUILD_DIR/gen:$APP_SRC/java" \
   "$BUILD_DIR/gen/com/lukasz/matrix/R.java" \
-  "$APP_SRC/java/com/lukasz/matrix/MainActivity.java" \
-  -bootclasspath "$PLATFORM"
+  "$APP_SRC/java/com/lukasz/matrix/MainActivity.java"
 
 echo "=== Convert to DEX ==="
-dalvik-exchange --dex --output="$BUILD_DIR/apk/classes.dex" "$BUILD_DIR/obj"
+dalvik-exchange --dex --min-sdk-version=26 --output="$BUILD_DIR/apk/classes.dex" "$BUILD_DIR/obj"
 
 echo "=== Create unsigned APK ==="
 aapt package -f \

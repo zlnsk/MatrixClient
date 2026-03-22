@@ -495,19 +495,28 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           {message.reactions.size > 0 && (
             <div className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
               {Array.from(message.reactions.entries()).map(([emoji, data]) => (
-                <button
-                  key={emoji}
-                  onClick={() => handleReaction(emoji)}
-                  className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all hover:scale-105 ${
-                    data.includesMe
-                      ? 'border-indigo-400/50 bg-indigo-100 text-indigo-600 shadow-[0_1px_3px_rgba(99,102,241,0.2)] dark:border-indigo-500/50 dark:bg-indigo-900/30 dark:text-indigo-300'
-                      : 'border-gray-200 bg-white text-gray-600 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-gray-300 hover:shadow-[0_2px_6px_rgba(0,0,0,0.1)] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:shadow-[0_1px_3px_rgba(0,0,0,0.3)] dark:hover:border-gray-600'
-                  }`}
-                  title={data.users.join(', ')}
-                >
-                  <span>{emoji}</span>
-                  <span>{data.count}</span>
-                </button>
+                <div key={emoji} className="group/reaction relative">
+                  <button
+                    onClick={() => handleReaction(emoji)}
+                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all hover:scale-105 ${
+                      data.includesMe
+                        ? 'border-indigo-400/50 bg-indigo-100 text-indigo-600 shadow-[0_1px_3px_rgba(99,102,241,0.2)] dark:border-indigo-500/50 dark:bg-indigo-900/30 dark:text-indigo-300'
+                        : 'border-gray-200 bg-white text-gray-600 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:border-gray-300 hover:shadow-[0_2px_6px_rgba(0,0,0,0.1)] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:shadow-[0_1px_3px_rgba(0,0,0,0.3)] dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <span>{emoji}</span>
+                    <span>{data.count}</span>
+                  </button>
+                  {/* Hover tooltip showing who reacted */}
+                  <div className={`absolute bottom-full mb-1.5 hidden group-hover/reaction:block z-30 ${isOwn ? 'right-0' : 'left-0'}`}>
+                    <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 shadow-lg dark:border-gray-700 dark:bg-gray-800 whitespace-nowrap">
+                      <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">{emoji} {data.count > 1 ? `${data.count} people` : '1 person'}</p>
+                      {data.users.map((userName, i) => (
+                        <p key={i} className="text-xs text-gray-700 dark:text-gray-300">{userName}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}
