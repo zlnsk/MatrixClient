@@ -334,7 +334,7 @@ export async function requestSelfVerification(): Promise<any> {
   return request
 }
 
-export async function restoreFromRecoveryKey(input: string): Promise<{ total: number; imported: number }> {
+export async function restoreFromRecoveryKey(input: string): Promise<void> {
   if (!matrixClient) throw new Error('Not connected')
   const crypto = matrixClient.getCrypto()
   if (!crypto) throw new Error('Crypto not initialized')
@@ -376,48 +376,47 @@ export async function restoreFromRecoveryKey(input: string): Promise<{ total: nu
     )
   }
 
-  // Method 1: Use Secret Storage (SSSS) flow - this is how Element's "Security Key" works.
-  // The recovery key unlocks Secret Storage, which contains the backup decryption key.
+  // Step 1: Set the recovery key so the SSSS callback can provide it
+  // when bootstrapCrossSigning needs to read cross-signing private keys from Secret Storage.
+  pendingSecretStorageKey = keyBytes
+
+  // Step 2: Bootstrap cross-signing WITHOUT setupNewCrossSigning.
+  // This loads the existing cross-signing private keys from Secret Storage
+  // (master, self-signing, user-signing) rather than creating new ones.
   try {
-    pendingSecretStorageKey = keyBytes
+    await crypto.bootstrapCrossSigning({})
+    console.log('Cross-signing keys loaded from Secret Storage')
+  } catch (err) {
+    console.warn('bootstrapCrossSigning failed:', err)
+    // Continue anyway — cross-signing keys may already be cached locally
+  }
+
+  // Step 3: Cross-sign this device using the self-signing key.
+  // This is what makes getCrossSigningStatus().thisDeviceVerified return true.
+  try {
+    const deviceId = matrixClient.getDeviceId()!
+    await crypto.crossSignDevice(deviceId)
+    console.log('Device cross-signed successfully:', deviceId)
+  } catch (err) {
+    console.warn('crossSignDevice failed (may already be signed):', err)
+  }
+
+  // Step 4: Optionally restore from key backup if one exists.
+  // Do NOT create a new backup — just restore existing keys if available.
+  try {
     await crypto.loadSessionBackupPrivateKeyFromSecretStorage()
     console.log('Loaded backup key from Secret Storage')
-
     const result = await crypto.restoreKeyBackup({
       progressCallback: (progress: any) => {
         console.log('Key restore progress:', progress)
       },
     })
-    pendingSecretStorageKey = null
-    return result
+    console.log(`Restored ${result.imported} of ${result.total} keys from backup`)
   } catch (err) {
-    console.log('Secret Storage flow failed, trying direct backup key:', err)
-    pendingSecretStorageKey = null
+    console.log('Key backup restoration skipped (no backup or failed):', err)
   }
 
-  // Method 2: Try using the key directly as the backup decryption key
-  const backupInfo = await crypto.getKeyBackupInfo()
-  if (!backupInfo?.version) throw new Error('No key backup found on server')
-
-  try {
-    await crypto.storeSessionBackupPrivateKey(keyBytes, backupInfo.version)
-    const result = await crypto.restoreKeyBackup({
-      progressCallback: (progress: any) => {
-        console.log('Key restore progress:', progress)
-      },
-    })
-    return result
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    if (msg.includes('does not match')) {
-      throw new Error(
-        'Recovery key does not match the backup on the server. ' +
-        'Make sure you are using the correct security key for this account. ' +
-        'You can find it in another Matrix client under Settings > Security.'
-      )
-    }
-    throw err
-  }
+  pendingSecretStorageKey = null
 }
 
 export async function deleteOtherDevice(

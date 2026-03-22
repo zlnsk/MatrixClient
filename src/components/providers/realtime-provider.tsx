@@ -199,6 +199,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     // Check cross-signing status after sync — prompt verification if needed
     const checkCrossSigning = async () => {
       try {
+        // Skip if user previously dismissed the banner
+        if (localStorage.getItem('matrix_verify_banner_dismissed') === 'true') return
         const status = await getCrossSigningStatus()
         if (status.exists && !status.thisDeviceVerified) {
           setShowNewSessionBanner(true)
@@ -275,7 +277,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         <NewSessionBanner
           onVerifyWithSession={handleVerifyWithSession}
           onVerifyWithKey={handleVerifyWithKey}
-          onDismiss={() => setShowNewSessionBanner(false)}
+          onDismiss={() => {
+            localStorage.setItem('matrix_verify_banner_dismissed', 'true')
+            setShowNewSessionBanner(false)
+          }}
         />
       )}
       {verificationRequest && (

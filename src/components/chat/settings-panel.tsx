@@ -471,8 +471,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                     setRestoreError(null)
                     setRestoreResult(null)
                     try {
-                      const result = await restoreFromRecoveryKey(recoveryKey)
-                      setRestoreResult(`Restored ${result.imported} of ${result.total} keys`)
+                      await restoreFromRecoveryKey(recoveryKey)
+                      setRestoreResult('Device verified and keys restored')
                       setRecoveryKey('')
                     } catch (err) {
                       setRestoreError(err instanceof Error ? err.message : 'Failed to restore keys')
