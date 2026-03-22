@@ -133,7 +133,6 @@ public class MainActivity extends Activity {
         configureWebView();
         webView.loadUrl(APP_URL);
         startSzeptService();
-        requestBatteryOptimization();
     }
 
     private void createNotificationChannels() {
@@ -163,9 +162,6 @@ public class MainActivity extends Activity {
     private void requestAllPermissions() {
         List<String> needed = new ArrayList<>();
         String[] perms = {
-            "android.permission.CAMERA",
-            "android.permission.RECORD_AUDIO",
-            "android.permission.ACCESS_FINE_LOCATION",
             "android.permission.READ_EXTERNAL_STORAGE"
         };
         for (String p : perms) {
@@ -188,19 +184,6 @@ public class MainActivity extends Activity {
         if (!needed.isEmpty()) {
             requestPermissions(needed.toArray(new String[0]), PERMISSION_REQUEST);
         }
-    }
-
-    private void requestBatteryOptimization() {
-        try {
-            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            Method isIgnoring = pm.getClass().getMethod("isIgnoringBatteryOptimizations", String.class);
-            boolean ignoring = (boolean) isIgnoring.invoke(pm, getPackageName());
-            if (!ignoring) {
-                Intent intent = new Intent("android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS");
-                intent.setData(Uri.parse("package:" + getPackageName()));
-                startActivity(intent);
-            }
-        } catch (Exception ignored) {}
     }
 
     private void startSzeptService() {
@@ -422,7 +405,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setTextZoom(110);
 
-        settings.setGeolocationEnabled(true);
+        settings.setGeolocationEnabled(false);
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
@@ -517,14 +500,30 @@ public class MainActivity extends Activity {
             }
 
             @Override
-            public void onPermissionRequest(PermissionRequest request) {
+            public void onPermissionRequest(final PermissionRequest request) {
+                // Request camera/microphone permissions on demand when the web content needs them
+                List<String> androidPerms = new ArrayList<>();
+                for (String res : request.getResources()) {
+                    if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res)) {
+                        if (checkSelfPermission("android.permission.CAMERA") != PackageManager.PERMISSION_GRANTED) {
+                            androidPerms.add("android.permission.CAMERA");
+                        }
+                    } else if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res)) {
+                        if (checkSelfPermission("android.permission.RECORD_AUDIO") != PackageManager.PERMISSION_GRANTED) {
+                            androidPerms.add("android.permission.RECORD_AUDIO");
+                        }
+                    }
+                }
+                if (!androidPerms.isEmpty()) {
+                    requestPermissions(androidPerms.toArray(new String[0]), PERMISSION_REQUEST);
+                }
                 request.grant(request.getResources());
             }
 
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin,
                     GeolocationPermissions.Callback callback) {
-                callback.invoke(origin, true, true);
+                callback.invoke(origin, false, false);
             }
         });
 

@@ -69,7 +69,7 @@ public class MatrixService extends Service {
         // Partial wake lock
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "szept::BackgroundSync");
-        wakeLock.acquire();
+        wakeLock.acquire(30 * 60 * 1000L); // 30 minute timeout
 
         return START_STICKY;
     }
