@@ -429,39 +429,37 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     set({ rooms, pendingInvites })
 
-    // Asynchronously resolve avatars for DM rooms where lazy-loaded members
-    // haven't provided avatar URLs yet. Uses the m.direct account data to find
-    // the DM partner's user ID, then fetches their profile info from the server.
-    const dmMap = (client as any).getAccountData('m.direct')?.getContent() || {}
-    const roomsMissingAvatars = rooms.filter(r => r.isDirect && !r.avatarUrl)
-    if (roomsMissingAvatars.length > 0) {
-      for (const room of roomsMissingAvatars) {
-        // Find the DM partner user ID from m.direct account data
-        let dmPartnerId: string | null = null
-        for (const [userId, roomIds] of Object.entries(dmMap) as [string, string[]][]) {
-          if (roomIds.includes(room.roomId)) {
-            dmPartnerId = userId
-            break
-          }
-        }
-        if (!dmPartnerId) continue
-
-        client.getProfileInfo(dmPartnerId).then((profile: any) => {
-          const avatarMxc = profile?.avatar_url
-          if (!avatarMxc) return
-
-          set((state) => ({
-            rooms: state.rooms.map((r) =>
-              r.roomId === room.roomId && !r.avatarUrl
-                ? { ...r, avatarUrl: getAvatarUrl(avatarMxc) }
-                : r
-            ),
-            activeRoom: state.activeRoom?.roomId === room.roomId && !state.activeRoom.avatarUrl
-              ? { ...state.activeRoom, avatarUrl: getAvatarUrl(avatarMxc) }
-              : state.activeRoom,
-          }))
-        }).catch(() => { /* profile fetch failed, keep initials fallback */ })
+    // With lazyLoadMembers, room member state events (including avatars) aren't
+    // loaded until the room's timeline is viewed. For DM rooms missing avatars,
+    // proactively load members so the avatar URLs become available.
+    // After members load, re-run loadRooms to pick up the now-available avatars.
+    const joinedRooms = allRooms.filter(r => r.getMyMembership() === 'join')
+    const roomsNeedingMembers: Room[] = []
+    for (const sdkRoom of joinedRooms) {
+      const matrixRoom = rooms.find(r => r.roomId === sdkRoom.roomId)
+      if (matrixRoom?.isDirect && !matrixRoom.avatarUrl) {
+        roomsNeedingMembers.push(sdkRoom)
       }
+    }
+    if (roomsNeedingMembers.length > 0) {
+      Promise.allSettled(
+        roomsNeedingMembers.map(r => r.loadMembersIfNeeded())
+      ).then((results) => {
+        // Only refresh if at least one room actually loaded new members
+        if (results.some(r => r.status === 'fulfilled' && r.value)) {
+          // Rebuild rooms with now-loaded member data
+          const updatedRooms = allRooms
+            .filter(r => r.getMyMembership() === 'join')
+            .map(roomToMatrixRoom)
+            .sort((a, b) => b.lastMessageTs - a.lastMessageTs)
+          set((state) => ({
+            rooms: updatedRooms,
+            activeRoom: state.activeRoom
+              ? updatedRooms.find(r => r.roomId === state.activeRoom!.roomId) || state.activeRoom
+              : null,
+          }))
+        }
+      })
     }
   },
 
