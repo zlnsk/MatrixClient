@@ -197,7 +197,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-5">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-900 capitalize dark:text-white">{activeSection}</h3>
             <button

@@ -274,7 +274,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-0.5 md:gap-1">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setShowRoomInfo(!showRoomInfo)}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"

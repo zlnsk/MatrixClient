@@ -330,7 +330,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white/80 px-2 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/50 dark:shadow-[0_-2px_10px_rgba(0,0,0,0.3)] md:px-4 md:py-4" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+    <div className="border-t border-gray-200 bg-white/80 px-3 py-2.5 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/50 dark:shadow-[0_-2px_10px_rgba(0,0,0,0.3)] md:px-4 md:py-3" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>
       {/* Command status */}
       {commandStatus && (
         <div
@@ -404,7 +404,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         </div>
       )}
 
-      <div className="flex items-end gap-1.5 md:gap-3">
+      <div className="flex items-end gap-2">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -418,7 +418,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         {/* Attachment button */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:hover:bg-gray-800 dark:hover:text-white dark:active:bg-gray-700 md:p-2.5"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:hover:bg-gray-800 dark:hover:text-white dark:active:bg-gray-700 md:h-11 md:w-11"
           title="Attach file"
           aria-label="Attach file"
         >
@@ -429,7 +429,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         <div className="relative hidden sm:block" ref={emojiRef}>
           <button
             onClick={() => setShowEmoji(!showEmoji)}
-            className="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:hover:bg-gray-800 dark:hover:text-white dark:active:bg-gray-700 md:p-2.5"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:hover:bg-gray-800 dark:hover:text-white dark:active:bg-gray-700 md:h-11 md:w-11"
             aria-label="Emoji picker"
           >
             <Smile className="h-5 w-5" />
@@ -470,7 +470,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
 
         {/* Text input / Recording indicator */}
         {isRecording ? (
-          <div className="flex flex-1 items-center gap-3 rounded-full border border-red-300 bg-red-50 px-5 py-3 dark:border-red-800 dark:bg-red-900/20">
+          <div className="flex flex-1 items-center gap-3 rounded-full border border-red-300 bg-red-50 px-5 py-2.5 dark:border-red-800 dark:bg-red-900/20">
             <span className="h-3 w-3 animate-pulse rounded-full bg-red-500" />
             <span className="text-sm font-medium text-red-600 dark:text-red-400">Recording {formatDuration(recordingDuration)}</span>
             <div className="flex-1" />

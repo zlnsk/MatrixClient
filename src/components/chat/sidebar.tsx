@@ -134,7 +134,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             <p className="text-xs text-gray-500">{user?.userId}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowNewChat(true)}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"

@@ -90,8 +90,8 @@ export function ChatLayout() {
           />
 
           {/* Chat window */}
-          <div className="absolute inset-0 z-30 flex items-center justify-center p-0 md:p-6 lg:p-10 pointer-events-none">
-            <div className="pointer-events-auto flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-none bg-white shadow-none md:h-[calc(100%-2rem)] md:rounded-2xl md:shadow-2xl md:shadow-black/40 dark:bg-gray-900 dark:md:shadow-black/60 md:border md:border-gray-200 dark:md:border-gray-800 animate-slide-in">
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-0 md:p-8 lg:p-10 pointer-events-none">
+            <div className="pointer-events-auto flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-none bg-white shadow-none md:max-h-full md:rounded-2xl md:shadow-2xl md:shadow-black/40 dark:bg-gray-900 dark:md:shadow-black/60 md:border md:border-gray-200 dark:md:border-gray-800 animate-slide-in">
               <ChatArea onBackClick={handleBackToSidebar} />
             </div>
           </div>
