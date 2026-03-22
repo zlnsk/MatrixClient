@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             <div className="absolute inset-0 rounded-full border-2 border-indigo-600/30" />
             <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-indigo-500" />
           </div>
-          <p className="text-sm text-gray-400">Connecting to Matrix...</p>
+          <p className="text-sm text-gray-400">Connecting...</p>
         </div>
       </div>
     )

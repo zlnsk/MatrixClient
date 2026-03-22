@@ -145,7 +145,7 @@ function EmptyState() {
         </svg>
       </div>
       <h3 className="mt-6 text-lg font-medium text-gray-700 dark:text-gray-300">
-        Welcome to Matrix Client
+        Welcome to szept
       </h3>
       <p className="mt-2 max-w-sm text-center text-sm text-gray-500">
         Select a conversation from the sidebar or start a new chat to begin messaging securely.

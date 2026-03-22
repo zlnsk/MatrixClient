@@ -487,7 +487,7 @@ export async function loginWithPassword(
   const response = await tmpClient.login('m.login.password', {
     user: username,
     password,
-    initial_device_display_name: 'Matrix Client Web',
+    initial_device_display_name: 'szept Web',
   })
 
   matrixClient = sdk.createClient({

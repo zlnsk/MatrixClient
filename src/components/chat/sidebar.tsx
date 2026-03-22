@@ -130,7 +130,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             status="online"
           />
           <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">Matrix</h1>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white">szept</h1>
             <p className="text-xs text-gray-500">{user?.userId}</p>
           </div>
         </div>
