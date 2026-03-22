@@ -63,11 +63,11 @@ echo "=== Sign APK ==="
   --min-sdk-version 26 \
   --v1-signing-enabled true \
   --v2-signing-enabled true \
-  --out "$SCRIPT_DIR/szept-v2.2-debug.apk" \
+  --out "$SCRIPT_DIR/szept-v2.3-debug.apk" \
   "$BUILD_DIR/matrix-aligned.apk"
 
 echo ""
 echo "=== APK built successfully ==="
-ls -lh "$SCRIPT_DIR/szept-v2.2-debug.apk"
+ls -lh "$SCRIPT_DIR/szept-v2.3-debug.apk"
 echo ""
 echo "Transfer to your Android phone and install (enable 'Install unknown apps')."

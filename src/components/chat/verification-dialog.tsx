@@ -73,8 +73,8 @@ export function VerificationDialog({ request, onClose }: VerificationDialogProps
           return
         }
       }
-      // When phase is Ready and we accepted an incoming request, try to start verification
-      if (phase === VerificationPhase.Ready && !request.initiatedByMe && request.methods?.includes('m.sas.v1')) {
+      // When phase is Ready, start the SAS verification from either side
+      if (phase === VerificationPhase.Ready && request.methods?.includes('m.sas.v1')) {
         request.startVerification('m.sas.v1').then((verifier: any) => {
           attachVerifierListeners(verifier)
           verifier.verify().catch(() => {
@@ -83,6 +83,13 @@ export function VerificationDialog({ request, onClose }: VerificationDialogProps
         }).catch((err: any) => {
           console.error('Failed to start verification:', err)
           // Don't cancel — the other side may start it
+        })
+      }
+      // When phase is Started and we have a verifier, ensure verify() is called
+      if (phase === VerificationPhase.Started && verifier && !(verifier as any)._hasCalledVerify) {
+        (verifier as any)._hasCalledVerify = true
+        verifier.verify().catch(() => {
+          setState({ step: 'cancelled' })
         })
       }
       if (state.step !== 'sas') {

@@ -412,7 +412,7 @@ public class MainActivity extends Activity {
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         String baseUA = settings.getUserAgentString();
-        settings.setUserAgentString(baseUA + " SzeptAndroid/2.2");
+        settings.setUserAgentString(baseUA + " SzeptAndroid/2.3");
 
         // Viewport — perfect phone fit, no zoom
         settings.setUseWideViewPort(false);
@@ -420,7 +420,7 @@ public class MainActivity extends Activity {
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
-        settings.setTextZoom(100);
+        settings.setTextZoom(110);
 
         settings.setGeolocationEnabled(true);
 
@@ -446,6 +446,18 @@ public class MainActivity extends Activity {
                     "if (!m) { m = document.createElement('meta'); m.name='viewport'; document.head.appendChild(m); }" +
                     "m.content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';";
                 view.evaluateJavascript(viewportJS, null);
+
+                // Prevent message bubbles from overflowing screen width
+                String overflowCSS =
+                    "if (!window.__szeptOverflowFixed) { " +
+                    "  window.__szeptOverflowFixed = true; " +
+                    "  var s = document.createElement('style'); " +
+                    "  s.textContent = '*, *::before, *::after { max-width: 100vw; box-sizing: border-box; } " +
+                    "    .rich-content { overflow-wrap: break-word; word-break: break-word; } " +
+                    "    pre, code { overflow-x: auto; max-width: calc(100vw - 4rem); white-space: pre-wrap; word-break: break-all; }'; " +
+                    "  document.head.appendChild(s); " +
+                    "}";
+                view.evaluateJavascript(overflowCSS, null);
 
                 String hapticBridge =
                     "if (!window.__szeptHapticsInjected) { " +

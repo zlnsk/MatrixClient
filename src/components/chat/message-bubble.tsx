@@ -348,7 +348,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
         if (!showEmojiPicker && !showContextMenu) setShowActions(false)
       }}
     >
-      <div className={`flex max-w-sm md:max-w-md lg:max-w-lg ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-end gap-2`}>
+      <div className={`flex max-w-[85vw] sm:max-w-sm md:max-w-md lg:max-w-lg ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-end gap-2`}>
         {/* Avatar */}
         <div className="w-8 flex-shrink-0">
           {showAvatar && !isOwn && (
