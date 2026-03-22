@@ -359,13 +359,13 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             {message.replyToEvent && !isEditing && (
               <div className={`mb-2 rounded-lg px-3 py-1.5 text-xs ${
                 isOwn
-                  ? 'border-l-2 border-indigo-300/60 bg-indigo-400/20'
+                  ? 'border-l-2 border-white/40 bg-black/15'
                   : 'border-l-2 border-gray-300 bg-gray-100/80 dark:border-gray-600 dark:bg-gray-700/50'
               }`}>
-                <p className={`font-semibold ${isOwn ? 'text-indigo-100' : 'text-gray-700 dark:text-gray-300'}`}>
+                <p className={`font-semibold ${isOwn ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>
                   {message.replyToEvent.senderName}
                 </p>
-                <p className={`truncate ${isOwn ? 'text-indigo-200/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                <p className={`truncate ${isOwn ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
                   {message.replyToEvent.content}
                 </p>
               </div>
@@ -521,7 +521,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
           {/* Emoji picker */}
           {showEmojiPicker && (
-            <div className={`absolute top-0 z-20 grid grid-cols-5 gap-0.5 rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'}`}>
+            <div className={`absolute bottom-full mb-1 z-20 grid grid-cols-5 gap-0.5 rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800 ${isOwn ? 'right-0' : 'left-0'}`}>
               {QUICK_EMOJIS.map(emoji => (
                 <button
                   key={emoji}
