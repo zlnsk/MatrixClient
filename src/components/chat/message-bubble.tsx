@@ -404,7 +404,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 setEditContent(message.content)
               }
             }}
-            className={`rounded-2xl transition-shadow duration-150 ${message.type === 'm.image' || message.type === 'm.video' ? 'w-fit overflow-hidden' : 'px-4 py-3'} ${isOwn ? 'cursor-pointer ' : ''}${
+            className={`rounded-2xl transition-shadow duration-150 ${message.type === 'm.image' || message.type === 'm.video' ? 'p-1.5 w-fit' : 'px-4 py-3'} ${isOwn ? 'cursor-pointer ' : ''}${
               isOwn
                 ? 'bg-m3-primary text-white shadow-sm'
                 : 'bg-white text-m3-on-surface shadow-sm dark:bg-m3-surface-container-high dark:text-m3-on-surface'
@@ -454,7 +454,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                       <img
                         src={effectiveMediaUrl}
                         alt={message.content || 'Shared image'}
-                        className="block max-w-full object-contain cursor-pointer transition-opacity hover:opacity-90"
+                        className="block max-w-full rounded-xl object-contain cursor-pointer transition-opacity hover:opacity-90"
                         style={{
                           maxHeight: 480,
                           width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
@@ -476,7 +476,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   )
                 ) : message.type === 'm.video' ? (
                   effectiveMediaUrl ? (
-                    <video controls className="block max-w-full" style={{ maxHeight: 480 }}>
+                    <video controls className="block max-w-full rounded-xl" style={{ maxHeight: 480 }}>
                       <source src={effectiveMediaUrl} type={message.mediaInfo?.mimetype} />
                     </video>
                   ) : (
@@ -532,7 +532,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             })()}
 
             {/* Timestamp + status */}
-            <div className={`mt-1 flex items-center gap-1.5 ${message.type === 'm.image' || message.type === 'm.video' ? 'px-3 pb-2' : ''} ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <div className={`mt-1 flex items-center gap-1.5 ${message.type === 'm.image' || message.type === 'm.video' ? 'px-1.5 pb-0.5' : ''} ${isOwn ? 'justify-end' : 'justify-start'}`}>
               <span className={`text-xs ${isOwn ? 'text-white/70' : 'text-m3-outline dark:text-m3-on-surface-variant'}`}>
                 {format(new Date(message.timestamp), 'HH:mm')}
               </span>
