@@ -344,7 +344,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   {displayName}
                 </span>
                 {matrixId && (
-                  <span className="text-[10px] font-normal text-gray-400/70 dark:text-gray-600 truncate max-w-[180px]" title={matrixId}>
+                  <span className="text-[10px] font-normal text-gray-200 dark:text-gray-800 truncate max-w-[180px] select-text" title={matrixId}>
                     {matrixId}
                   </span>
                 )}
