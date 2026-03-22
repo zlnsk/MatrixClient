@@ -21,6 +21,7 @@ export function ChatLayout() {
 
   // Navigate back to sidebar
   const handleBackToSidebar = useCallback(() => {
+    useChatStore.getState().setActiveRoom(null)
     setShowMobileSidebar(true)
     // If we pushed a state, go back to pop it; otherwise just show sidebar
     if (history.state?.view === 'chat') {
@@ -31,6 +32,7 @@ export function ChatLayout() {
   // Handle browser/Android back button
   useEffect(() => {
     const handlePopState = () => {
+      useChatStore.getState().setActiveRoom(null)
       setShowMobileSidebar(true)
     }
     window.addEventListener('popstate', handlePopState)
@@ -61,28 +63,40 @@ export function ChatLayout() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  const handleBackdropClick = useCallback(() => {
+    useChatStore.getState().setActiveRoom(null)
+    setShowMobileSidebar(true)
+  }, [])
+
   return (
-    <div className="flex h-dvh overflow-hidden bg-gray-50 dark:bg-gray-950">
-      {/* Sidebar - always visible on desktop, conditional on mobile */}
-      <div className={`${
-        showMobileSidebar ? 'flex' : 'hidden'
-      } md:flex w-full md:w-80 flex-shrink-0 flex-col border-r border-gray-200 bg-white shadow-lg shadow-gray-200/50 dark:border-gray-800 dark:bg-gray-900 dark:shadow-black/30`}>
+    <div className="relative h-dvh overflow-hidden bg-gray-50 dark:bg-gray-950">
+      {/* Sidebar — always visible behind the overlay */}
+      <div className={`absolute inset-0 flex flex-col bg-white dark:bg-gray-900 transition-[filter] duration-300 ${
+        activeRoom ? 'blur-[2px] brightness-[0.85] dark:brightness-75 pointer-events-none' : ''
+      }`}>
         <Sidebar
           onSettingsClick={() => setShowSettings(true)}
           onChatSelect={handleChatSelect}
         />
       </div>
 
-      {/* Main chat area */}
-      <div className={`${
-        !showMobileSidebar || !activeRoom ? 'flex' : 'hidden'
-      } md:flex flex-1 flex-col min-h-0 min-w-0`}>
-        {activeRoom ? (
-          <ChatArea onBackClick={handleBackToSidebar} />
-        ) : (
-          <EmptyState />
-        )}
-      </div>
+      {/* Chat overlay */}
+      {activeRoom && (
+        <>
+          {/* Backdrop — click to dismiss */}
+          <div
+            className="absolute inset-0 z-20 animate-fade-in"
+            onClick={handleBackdropClick}
+          />
+
+          {/* Chat window */}
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-0 md:p-6 lg:p-10 pointer-events-none">
+            <div className="pointer-events-auto flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-none bg-white shadow-none md:h-[calc(100%-2rem)] md:rounded-2xl md:shadow-2xl md:shadow-black/40 dark:bg-gray-900 dark:md:shadow-black/60 md:border md:border-gray-200 dark:md:border-gray-800 animate-slide-in">
+              <ChatArea onBackClick={handleBackToSidebar} />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Build version */}
       <span className="fixed bottom-1 right-2 text-[10px] text-gray-300 dark:text-gray-700 pointer-events-none select-none z-10">
