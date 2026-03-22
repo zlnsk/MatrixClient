@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { resolveHomeserver } from '@/lib/matrix/client'
 import { Shield, Eye, EyeOff, Loader2, Server } from 'lucide-react'
+import { DotGrid } from '@/components/ui/dot-grid'
 
 export default function LoginPage() {
   const [server, setServer] = useState('')
@@ -60,7 +61,8 @@ export default function LoginPage() {
   const serverDomain = server.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '') || null
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
+    <div className="relative flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
+      <DotGrid />
       <div className="pointer-events-none fixed inset-x-0 top-0 h-96 bg-gradient-to-b from-indigo-100/50 to-transparent dark:from-indigo-900/20" />
 
       <div className="relative w-full max-w-md">

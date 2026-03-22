@@ -5,6 +5,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { getHomeserverUrl, getHomeserverDomain, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient, generateSecurityKey } from '@/lib/matrix/client'
+import { DotGrid } from '@/components/ui/dot-grid'
 import {
   LogOut,
   User,
@@ -155,7 +156,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="flex h-[500px] w-full max-w-2xl animate-slide-in overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900" onClick={e => e.stopPropagation()}>
+      <div className="relative flex h-[500px] w-full max-w-2xl animate-slide-in overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900" onClick={e => e.stopPropagation()}>
+        <DotGrid />
         {/* Left nav */}
         <div className="w-48 flex-shrink-0 border-r border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
           <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Settings</h2>

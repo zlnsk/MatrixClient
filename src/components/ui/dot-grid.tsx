@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from 'react'
 
-const DOT_SPACING = 28
-const DOT_BASE_RADIUS = 1
-const DOT_MAX_RADIUS = 2.6
-const INFLUENCE_RADIUS = 120
+const DOT_SPACING = 22
+const DOT_BASE_RADIUS = 0.7
+const DOT_MAX_RADIUS = 1.8
+const INFLUENCE_RADIUS = 100
 
 export function DotGrid() {
   const canvasRef = useRef<HTMLCanvasElement>(null)

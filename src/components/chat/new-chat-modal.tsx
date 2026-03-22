@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useChatStore } from '@/stores/chat-store'
 import { getHomeserverDomain } from '@/lib/matrix/client'
+import { DotGrid } from '@/components/ui/dot-grid'
 import {
   MessageSquare,
   Users,
@@ -96,7 +97,8 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md animate-slide-in rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-md animate-slide-in rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900" onClick={e => e.stopPropagation()}>
+        <DotGrid />
         {/* Header */}
         <div className="border-b border-gray-200 p-4 dark:border-gray-800">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Conversation</h2>
