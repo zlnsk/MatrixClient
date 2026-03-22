@@ -12,11 +12,11 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 
 ## What Makes It Different
 
-- **Beautiful by default** — Polished interface with smooth animations, elegant message bubbles, proper shadows and transitions. Dark mode that actually looks good. No tweaking required.
+- **Beautiful by default** — Material Design 3 interface with smooth animations, elegant message bubbles, proper transitions. Dark mode that actually looks good.
 - **Element-level security** — Full end-to-end encryption via the Matrix protocol. Cross-signing, device verification, encrypted media — everything you'd expect from a serious secure messenger.
+- **Installable PWA** — Install directly from your browser to your phone's home screen. Runs as a standalone app with no browser chrome.
 - **Dead simple** — No learning curve. If you've used any modern messenger, you already know how to use this.
 - **Bridge everything** — Connect Signal, WhatsApp, WeChat, Telegram, Discord, iMessage, and more through Matrix bridges. One app for all your conversations.
-- **Multi-platform** — Web app and Android app with Material 3 design.
 
 ## Features
 
@@ -29,16 +29,16 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 - Link previews
 - VoIP voice and video calls
 - Device verification and cross-signing
-- Bridges for Signal, WhatsApp, WeChat, Telegram, Discord, iMessage, and more
-- Dark mode
-- Android app
+- Installable PWA with offline app shell caching
+- Touch-optimized with haptic feedback and long-press menus
+- Dark mode with Material Design 3 theming
 
 ## Tech Stack
 
-- **Frontend**: Next.js, React 19, TypeScript, Tailwind CSS
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS v4
 - **Matrix SDK**: matrix-js-sdk with Rust crypto (WASM)
 - **State Management**: Zustand
-- **Android**: Native WebView wrapper with Material 3 design, haptic feedback, background sync
+- **Design System**: Material Design 3
 
 ## Getting Started
 
@@ -64,7 +64,7 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
    ```bash
    cp .env.example .env.local
    ```
-   Fill in your Matrix server domain.
+   Set `NEXT_PUBLIC_MATRIX_SERVER` to your Matrix server domain.
 
 4. Run the development server:
    ```bash
@@ -77,16 +77,8 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 
 ```bash
 npm run build
+npm start
 ```
-
-### Android APK
-
-```bash
-cd android-app
-bash build-apk.sh
-```
-
-Transfer the generated `matrix-debug.apk` to your Android device and install it (enable "Install from unknown sources").
 
 ## Bridges
 
@@ -109,10 +101,11 @@ All bridged conversations appear as regular Matrix rooms — fully encrypted, se
 This project takes security seriously:
 
 - **End-to-end encryption** using the Matrix protocol's Olm/Megolm implementation via the official Rust crypto SDK (compiled to WASM)
+- **Encrypted media integrity** — SHA-256 hash verification before decryption
 - **No tracking, no analytics, no telemetry**
 - **Fully open source** — every line is auditable
-- **HTTPS only** — no cleartext traffic
-- **Content Security Policy** headers configured for protection
+- **HTTPS only** — insecure homeserver URLs are blocked in production
+- **Content Security Policy** headers with no `unsafe-eval` in production
 - **DOMPurify** sanitization on all rendered HTML
 
 The codebase is transparent by design. Scan it, audit it, verify it.

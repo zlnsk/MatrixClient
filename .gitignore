@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -30,18 +28,21 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
 !.env.example
-
-# vercel
-.vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-out/
 
 # android build artifacts
+*.apk
 *.idsig
-android-app/matrix-debug.apk
+android-app/javac.*.args
+
+# build metadata (now derived from git)
+build-meta.json
+
+# vercel
+.vercel

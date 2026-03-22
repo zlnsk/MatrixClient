@@ -8,7 +8,6 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'szept — Secure Messaging',
   description: 'End-to-end encrypted messaging powered by the Matrix protocol',
-  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
