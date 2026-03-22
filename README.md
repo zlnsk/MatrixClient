@@ -30,12 +30,13 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 - VoIP voice and video calls
 - Device verification and cross-signing
 - Installable PWA with offline app shell caching
+- Auto-archive conversations after 2 hours of inactivity
 - Touch-optimized with haptic feedback and long-press menus
 - Dark mode with Material Design 3 theming
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS v4
+- **Frontend**: Next.js, React, TypeScript, Tailwind CSS
 - **Matrix SDK**: matrix-js-sdk with Rust crypto (WASM)
 - **State Management**: Zustand
 - **Design System**: Material Design 3
@@ -51,7 +52,7 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/AverageJoesHosting/MatrixClient.git
+   git clone https://github.com/zlnsk/MatrixClient.git
    cd MatrixClient
    ```
 
@@ -113,10 +114,6 @@ The codebase is transparent by design. Scan it, audit it, verify it.
 ## Contributing
 
 Contributions are welcome. Found a bug or have an idea? Open an issue or submit a pull request.
-
-## Built With
-
-This client was built with the help of [Claude Code](https://claude.ai/code), a lot of patience, and the understanding of my wife.
 
 ## License
 
