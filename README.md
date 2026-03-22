@@ -109,6 +109,10 @@ The codebase is transparent by design. Scan it, audit it, verify it.
 
 Contributions are welcome. Found a bug or have an idea? Open an issue or submit a pull request.
 
+## Built With
+
+This client was built with [Claude Code](https://claude.ai/code), a lot of patience, and the understanding of my wife.
+
 ## License
 
 Open source. Free to use, modify, and distribute.
