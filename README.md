@@ -1,8 +1,8 @@
-# Matrix Client
+# szept
 
 Probably the best-looking Matrix client out there.
 
-Born out of frustration — after years of searching for a Matrix client that's both **truly secure** and **genuinely beautiful**, and never finding one, I built it myself. Matrix Client delivers Element-level end-to-end encryption wrapped in a modern, clean interface that's actually a pleasure to use.
+Born out of frustration — after years of searching for a Matrix client that's both **truly secure** and **genuinely beautiful**, and never finding one, I built it myself. szept delivers Element-level end-to-end encryption wrapped in a modern, clean interface that's actually a pleasure to use.
 
 ## Why I Built This
 
@@ -16,7 +16,7 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 - **Element-level security** — Full end-to-end encryption via the Matrix protocol. Cross-signing, device verification, encrypted media — everything you'd expect from a serious secure messenger.
 - **Dead simple** — No learning curve. If you've used any modern messenger, you already know how to use this.
 - **Bridge everything** — Connect Signal, WhatsApp, WeChat, Telegram, Discord, iMessage, and more through Matrix bridges. One app for all your conversations.
-- **Multi-platform** — Web app and Android app.
+- **Multi-platform** — Web app and Android app with Material 3 design.
 
 ## Features
 
@@ -38,7 +38,7 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 - **Frontend**: Next.js, React 19, TypeScript, Tailwind CSS
 - **Matrix SDK**: matrix-js-sdk with Rust crypto (WASM)
 - **State Management**: Zustand
-- **Android**: Native WebView wrapper
+- **Android**: Native WebView wrapper with Material 3 design, haptic feedback, background sync
 
 ## Getting Started
 
@@ -90,7 +90,7 @@ Transfer the generated `matrix-debug.apk` to your Android device and install it 
 
 ## Bridges
 
-One of the biggest advantages of Matrix is bridging — connecting other messaging platforms so all your conversations live in one place. Set up bridges on your Matrix homeserver and access them all through Matrix Client:
+One of the biggest advantages of Matrix is bridging — connecting other messaging platforms so all your conversations live in one place. Set up bridges on your Matrix homeserver and access them all through szept:
 
 - **Signal** — [mautrix-signal](https://docs.mau.fi/bridges/go/signal/)
 - **WhatsApp** — [mautrix-whatsapp](https://docs.mau.fi/bridges/go/whatsapp/)
@@ -123,7 +123,7 @@ Contributions are welcome. Found a bug or have an idea? Open an issue or submit 
 
 ## Built With
 
-This client was built with [Claude Code](https://claude.ai/code), a lot of patience, and the understanding of my wife.
+This client was built with the help of [Claude Code](https://claude.ai/code), a lot of patience, and the understanding of my wife.
 
 ## License
 
