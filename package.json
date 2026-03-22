@@ -7,10 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "build:tauri": "TAURI_ENV=1 next build",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "lint:fix": "eslint --fix"
   },
   "dependencies": {
     "@matrix-org/matrix-sdk-crypto-wasm": "^18.0.0",
@@ -28,7 +25,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@tauri-apps/cli": "^2.10.1",
+
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

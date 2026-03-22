@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 import { readFileSync, writeFileSync } from "fs";
 
-const isTauri = process.env.TAURI_ENV === '1'
-
 // Build version: <package version> (build <number>) — auto-increments each build
 function getBuildVersion(): string {
   const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
@@ -32,12 +30,10 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_VERSION: getBuildVersion(),
   },
-  // Static export for Tauri, standalone for Docker/server
-  ...(isTauri ? { output: 'export' } : { output: 'standalone' }),
+  output: 'standalone',
   // Turbopack config (default bundler in Next.js 16)
   turbopack: {},
   images: {
-    ...(isTauri && { unoptimized: true }),
     unoptimized: true,
   },
   // WASM support for matrix-sdk-crypto

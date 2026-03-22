@@ -16,7 +16,7 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 - **Element-level security** — Full end-to-end encryption via the Matrix protocol. Cross-signing, device verification, encrypted media — everything you'd expect from a serious secure messenger.
 - **Dead simple** — No learning curve. If you've used any modern messenger, you already know how to use this.
 - **Signal Bridge included** — Want to keep using Signal but consolidate your chats? Hook up the Signal bridge and access your Signal conversations directly from Matrix Client.
-- **Multi-platform** — Web app, desktop app (Tauri), and Android app.
+- **Multi-platform** — Web app and Android app.
 
 ## Features
 
@@ -31,16 +31,13 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 - Device verification and cross-signing
 - Signal bridge support
 - Dark mode
-- Desktop app (Tauri)
 - Android app
 
 ## Tech Stack
 
 - **Frontend**: Next.js, React 19, TypeScript, Tailwind CSS
 - **Matrix SDK**: matrix-js-sdk with Rust crypto (WASM)
-- **Backend**: Supabase
 - **State Management**: Zustand
-- **Desktop**: Tauri
 - **Android**: Native WebView wrapper
 
 ## Getting Started
@@ -49,7 +46,6 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 
 - Node.js 18+
 - A Matrix homeserver (e.g., Synapse, Conduit, or any Matrix-compatible server)
-- A Supabase project
 
 ### Setup
 
@@ -68,7 +64,7 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
    ```bash
    cp .env.example .env.local
    ```
-   Fill in your Supabase URL, anon key, and Matrix server domain.
+   Fill in your Matrix server domain.
 
 4. Run the development server:
    ```bash
@@ -91,12 +87,6 @@ bash build-apk.sh
 ```
 
 Transfer the generated `matrix-debug.apk` to your Android device and install it (enable "Install from unknown sources").
-
-### Desktop App (Tauri)
-
-```bash
-npm run tauri build
-```
 
 ## Signal Bridge
 
