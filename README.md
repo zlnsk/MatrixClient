@@ -15,7 +15,7 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 - **Beautiful by default** — Polished interface with smooth animations, elegant message bubbles, proper shadows and transitions. Dark mode that actually looks good. No tweaking required.
 - **Element-level security** — Full end-to-end encryption via the Matrix protocol. Cross-signing, device verification, encrypted media — everything you'd expect from a serious secure messenger.
 - **Dead simple** — No learning curve. If you've used any modern messenger, you already know how to use this.
-- **Signal Bridge included** — Want to keep using Signal but consolidate your chats? Hook up the Signal bridge and access your Signal conversations directly from Matrix Client.
+- **Bridge everything** — Connect Signal, WhatsApp, WeChat, Telegram, Discord, iMessage, and more through Matrix bridges. One app for all your conversations.
 - **Multi-platform** — Web app and Android app.
 
 ## Features
@@ -29,7 +29,7 @@ Every Matrix client I tried was either rock-solid on security but painful to loo
 - Link previews
 - VoIP voice and video calls
 - Device verification and cross-signing
-- Signal bridge support
+- Bridges for Signal, WhatsApp, WeChat, Telegram, Discord, iMessage, and more
 - Dark mode
 - Android app
 
@@ -88,9 +88,21 @@ bash build-apk.sh
 
 Transfer the generated `matrix-debug.apk` to your Android device and install it (enable "Install from unknown sources").
 
-## Signal Bridge
+## Bridges
 
-To use Signal alongside Matrix, set up [mautrix-signal](https://docs.mau.fi/bridges/go/signal/) on your Matrix homeserver. Once configured, your Signal conversations will appear as rooms in Matrix Client — fully encrypted, just like native Matrix chats.
+One of the biggest advantages of Matrix is bridging — connecting other messaging platforms so all your conversations live in one place. Set up bridges on your Matrix homeserver and access them all through Matrix Client:
+
+- **Signal** — [mautrix-signal](https://docs.mau.fi/bridges/go/signal/)
+- **WhatsApp** — [mautrix-whatsapp](https://docs.mau.fi/bridges/go/whatsapp/)
+- **WeChat** — [mautrix-wechat](https://github.com/duo/mautrix-wechat)
+- **Telegram** — [mautrix-telegram](https://docs.mau.fi/bridges/python/telegram/)
+- **Discord** — [mautrix-discord](https://docs.mau.fi/bridges/go/discord/)
+- **iMessage** — [mautrix-imessage](https://docs.mau.fi/bridges/go/imessage/)
+- **Slack** — [mautrix-slack](https://docs.mau.fi/bridges/go/slack/)
+- **Instagram** — [mautrix-meta](https://docs.mau.fi/bridges/go/meta/)
+- **Facebook Messenger** — [mautrix-meta](https://docs.mau.fi/bridges/go/meta/)
+
+All bridged conversations appear as regular Matrix rooms — fully encrypted, seamless.
 
 ## Security
 
