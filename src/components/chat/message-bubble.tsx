@@ -404,7 +404,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 setEditContent(message.content)
               }
             }}
-            className={`rounded-2xl transition-shadow duration-150 ${message.type === 'm.image' || message.type === 'm.video' ? 'p-1 w-fit' : 'px-4 py-3'} ${isOwn ? 'cursor-pointer ' : ''}${
+            className={`rounded-2xl transition-shadow duration-150 ${message.type === 'm.image' || message.type === 'm.video' ? 'p-2 w-fit' : 'px-4 py-3'} ${isOwn ? 'cursor-pointer ' : ''}${
               isOwn
                 ? 'bg-m3-primary text-white shadow-sm'
                 : 'bg-white text-m3-on-surface shadow-sm dark:bg-m3-surface-container-high dark:text-m3-on-surface'
@@ -454,7 +454,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                       <img
                         src={effectiveMediaUrl}
                         alt={message.content || 'Shared image'}
-                        className="max-w-full rounded-2xl object-contain shadow-sm cursor-pointer transition-opacity hover:opacity-90"
+                        className="max-w-full rounded-xl object-contain shadow-sm cursor-pointer transition-opacity hover:opacity-90"
                         style={{
                           maxHeight: 480,
                           width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
@@ -476,7 +476,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   )
                 ) : message.type === 'm.video' ? (
                   effectiveMediaUrl ? (
-                    <video controls className="max-w-full rounded-2xl shadow-sm" style={{ maxHeight: 480 }}>
+                    <video controls className="max-w-full rounded-xl shadow-sm" style={{ maxHeight: 480 }}>
                       <source src={effectiveMediaUrl} type={message.mediaInfo?.mimetype} />
                     </video>
                   ) : (
