@@ -55,7 +55,16 @@ public class MatrixService extends Service {
                 .build();
         }
 
-        startForeground(NOTIFICATION_ID, notification);
+        try {
+            startForeground(NOTIFICATION_ID, notification);
+        } catch (Exception e) {
+            // Android 14+ requires foregroundServiceType which our build tools can't set.
+            // Fall back to showing a regular notification instead.
+            try {
+                NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                nm.notify(NOTIFICATION_ID, notification);
+            } catch (Exception ignored) {}
+        }
 
         // Partial wake lock
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
