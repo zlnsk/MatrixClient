@@ -729,6 +729,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       },
     }
 
+    // Mark voice messages with MSC3245 voice flag for bridge compatibility
+    if (msgtype === 'm.audio' && file.name.startsWith('voice-message-')) {
+      content['org.matrix.msc3245.voice'] = {}
+    }
+
     // For images, try to get dimensions
     if (msgtype === 'm.image') {
       try {

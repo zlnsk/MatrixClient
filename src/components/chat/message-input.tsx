@@ -75,7 +75,13 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' })
+      // Use OGG+Opus for best bridge compatibility (Signal, WhatsApp, etc.)
+      // Fall back to webm if browser doesn't support OGG recording
+      const mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+        ? 'audio/ogg;codecs=opus'
+        : 'audio/webm;codecs=opus'
+      const ext = mimeType.startsWith('audio/ogg') ? 'ogg' : 'webm'
+      const mediaRecorder = new MediaRecorder(stream, { mimeType })
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
 
@@ -85,9 +91,9 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
 
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach(track => track.stop())
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const blob = new Blob(audioChunksRef.current, { type: mimeType })
         if (blob.size > 0) {
-          const file = new File([blob], `voice-message-${Date.now()}.webm`, { type: 'audio/webm' })
+          const file = new File([blob], `voice-message-${Date.now()}.${ext}`, { type: mimeType })
           await uploadFile(roomId, file)
         }
         setRecordingDuration(0)
