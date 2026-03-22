@@ -129,33 +129,47 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   }, [activeRoom, messages])
 
   const prevRoomIdRef = useRef<string | null>(null)
+  const justSwitchedRef = useRef(false)
 
   const scrollToBottom = useCallback((instant?: boolean) => {
+    const doScroll = () => {
+      const el = scrollContainerRef.current
+      if (!el) return
+      if (instant) {
+        el.scrollTop = el.scrollHeight
+      } else {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+      }
+    }
     // Double-rAF ensures the browser has painted the new content before scrolling
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        const el = scrollContainerRef.current
-        if (!el) return
+        doScroll()
+        // Safety net: scroll again after a short delay to catch late layout shifts
+        // (encrypted media decrypting, images loading, etc.)
         if (instant) {
-          el.scrollTop = el.scrollHeight
-        } else {
-          el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+          setTimeout(doScroll, 150)
         }
       })
     })
   }, [])
 
-  // Scroll instantly to bottom when switching rooms
+  // Track room switches
   useEffect(() => {
     if (activeRoom && activeRoom.roomId !== prevRoomIdRef.current) {
       prevRoomIdRef.current = activeRoom.roomId
-      scrollToBottom(true)
+      justSwitchedRef.current = true
     }
-  }, [activeRoom, scrollToBottom])
+  }, [activeRoom])
 
-  // Scroll smoothly for new messages in the same room
+  // Scroll after messages are rendered — instant on room switch, smooth for new messages
   useEffect(() => {
-    scrollToBottom()
+    if (justSwitchedRef.current) {
+      justSwitchedRef.current = false
+      scrollToBottom(true)
+    } else {
+      scrollToBottom()
+    }
   }, [messages, scrollToBottom])
 
   // Re-scroll when mobile keyboard opens/closes (viewport resize)
