@@ -33,6 +33,7 @@ const EMOJI_CATEGORIES: Record<string, string[]> = {
 
 export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: MessageInputProps) {
   const { sendTyping, uploadFile, setDisplayName, joinRoom, inviteMember, setRoomTopic } = useChatStore()
+  const activeRoom = useChatStore(s => s.activeRoom)
   const [content, setContent] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
   const [emojiCategory, setEmojiCategory] = useState('Smileys')
@@ -42,6 +43,10 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const [commandStatus, setCommandStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [recordingDuration, setRecordingDuration] = useState(0)
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const [mentionIndex, setMentionIndex] = useState(0)
+  const [mentionStart, setMentionStart] = useState(0)
+  const mentionRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -154,6 +159,23 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
 
   const handleContentChange = (value: string) => {
     setContent(value)
+
+    // Detect @ mention trigger
+    const textarea = inputRef.current
+    if (textarea) {
+      const cursorPos = textarea.selectionStart
+      const textBeforeCursor = value.slice(0, cursorPos)
+      // Find the last '@' that starts a mention (preceded by space or at start)
+      const mentionMatch = textBeforeCursor.match(/(?:^|\s)@([^\s]*)$/)
+      if (mentionMatch) {
+        setMentionQuery(mentionMatch[1].toLowerCase())
+        setMentionStart(cursorPos - mentionMatch[1].length - 1) // -1 for '@'
+        setMentionIndex(0)
+      } else {
+        setMentionQuery(null)
+      }
+    }
+
     if (value.length > 0) {
       sendTyping(roomId, true)
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
@@ -163,6 +185,28 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
     } else {
       sendTyping(roomId, false)
     }
+  }
+
+  const filteredMembers = mentionQuery !== null && activeRoom
+    ? activeRoom.members.filter(m =>
+        m.displayName.toLowerCase().includes(mentionQuery) ||
+        m.userId.toLowerCase().includes(mentionQuery)
+      ).slice(0, 8)
+    : []
+
+  const insertMention = (member: { userId: string; displayName: string }) => {
+    const before = content.slice(0, mentionStart)
+    const after = content.slice(inputRef.current?.selectionStart ?? content.length)
+    const mention = `${member.displayName} `
+    const newContent = `${before}@${mention}${after}`
+    setContent(newContent)
+    setMentionQuery(null)
+    // Restore focus and cursor position
+    requestAnimationFrame(() => {
+      const pos = mentionStart + 1 + mention.length
+      inputRef.current?.focus()
+      inputRef.current?.setSelectionRange(pos, pos)
+    })
   }
 
   const handleSlashCommand = async (trimmed: string): Promise<boolean> => {
@@ -271,6 +315,29 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Handle mention popup navigation
+    if (mentionQuery !== null && filteredMembers.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setMentionIndex(i => (i + 1) % filteredMembers.length)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setMentionIndex(i => (i - 1 + filteredMembers.length) % filteredMembers.length)
+        return
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        insertMention(filteredMembers[mentionIndex])
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setMentionQuery(null)
+        return
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
@@ -404,7 +471,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="relative flex items-center gap-2">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -467,6 +534,41 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
             </div>
           )}
         </div>
+
+        {/* Mention autocomplete popup */}
+        {mentionQuery !== null && filteredMembers.length > 0 && (
+          <div
+            ref={mentionRef}
+            className="absolute bottom-full left-0 right-0 mb-1 max-h-52 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 z-30"
+          >
+            {filteredMembers.map((member, i) => (
+              <button
+                key={member.userId}
+                onMouseDown={e => {
+                  e.preventDefault()
+                  insertMention(member)
+                }}
+                className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
+                  i === mentionIndex
+                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                    : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50'
+                }`}
+              >
+                {member.avatarUrl ? (
+                  <img src={member.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+                ) : (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
+                    {member.displayName[0]?.toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{member.displayName}</p>
+                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{member.userId}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Text input / Recording indicator */}
         {isRecording ? (
