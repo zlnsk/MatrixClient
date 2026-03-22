@@ -144,7 +144,7 @@ function PipOverlay() {
           className="h-full w-full object-cover"
         />
       ) : (
-        <div className="flex flex-col items-center gap-2 bg-gray-900 px-4 py-5">
+        <div className="flex flex-col items-center gap-2 bg-m3-surface-container-highest dark:bg-m3-surface px-4 py-5">
           <Avatar
             src={callInfo?.opponentAvatarUrl}
             name={callInfo?.opponentName || ''}
@@ -175,7 +175,7 @@ function PipOverlay() {
         <button
           onClick={(e) => { e.stopPropagation(); toggleAudioMute() }}
           className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-            audioMuted ? 'bg-white text-gray-900' : 'bg-white/20 text-white hover:bg-white/30'
+            audioMuted ? 'bg-white text-m3-on-surface' : 'bg-white/20 text-white hover:bg-white/30'
           }`}
           title={audioMuted ? 'Unmute' : 'Mute'}
         >
@@ -183,7 +183,7 @@ function PipOverlay() {
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); hangupCall() }}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white transition-colors hover:bg-red-500"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white transition-colors hover:bg-m3-error-container0"
           title="Hang up"
         >
           <PhoneOff className="h-3.5 w-3.5" />
@@ -302,7 +302,7 @@ export function CallOverlay() {
             <h2 className="text-2xl font-bold text-white">
               {callInfo.opponentName}
             </h2>
-            <p className="text-lg text-gray-300">
+            <p className="text-lg text-m3-outline-variant">
               {isVideo ? 'Video Call' : 'Voice Call'}
             </p>
           </div>
@@ -314,7 +314,7 @@ export function CallOverlay() {
             {isVideo && remoteStream && (
               <p className="text-sm font-medium text-white">{callInfo.opponentName}</p>
             )}
-            <p className={`text-sm ${isRinging && isIncoming ? 'animate-pulse text-green-400' : 'text-gray-300'}`}>
+            <p className={`text-sm ${isRinging && isIncoming ? 'animate-pulse text-green-400' : 'text-m3-outline-variant'}`}>
               {statusText}
             </p>
           </div>
@@ -342,7 +342,7 @@ export function CallOverlay() {
               <>
                 <button
                   onClick={rejectCall}
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg transition-transform hover:scale-110 hover:bg-red-500"
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg transition-transform hover:scale-110 hover:bg-m3-error-container0"
                   title="Reject"
                 >
                   <PhoneOff className="h-7 w-7" />
@@ -365,7 +365,7 @@ export function CallOverlay() {
                   onClick={toggleAudioMute}
                   className={`flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 ${
                     audioMuted
-                      ? 'bg-white text-gray-900'
+                      ? 'bg-white text-m3-on-surface'
                       : 'bg-white/20 text-white hover:bg-white/30'
                   }`}
                   title={audioMuted ? 'Unmute microphone' : 'Mute microphone'}
@@ -379,7 +379,7 @@ export function CallOverlay() {
                     onClick={toggleVideoMute}
                     className={`flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 ${
                       videoMuted
-                        ? 'bg-white text-gray-900'
+                        ? 'bg-white text-m3-on-surface'
                         : 'bg-white/20 text-white hover:bg-white/30'
                     }`}
                     title={videoMuted ? 'Turn on camera' : 'Turn off camera'}
@@ -394,7 +394,7 @@ export function CallOverlay() {
                     onClick={toggleHdQuality}
                     className={`flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 ${
                       hdQuality
-                        ? 'bg-indigo-500 text-white'
+                        ? 'bg-m3-primary text-white'
                         : 'bg-white/20 text-white hover:bg-white/30'
                     }`}
                     title={hdQuality ? 'Switch to standard quality' : 'Switch to HD quality'}
@@ -424,7 +424,7 @@ export function CallOverlay() {
                 {/* Hang up */}
                 <button
                   onClick={hangupCall}
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg transition-transform hover:scale-110 hover:bg-red-500"
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg transition-transform hover:scale-110 hover:bg-m3-error-container0"
                   title="Hang up"
                 >
                   <PhoneOff className="h-7 w-7" />

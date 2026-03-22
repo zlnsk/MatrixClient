@@ -121,7 +121,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
+      <div className="flex items-center justify-between border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant">
         <div className="flex items-center gap-3">
           <Avatar
             src={user?.avatarUrl}
@@ -130,14 +130,14 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             status="online"
           />
           <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">szept</h1>
-            <p className="text-xs text-gray-500">{user?.userId}</p>
+            <h1 className="text-lg font-bold text-m3-on-surface dark:text-m3-on-surface">szept</h1>
+            <p className="text-xs text-m3-on-surface-variant">{user?.userId}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowNewChat(true)}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
             title="New chat"
             aria-label="New chat"
           >
@@ -145,7 +145,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
           </button>
           <button
             onClick={toggleTheme}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
             title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             aria-label="Toggle theme"
           >
@@ -153,7 +153,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
           </button>
           <button
             onClick={onSettingsClick}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
             title="Settings"
             aria-label="Settings"
           >
@@ -165,19 +165,19 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
       {/* Search */}
       <div className="p-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant" />
           <input
             type="search"
             placeholder="Search rooms..."
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
             aria-label="Search rooms and messages"
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+            className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low py-2.5 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
           />
           {searchFilter && (
             <button
               onClick={() => setSearchFilter('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface dark:hover:text-m3-outline-variant"
             >
               <X className="h-4 w-4" />
             </button>
@@ -192,21 +192,21 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
           <div className="mb-2">
             <button
               onClick={() => setShowInvites(!showInvites)}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
             >
               <Mail className="h-3.5 w-3.5" />
               Invitations ({pendingInvites.length})
-              <span className="ml-auto text-gray-400">{showInvites ? '▲' : '▼'}</span>
+              <span className="ml-auto text-m3-outline">{showInvites ? '▲' : '▼'}</span>
             </button>
             {inviteError && (
-              <p className="px-3 py-1 text-xs text-red-500">{inviteError}</p>
+              <p className="px-3 py-1 text-xs text-m3-error">{inviteError}</p>
             )}
             {showInvites && (
               <div className="space-y-0.5 py-1">
                 {pendingInvites.map(invite => (
                   <div
                     key={invite.roomId}
-                    className="flex items-center gap-3 rounded-xl p-3 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                    className="flex items-center gap-3 rounded-xl p-3 hover:bg-m3-surface-container-low dark:hover:bg-m3-surface-container-high/60"
                   >
                     <Avatar
                       src={invite.avatarUrl}
@@ -214,10 +214,10 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                       size="md"
                     />
                     <div className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">
+                      <span className="block truncate text-sm font-semibold text-m3-on-surface dark:text-m3-on-surface">
                         {invite.name}
                       </span>
-                      <span className="text-xs text-gray-500">Invited</span>
+                      <span className="text-xs text-m3-on-surface-variant">Invited</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <button
@@ -243,7 +243,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                             setInviteError(`Failed to reject: ${err instanceof Error ? err.message : 'Unknown error'}`)
                           }
                         }}
-                        className="rounded-lg p-1.5 text-red-600 transition-colors hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30"
+                        className="rounded-lg p-1.5 text-m3-error transition-colors hover:bg-red-100 dark:text-m3-error dark:hover:bg-red-900/30"
                         title="Reject invitation"
                       >
                         <X className="h-4 w-4" />
@@ -258,14 +258,14 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
 
         {activeRooms.length === 0 && !showArchived ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <MessageSquare className="h-10 w-10 text-gray-300 dark:text-gray-700" />
-            <p className="mt-3 text-sm text-gray-500">
+            <MessageSquare className="h-10 w-10 text-m3-outline-variant dark:text-m3-on-surface" />
+            <p className="mt-3 text-sm text-m3-on-surface-variant">
               {searchFilter ? 'No rooms found' : 'No rooms yet'}
             </p>
             {!searchFilter && (
               <button
                 onClick={() => setShowNewChat(true)}
-                className="mt-3 text-sm text-indigo-400 transition-colors hover:text-indigo-300"
+                className="mt-3 text-sm text-m3-primary transition-colors hover:text-m3-primary/80"
               >
                 Start a new chat
               </button>
@@ -292,11 +292,11 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
           <div className="mt-2">
             <button
               onClick={() => setShowArchived(!showArchived)}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
             >
               <Archive className="h-3.5 w-3.5" />
               Archived ({archivedRooms.length})
-              <span className="ml-auto text-gray-400">{showArchived ? '▲' : '▼'}</span>
+              <span className="ml-auto text-m3-outline">{showArchived ? '▲' : '▼'}</span>
             </button>
             {showArchived && (
               <div className="space-y-0.5 py-1">
@@ -319,13 +319,13 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
         {/* Message search results */}
         {searchFilter.trim().length >= 3 && (
           <div className="mt-2">
-            <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500">
+            <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-m3-on-surface-variant">
               <MessageSquareDashed className="h-3.5 w-3.5" />
               Message Results
               {isSearchingMessages && <Loader2 className="h-3 w-3 animate-spin" />}
             </div>
             {messageResults.length === 0 && !isSearchingMessages ? (
-              <p className="px-3 py-2 text-xs text-gray-400">No messages found</p>
+              <p className="px-3 py-2 text-xs text-m3-outline">No messages found</p>
             ) : (
               <div className="space-y-0.5 py-1">
                 {messageResults.map(result => (
@@ -355,19 +355,19 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                         })
                       }
                     }}
-                    className="flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                    className="flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-m3-surface-container-low dark:hover:bg-m3-surface-container-high/60"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="truncate text-xs font-semibold text-indigo-500">{result.roomName}</span>
+                        <span className="truncate text-xs font-semibold text-m3-primary">{result.roomName}</span>
                         {result.timestamp > 0 && (
-                          <span className="ml-2 flex-shrink-0 text-xs text-gray-400">
+                          <span className="ml-2 flex-shrink-0 text-xs text-m3-outline">
                             {formatDistanceToNow(new Date(result.timestamp), { addSuffix: false })}
                           </span>
                         )}
                       </div>
-                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                        <span className="text-gray-400 dark:text-gray-500">{result.sender}: </span>
+                      <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">
+                        <span className="text-m3-outline dark:text-m3-on-surface-variant">{result.sender}: </span>
                         {result.body}
                       </p>
                     </div>
@@ -423,8 +423,8 @@ const RoomListItem = memo(function RoomListItem({
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
       className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl p-3 text-left transition-all duration-150 ${
         isActive
-          ? 'bg-indigo-50 dark:bg-gray-800'
-          : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'
+          ? 'bg-m3-primary-container dark:bg-m3-surface-container-high'
+          : 'hover:bg-m3-surface-container-low dark:hover:bg-m3-surface-container-high/60'
       }`}
     >
       <Avatar
@@ -435,23 +435,23 @@ const RoomListItem = memo(function RoomListItem({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className={`truncate font-semibold ${isActive ? 'text-indigo-700 dark:text-white' : 'text-gray-900 dark:text-white'}`}>
+          <span className={`truncate font-semibold ${isActive ? 'text-m3-on-primary-container dark:text-m3-on-surface' : 'text-m3-on-surface dark:text-m3-on-surface'}`}>
             {room.name}
           </span>
           {room.lastMessageTs > 0 && (
-            <span className="ml-2 flex-shrink-0 text-xs text-gray-400">
+            <span className="ml-2 flex-shrink-0 text-xs text-m3-outline">
               {formatDistanceToNow(new Date(room.lastMessageTs), { addSuffix: false })}
             </span>
           )}
         </div>
         <div className="flex items-center justify-between">
-          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-            {room.lastSenderName && <span className="text-gray-400 dark:text-gray-500">{room.lastSenderName}: </span>}
+          <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">
+            {room.lastSenderName && <span className="text-m3-outline dark:text-m3-on-surface-variant">{room.lastSenderName}: </span>}
             {lastMsgPreview}
           </p>
           <div className="ml-2 flex items-center gap-1">
             {room.unreadCount > 0 && (
-              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-xs font-medium text-white shadow-sm">
+              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary px-1.5 text-xs font-medium text-white shadow-sm">
                 {room.unreadCount > 99 ? '99+' : room.unreadCount}
               </span>
             )}
@@ -460,14 +460,14 @@ const RoomListItem = memo(function RoomListItem({
       </div>
       <div className="relative flex flex-col items-center gap-1">
         {!room.isDirect && (
-          <Hash className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+          <Hash className="h-3.5 w-3.5 flex-shrink-0 text-m3-outline" />
         )}
         {room.encrypted && (
           <Lock className="h-3 w-3 flex-shrink-0 text-green-500" />
         )}
         <button
           onClick={onArchive}
-          className="absolute -right-1 -top-1 hidden rounded-full bg-white p-1 text-gray-400 shadow-sm transition-colors hover:text-indigo-500 group-hover:block dark:bg-gray-800"
+          className="absolute -right-1 -top-1 hidden rounded-full bg-m3-surface-container-lowest p-1 text-m3-outline shadow-sm transition-colors hover:text-m3-primary group-hover:block dark:bg-m3-surface-container-high"
           title={room.isArchived ? 'Unarchive' : 'Archive'}
         >
           {room.isArchived ? (

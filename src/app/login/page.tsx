@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { resolveHomeserver } from '@/lib/matrix/client'
 import { Shield, Eye, EyeOff, Loader2, Server } from 'lucide-react'
-import { DotGrid } from '@/components/ui/dot-grid'
 
 export default function LoginPage() {
   const [server, setServer] = useState('')
@@ -61,12 +60,10 @@ export default function LoginPage() {
   const serverDomain = server.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '') || null
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-[#0a0a0c]">
-      <DotGrid />
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-96 bg-gradient-to-b from-indigo-100/50 to-transparent dark:from-indigo-900/20" />
+    <div className="relative flex min-h-screen items-center justify-center bg-m3-surface px-4 dark:bg-m3-surface">
 
       <div className="relative w-full max-w-md">
-        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-2xl dark:border-gray-800 dark:bg-[#121215]">
+        <div className="rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest p-8 shadow-xl dark:border-m3-outline-variant dark:bg-m3-surface-container">
           {/* Logo — inline SVG of szept icon */}
           <div className="mb-8 flex flex-col items-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#6359dc] shadow-lg shadow-[#6359dc]/25">
@@ -84,8 +81,8 @@ export default function LoginPage() {
                 <circle cx="314" cy="334" r="21" fill="white" opacity="0.25"/>
               </svg>
             </div>
-            <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-gray-900 dark:text-[#f0efeb]">szept</h1>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-m3-on-surface dark:text-m3-on-surface">szept</h1>
+            <p className="mt-2 text-sm text-m3-on-surface-variant dark:text-m3-on-surface-variant">
               Sign in to any Matrix homeserver
             </p>
           </div>
@@ -93,18 +90,18 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
             {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 shadow-sm dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
+              <div className="rounded-lg border border-m3-error/20 bg-m3-error-container px-4 py-3 text-sm text-m3-error dark:border-m3-error/30 dark:bg-m3-error-container dark:text-m3-error">
                 {error}
               </div>
             )}
 
             {/* Homeserver */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
+              <label className="mb-1.5 block text-xs font-medium text-m3-on-surface-variant dark:text-m3-on-surface-variant">
                 Homeserver
               </label>
               <div className="relative">
-                <Server className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Server className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-outline" />
                 <input
                   type="text"
                   value={server}
@@ -112,10 +109,10 @@ export default function LoginPage() {
                   onBlur={handleServerBlur}
                   placeholder="matrix.org"
                   required
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low py-3 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                 />
                 {isResolving && (
-                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
+                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-m3-outline" />
                 )}
               </div>
               {resolvedUrl && (
@@ -128,11 +125,11 @@ export default function LoginPage() {
 
             {/* Username */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
+              <label className="mb-1.5 block text-xs font-medium text-m3-on-surface-variant dark:text-m3-on-surface-variant">
                 Username
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">@</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-m3-on-surface-variant">@</span>
                 <input
                   type="text"
                   value={username}
@@ -140,11 +137,11 @@ export default function LoginPage() {
                   placeholder="username"
                   required
                   autoComplete="username"
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 py-3 pl-8 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-inner transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low py-3 pl-8 pr-4 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                 />
               </div>
               {serverDomain && (
-                <p className="mt-1 text-xs text-gray-600">
+                <p className="mt-1 text-xs text-m3-on-surface-variant">
                   e.g. user for @user:{serverDomain}
                 </p>
               )}
@@ -152,7 +149,7 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
+              <label className="mb-1.5 block text-xs font-medium text-m3-on-surface-variant dark:text-m3-on-surface-variant">
                 Password
               </label>
               <div className="relative">
@@ -163,12 +160,12 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   required
                   autoComplete="current-password"
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 pr-11 text-sm text-gray-900 placeholder-gray-400 shadow-inner transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low px-4 py-3 pr-11 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-m3-outline hover:text-m3-on-surface-variant dark:text-m3-outline dark:hover:text-m3-on-surface-variant"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -178,7 +175,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-m3-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-m3-primary/90 disabled:opacity-50"
             >
               {isLoading ? (
                 <>
@@ -193,7 +190,7 @@ export default function LoginPage() {
         </div>
 
         {/* Security badge */}
-        <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-600">
+        <div className="mt-4 flex items-center justify-center gap-2 text-xs text-m3-on-surface-variant">
           <Shield className="h-3 w-3" />
           <span>End-to-end encrypted via Matrix protocol</span>
         </div>

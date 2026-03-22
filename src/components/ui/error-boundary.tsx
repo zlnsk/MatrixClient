@@ -38,12 +38,12 @@ export class ErrorBoundary extends Component<Props, State> {
             </svg>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Something went wrong</h3>
-            <p className="mt-1 text-sm text-gray-500">{this.state.error?.message || 'An unexpected error occurred'}</p>
+            <h3 className="text-lg font-semibold text-m3-on-surface dark:text-m3-on-surface">Something went wrong</h3>
+            <p className="mt-1 text-sm text-m3-on-surface-variant">{this.state.error?.message || 'An unexpected error occurred'}</p>
           </div>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500"
+            className="rounded-lg bg-m3-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-m3-primary/90"
           >
             Try again
           </button>

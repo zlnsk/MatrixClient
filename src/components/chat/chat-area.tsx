@@ -68,8 +68,8 @@ function MediaThumbnail({ message }: { message: MatrixMessage }) {
 
   if (!decryptedUrl) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-gray-200 dark:bg-gray-700">
-        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+      <div className="flex h-full w-full items-center justify-center bg-m3-surface-container-high dark:bg-m3-surface-container-highest">
+        <Loader2 className="h-4 w-4 animate-spin text-m3-outline" />
       </div>
     )
   }
@@ -84,7 +84,7 @@ function MediaThumbnail({ message }: { message: MatrixMessage }) {
 
   return (
     <a href={decryptedUrl} target="_blank" rel="noopener noreferrer" className="flex h-full w-full items-center justify-center">
-      <Video className="h-6 w-6 text-gray-400" />
+      <Video className="h-6 w-6 text-m3-outline" />
     </a>
   )
 }
@@ -251,13 +251,13 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   }, [filteredMessages])
 
   return (
-    <div className="relative flex flex-1 flex-col min-h-0 bg-gray-50 dark:bg-gray-950">
+    <div className="relative flex flex-1 flex-col min-h-0 bg-m3-surface-container-low dark:bg-m3-surface">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+      <div className="flex items-center justify-between border-b border-m3-outline-variant bg-m3-surface-container-lowest px-4 py-3 dark:border-m3-outline-variant dark:bg-m3-surface-container">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
           <button
             onClick={onBackClick}
-            className="flex-shrink-0 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white dark:active:bg-gray-700 md:hidden"
+            className="flex-shrink-0 rounded-lg p-1.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface active:bg-m3-surface-container-high dark:text-m3-outline dark:hover:bg-m3-surface-container-high dark:hover:text-white dark:active:bg-m3-surface-container-highest md:hidden"
             aria-label="Back to chat list"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -270,16 +270,16 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <h2 className="truncate text-base font-bold text-gray-900 dark:text-white md:text-lg">{roomDisplayName}</h2>
-              {!activeRoom.isDirect && <Hash className="h-4 w-4 flex-shrink-0 text-gray-400" />}
+              <h2 className="truncate text-base font-bold text-m3-on-surface dark:text-m3-on-surface md:text-lg">{roomDisplayName}</h2>
+              {!activeRoom.isDirect && <Hash className="h-4 w-4 flex-shrink-0 text-m3-outline" />}
             </div>
             <div className="flex items-center gap-1.5">
               {typingUsers.length > 0 ? (
-                <span className="truncate text-xs text-indigo-500 dark:text-indigo-400 md:text-sm">
+                <span className="truncate text-xs text-m3-primary dark:text-m3-primary md:text-sm">
                   {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
                 </span>
               ) : (
-                <span className="truncate text-xs text-gray-500 md:text-sm">{roomStatus}</span>
+                <span className="truncate text-xs text-m3-on-surface-variant md:text-sm">{roomStatus}</span>
               )}
               {activeRoom.encrypted && (
                 <div className="hidden items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 dark:bg-green-900/50 sm:flex">
@@ -294,7 +294,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowRoomInfo(!showRoomInfo)}
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
             title="Room info"
             aria-label="Room info"
           >
@@ -302,7 +302,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           </button>
           <button
             onClick={() => setShowSearch(!showSearch)}
-            className="hidden sm:block rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="hidden sm:block rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
             title="Search"
             aria-label="Search in conversation"
           >
@@ -310,7 +310,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           </button>
           <button
             onClick={handleArchiveToggle}
-            className="hidden sm:block rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="hidden sm:block rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
             title={activeRoom.isArchived ? 'Unarchive' : 'Archive'}
             aria-label={activeRoom.isArchived ? 'Unarchive' : 'Archive'}
           >
@@ -322,7 +322,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           </button>
           <button
             onClick={() => setConfirmLeave(true)}
-            className="hidden md:block rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            className="hidden md:block rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-error-container hover:text-m3-error dark:hover:bg-red-900/20 dark:hover:text-red-400"
             title="Leave room"
             aria-label="Leave room"
           >
@@ -332,7 +332,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             <>
               <button
                 onClick={() => placeCall(activeRoom.roomId, false)}
-                className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+                className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
                 title="Voice call"
                 aria-label="Voice call"
               >
@@ -340,7 +340,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
               </button>
               <button
                 onClick={() => placeCall(activeRoom.roomId, true)}
-                className="hidden sm:block rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+                className="hidden sm:block rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
                 title="Video call"
                 aria-label="Video call"
               >
@@ -353,16 +353,16 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
       {/* Search bar */}
       {showSearch && (
-        <div className="animate-slide-in border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/50">
+        <div className="animate-slide-in border-b border-m3-outline-variant bg-m3-surface-container-low px-4 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container/50">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant" />
             <input
               type="text"
               placeholder="Search in conversation..."
               value={chatSearch}
               onChange={e => setChatSearch(e.target.value)}
               autoFocus
-              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+              className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-lowest py-2 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
             />
           </div>
         </div>
@@ -389,8 +389,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
       {/* Leave confirmation */}
       {confirmLeave && (
-        <div className="animate-slide-in border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/50 dark:bg-red-900/20">
-          <p className="text-sm text-red-700 dark:text-red-300">
+        <div className="animate-slide-in border-b border-m3-error bg-m3-error-container px-4 py-3 dark:border-m3-error/50 dark:bg-m3-error-container/20">
+          <p className="text-sm text-m3-on-error-container dark:text-red-300">
             Leave <strong>{activeRoom.name}</strong>? You will lose access to this room.
           </p>
           <div className="mt-2 flex gap-2">
@@ -399,13 +399,13 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                 await leaveRoom(activeRoom.roomId)
                 setConfirmLeave(false)
               }}
-              className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-500"
+              className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-m3-error-container0"
             >
               Leave
             </button>
             <button
               onClick={() => setConfirmLeave(false)}
-              className="rounded-lg bg-gray-200 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              className="rounded-lg bg-m3-surface-container-high px-4 py-1.5 text-sm font-medium text-m3-on-surface hover:bg-m3-outline-variant dark:bg-m3-surface-container-highest dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
             >
               Cancel
             </button>
@@ -417,13 +417,13 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       <div ref={scrollContainerRef} className="message-scroll-container min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-6 md:px-6 md:pb-8">
         {isLoadingMessages ? (
           <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-m3-primary" />
           </div>
         ) : (
           <div className="flex min-h-full flex-col justify-end space-y-4">
             {activeRoom.topic && (
               <div className="flex items-center justify-center py-2">
-                <span className="rounded-full bg-gray-200 px-4 py-1.5 text-sm text-gray-500 shadow-sm dark:bg-gray-800 dark:text-gray-400">
+                <span className="rounded-full bg-m3-surface-container-high px-4 py-1.5 text-sm text-m3-on-surface-variant shadow-sm dark:bg-m3-surface-container-high dark:text-m3-outline">
                   {activeRoom.topic}
                 </span>
               </div>
@@ -432,7 +432,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {groupedMessages.map(group => (
               <div key={group.date}>
                 <div className="flex items-center justify-center py-4">
-                  <span className="rounded-full bg-white px-4 py-1.5 text-xs font-medium text-gray-500 shadow-md shadow-gray-200/50 dark:bg-gray-800 dark:text-gray-400 dark:shadow-black/20">
+                  <span className="rounded-full bg-m3-surface-container-lowest px-4 py-1.5 text-xs font-medium text-m3-on-surface-variant shadow-md shadow-gray-200/50 dark:bg-m3-surface-container-high dark:text-m3-outline dark:shadow-black/20">
                     {group.date}
                   </span>
                 </div>
@@ -459,11 +459,11 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {/* Typing indicator */}
             {typingUsers.length > 0 && (
               <div className="flex items-end gap-2 animate-fade-in">
-                <div className="rounded-2xl bg-white px-4 py-3 shadow-md dark:bg-gray-800">
+                <div className="rounded-2xl bg-m3-surface-container-lowest px-4 py-3 shadow-md dark:bg-m3-surface-container-high">
                   <div className="flex gap-1">
-                    <span className="typing-dot h-2.5 w-2.5 rounded-full bg-indigo-400" />
-                    <span className="typing-dot h-2.5 w-2.5 rounded-full bg-indigo-400" />
-                    <span className="typing-dot h-2.5 w-2.5 rounded-full bg-indigo-400" />
+                    <span className="typing-dot h-2.5 w-2.5 rounded-full bg-m3-primary" />
+                    <span className="typing-dot h-2.5 w-2.5 rounded-full bg-m3-primary" />
+                    <span className="typing-dot h-2.5 w-2.5 rounded-full bg-m3-primary" />
                   </div>
                 </div>
               </div>
@@ -484,12 +484,12 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
       {/* Room Info Panel */}
       {showRoomInfo && (
-        <div className="absolute right-0 top-0 z-40 h-full w-80 border-l border-gray-200 bg-white shadow-2xl animate-slide-in dark:border-gray-800 dark:bg-gray-900 overflow-y-auto">
-          <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">Room Details</h3>
+        <div className="absolute right-0 top-0 z-40 h-full w-80 border-l border-m3-outline-variant bg-m3-surface-container-lowest shadow-2xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container overflow-y-auto">
+          <div className="flex items-center justify-between border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant">
+            <h3 className="text-base font-bold text-m3-on-surface dark:text-m3-on-surface">Room Details</h3>
             <button
               onClick={() => setShowRoomInfo(false)}
-              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+              className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
             >
               <X className="h-5 w-5" />
             </button>
@@ -511,7 +511,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                       value={nameInput}
                       onChange={e => setNameInput(e.target.value)}
                       autoFocus
-                      className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                      className="flex-1 rounded-lg border border-m3-outline bg-m3-surface-container-lowest px-3 py-1.5 text-sm text-m3-on-surface focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline dark:bg-m3-surface-container-high dark:text-m3-on-surface"
                       onKeyDown={async e => {
                         if (e.key === 'Enter' && nameInput.trim()) {
                           setSavingName(true)
@@ -542,18 +542,18 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                     </button>
                     <button
                       onClick={() => setEditingName(false)}
-                      className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                      className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2">
-                    <h4 className="text-lg font-bold text-gray-900 dark:text-white">{roomDisplayName}</h4>
+                    <h4 className="text-lg font-bold text-m3-on-surface dark:text-m3-on-surface">{roomDisplayName}</h4>
                     {!activeRoom.isDirect && (
                       <button
                         onClick={() => { setNameInput(activeRoom.name); setEditingName(true) }}
-                        className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+                        className="rounded-lg p-1 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
                         title="Edit room name"
                       >
                         <Pencil className="h-3.5 w-3.5" />
@@ -570,7 +570,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                       onChange={e => setTopicInput(e.target.value)}
                       placeholder="Set a topic..."
                       autoFocus
-                      className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                      className="flex-1 rounded-lg border border-m3-outline bg-m3-surface-container-lowest px-3 py-1.5 text-sm text-m3-on-surface focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline dark:bg-m3-surface-container-high dark:text-m3-on-surface"
                       onKeyDown={async e => {
                         if (e.key === 'Enter') {
                           setSavingTopic(true)
@@ -600,7 +600,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                     </button>
                     <button
                       onClick={() => setEditingTopic(false)}
-                      className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                      className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -608,14 +608,14 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                 ) : (
                   <div className="mt-1 flex items-center justify-center gap-1">
                     {activeRoom.topic ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{activeRoom.topic}</p>
+                      <p className="text-sm text-m3-on-surface-variant dark:text-m3-outline">{activeRoom.topic}</p>
                     ) : (
-                      <p className="text-sm italic text-gray-400 dark:text-gray-500">No topic set</p>
+                      <p className="text-sm italic text-m3-outline dark:text-m3-on-surface-variant">No topic set</p>
                     )}
                     {!activeRoom.isDirect && (
                       <button
                         onClick={() => { setTopicInput(activeRoom.topic || ''); setEditingTopic(true) }}
-                        className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
+                        className="rounded-lg p-1 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
                         title="Edit room topic"
                       >
                         <Pencil className="h-3 w-3" />
@@ -627,13 +627,13 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             </div>
 
             {/* Room ID */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Room ID</p>
-              <p className="mt-1 font-mono text-xs text-gray-700 dark:text-gray-300 break-all">{activeRoom.roomId}</p>
+            <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-3 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
+              <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Room ID</p>
+              <p className="mt-1 font-mono text-xs text-m3-on-surface dark:text-m3-on-surface-variant break-all">{activeRoom.roomId}</p>
             </div>
 
             {/* Encryption */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+            <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-3 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
               <div className="flex items-center gap-2">
                 {activeRoom.encrypted ? (
                   <>
@@ -642,26 +642,26 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                   </>
                 ) : (
                   <>
-                    <Shield className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Not encrypted</span>
+                    <Shield className="h-4 w-4 text-m3-outline" />
+                    <span className="text-sm font-medium text-m3-on-surface-variant dark:text-m3-outline">Not encrypted</span>
                   </>
                 )}
               </div>
             </div>
 
             {/* Notification Settings */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+            <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-3 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
               <div className="flex items-center gap-2 mb-3">
-                <Bell className="h-4 w-4 text-gray-500" />
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Notifications</p>
+                <Bell className="h-4 w-4 text-m3-on-surface-variant" />
+                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Notifications</p>
               </div>
               <div className="flex gap-1">
                 <button
                   onClick={() => setNotifSetting('all')}
                   className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
                     notifSetting === 'all'
-                      ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'
-                      : 'text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700'
+                      ? 'bg-m3-primary-container text-m3-on-primary-container dark:bg-m3-primary-container/50 dark:text-m3-primary'
+                      : 'text-m3-on-surface-variant hover:bg-m3-surface-container-high dark:text-m3-outline dark:hover:bg-m3-surface-container-highest'
                   }`}
                 >
                   All
@@ -670,8 +670,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                   onClick={() => setNotifSetting('mentions')}
                   className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
                     notifSetting === 'mentions'
-                      ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'
-                      : 'text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700'
+                      ? 'bg-m3-primary-container text-m3-on-primary-container dark:bg-m3-primary-container/50 dark:text-m3-primary'
+                      : 'text-m3-on-surface-variant hover:bg-m3-surface-container-high dark:text-m3-outline dark:hover:bg-m3-surface-container-highest'
                   }`}
                 >
                   Mentions
@@ -680,8 +680,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                   onClick={() => setNotifSetting('mute')}
                   className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
                     notifSetting === 'mute'
-                      ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
-                      : 'text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700'
+                      ? 'bg-red-100 text-m3-on-error-container dark:bg-m3-error-container/50 dark:text-red-300'
+                      : 'text-m3-on-surface-variant hover:bg-m3-surface-container-high dark:text-m3-outline dark:hover:bg-m3-surface-container-highest'
                   }`}
                 >
                   <BellOff className="mx-auto h-3.5 w-3.5" />
@@ -690,10 +690,10 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             </div>
 
             {/* Invite Member */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
+            <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-3 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
               <div className="flex items-center gap-2 mb-3">
-                <UserPlus className="h-4 w-4 text-gray-500" />
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Invite Member</p>
+                <UserPlus className="h-4 w-4 text-m3-on-surface-variant" />
+                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Invite Member</p>
               </div>
               <div className="flex gap-2">
                 <input
@@ -701,7 +701,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                   value={inviteInput}
                   onChange={e => { setInviteInput(e.target.value); setInviteError('') }}
                   placeholder="@user:server.com"
-                  className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="flex-1 rounded-lg border border-m3-outline bg-m3-surface-container-lowest px-3 py-1.5 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                   onKeyDown={async e => {
                     if (e.key === 'Enter') {
                       const matrixIdRegex = /^@[a-zA-Z0-9._=\-/+]+:[a-zA-Z0-9.-]+$/
@@ -739,27 +739,27 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                     setInviting(false)
                   }}
                   disabled={inviting || !inviteInput.trim()}
-                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-lg bg-m3-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-m3-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
                 </button>
               </div>
               {inviteError && (
-                <p className="mt-1.5 text-xs text-red-500 dark:text-red-400">{inviteError}</p>
+                <p className="mt-1.5 text-xs text-m3-error dark:text-m3-error">{inviteError}</p>
               )}
             </div>
 
             {/* Members */}
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Users className="h-4 w-4 text-gray-500" />
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Users className="h-4 w-4 text-m3-on-surface-variant" />
+                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">
                   Members ({activeRoom.members.length})
                 </h4>
               </div>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {activeRoom.members.map(member => (
-                  <div key={member.userId} className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <div key={member.userId} className="flex items-center gap-3 rounded-lg p-2 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
                     <Avatar
                       src={member.avatarUrl}
                       name={member.displayName}
@@ -767,8 +767,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                       status={member.presence === 'online' ? 'online' : member.presence === 'unavailable' ? 'away' : null}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{member.displayName}</p>
-                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{member.userId}</p>
+                      <p className="truncate text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">{member.displayName}</p>
+                      <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">{member.userId}</p>
                     </div>
                   </div>
                 ))}
@@ -778,8 +778,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {/* Media Gallery */}
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <ImageIcon className="h-4 w-4 text-gray-500" />
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Shared Media</h4>
+                <ImageIcon className="h-4 w-4 text-m3-on-surface-variant" />
+                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">Shared Media</h4>
               </div>
               <div className="grid grid-cols-3 gap-1 max-h-64 overflow-y-auto rounded-lg">
                 {messages
@@ -789,20 +789,20 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                   .map(m => (
                     <div
                       key={m.eventId}
-                      className="aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+                      className="aspect-square overflow-hidden rounded-lg bg-m3-surface-container dark:bg-m3-surface-container-high"
                     >
                       <MediaThumbnail message={m} />
                     </div>
                   ))}
                 {messages.filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video')).length === 0 && (
-                  <p className="col-span-3 py-4 text-center text-xs text-gray-400">No shared media yet</p>
+                  <p className="col-span-3 py-4 text-center text-xs text-m3-outline">No shared media yet</p>
                 )}
               </div>
 
               {/* Shared files */}
               {messages.filter(m => m.mediaUrl && m.type === 'm.file').length > 0 && (
                 <div className="mt-3 space-y-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Files</p>
+                  <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Files</p>
                   {messages
                     .filter(m => m.mediaUrl && m.type === 'm.file')
                     .slice(-10)
@@ -813,10 +813,10 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                         href={m.mediaUrl!}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 rounded-lg p-2 text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="flex items-center gap-2 rounded-lg p-2 text-sm transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                       >
-                        <FileText className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                        <span className="truncate text-gray-700 dark:text-gray-300">{m.content}</span>
+                        <FileText className="h-4 w-4 flex-shrink-0 text-m3-outline" />
+                        <span className="truncate text-m3-on-surface dark:text-m3-on-surface-variant">{m.content}</span>
                       </a>
                     ))}
                 </div>
@@ -824,7 +824,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             </div>
 
             {/* Leave Room */}
-            <div className="pt-2 border-t border-gray-200 dark:border-gray-800">
+            <div className="pt-2 border-t border-m3-outline-variant dark:border-m3-outline-variant">
               <button
                 onClick={async () => {
                   if (!confirm(`Leave ${activeRoom.isDirect ? 'this conversation' : activeRoom.name}?`)) return
@@ -835,7 +835,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                     console.error('Failed to leave room:', err)
                   }
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-m3-error transition-colors hover:bg-m3-error-container dark:text-m3-error dark:hover:bg-red-900/20"
               >
                 <LogOut className="h-4 w-4" />
                 {activeRoom.isDirect ? 'Leave Conversation' : 'Leave Room'}

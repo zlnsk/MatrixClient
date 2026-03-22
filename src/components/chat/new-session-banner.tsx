@@ -46,14 +46,14 @@ export function NewSessionBanner({ onVerifyWithSession, onVerifyWithKey, onDismi
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       onClick={onVerifyWithSession}
-                      className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500"
+                      className="flex items-center gap-1.5 rounded-lg bg-m3-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-m3-primary"
                     >
                       <Monitor className="h-3.5 w-3.5" />
                       Verify from another session
                     </button>
                     <button
                       onClick={() => setMode('key')}
-                      className="flex items-center gap-1.5 rounded-lg bg-gray-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-600"
+                      className="flex items-center gap-1.5 rounded-lg bg-m3-surface-container-highest px-3 py-1.5 text-xs font-medium text-m3-on-surface transition-colors hover:bg-m3-outline-variant dark:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest"
                     >
                       <Key className="h-3.5 w-3.5" />
                       Use security key
@@ -69,21 +69,21 @@ export function NewSessionBanner({ onVerifyWithSession, onVerifyWithKey, onDismi
                     onChange={e => { setSecurityKey(e.target.value); setError(null) }}
                     placeholder="Enter your security key (EsTC j9gP noRq ...)"
                     rows={2}
-                    className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 font-mono text-xs text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-amber-800 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500"
+                    className="w-full rounded-lg border border-amber-200 bg-m3-surface-container-lowest px-3 py-2 font-mono text-xs text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-amber-800 dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline"
                   />
-                  {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+                  {error && <p className="text-xs text-m3-error dark:text-m3-error">{error}</p>}
                   <div className="flex gap-2">
                     <button
                       onClick={handleKeySubmit}
                       disabled={isVerifying || !securityKey.trim()}
-                      className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-lg bg-m3-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-m3-primary disabled:opacity-50"
                     >
                       {isVerifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
                       {isVerifying ? 'Verifying...' : 'Verify'}
                     </button>
                     <button
                       onClick={() => { setMode('prompt'); setError(null) }}
-                      className="rounded-lg bg-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                      className="rounded-lg bg-m3-surface-container-high px-3 py-1.5 text-xs font-medium text-m3-on-surface transition-colors hover:bg-m3-outline-variant dark:bg-m3-surface-container-highest dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
                     >
                       Back
                     </button>

@@ -111,7 +111,7 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
       )}
       {status && (
         <span
-          className={`absolute ${statusSizeMap[size]} ${statusColorMap[status]} rounded-full border-2 border-white dark:border-gray-900`}
+          className={`absolute ${statusSizeMap[size]} ${statusColorMap[status]} rounded-full border-2 border-m3-surface-container-lowest dark:border-m3-surface-container`}
         />
       )}
     </div>

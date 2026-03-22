@@ -75,13 +75,13 @@ export function ChatLayout() {
   }, [])
 
   return (
-    <div className="relative h-dvh overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div className="relative h-dvh overflow-hidden bg-m3-surface-container-low dark:bg-m3-surface">
 
       {/* Sidebar — always visible behind the overlay */}
       <div className={`absolute inset-0 flex bg-transparent transition-[filter] duration-150 ${
         activeRoom ? 'blur-[2px] brightness-[0.85] dark:brightness-75 pointer-events-none' : ''
       }`}>
-        <div className="flex w-full max-w-md flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+        <div className="flex w-full max-w-md flex-col bg-m3-surface-container-lowest dark:bg-m3-surface-container border-r border-m3-outline-variant dark:border-m3-outline-variant">
           <Sidebar
             onSettingsClick={() => setShowSettings(true)}
             onChatSelect={handleChatSelect}
@@ -100,7 +100,7 @@ export function ChatLayout() {
 
           {/* Chat window */}
           <div className="absolute inset-0 z-30 flex items-center justify-center p-0 md:p-8 lg:p-10 pointer-events-none">
-            <div className="pointer-events-auto relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-none bg-white shadow-none md:max-h-[85vh] md:rounded-2xl md:shadow-xl dark:bg-gray-900 md:border md:border-gray-200 dark:md:border-gray-800 animate-slide-in">
+            <div className="pointer-events-auto relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-none bg-m3-surface-container-lowest shadow-none md:max-h-[85vh] md:rounded-2xl md:shadow-xl dark:bg-m3-surface-container md:border md:border-m3-outline-variant dark:md:border-m3-outline-variant animate-slide-in">
               <ChatArea onBackClick={handleBackToSidebar} />
             </div>
           </div>
@@ -108,7 +108,7 @@ export function ChatLayout() {
       )}
 
       {/* Build version */}
-      <span className="fixed bottom-1 right-2 text-[10px] text-gray-300 dark:text-gray-700 pointer-events-none select-none z-10">
+      <span className="fixed bottom-1 right-2 text-[10px] text-m3-outline-variant dark:text-m3-on-surface pointer-events-none select-none z-10">
         v{process.env.NEXT_PUBLIC_BUILD_VERSION}
       </span>
 
@@ -124,10 +124,10 @@ export function ChatLayout() {
 
 function EmptyState() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-gray-50 p-8 dark:bg-gray-950">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-100 shadow-lg dark:bg-gray-900">
+    <div className="flex flex-1 flex-col items-center justify-center bg-m3-surface-container-low p-8 dark:bg-m3-surface">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-m3-surface-container shadow-lg dark:bg-m3-surface-container">
         <svg
-          className="h-10 w-10 text-gray-700"
+          className="h-10 w-10 text-m3-on-surface"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -140,10 +140,10 @@ function EmptyState() {
           />
         </svg>
       </div>
-      <h3 className="mt-6 text-lg font-medium text-gray-700 dark:text-gray-300">
+      <h3 className="mt-6 text-lg font-medium text-m3-on-surface dark:text-m3-on-surface-variant">
         Welcome to szept
       </h3>
-      <p className="mt-2 max-w-sm text-center text-sm text-gray-500">
+      <p className="mt-2 max-w-sm text-center text-sm text-m3-on-surface-variant">
         Select a conversation from the sidebar or start a new chat to begin messaging securely.
       </p>
       <div className="mt-4 flex items-center gap-2 rounded-full bg-green-900/30 px-3 py-1.5">

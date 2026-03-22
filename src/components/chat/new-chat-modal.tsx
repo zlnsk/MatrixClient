@@ -96,20 +96,20 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="relative w-full max-w-md animate-slide-in rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-md animate-slide-in rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest shadow-2xl dark:border-m3-outline-variant dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="border-b border-gray-200 p-4 dark:border-gray-800">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Conversation</h2>
+        <div className="border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant">
+          <h2 className="text-lg font-bold text-m3-on-surface dark:text-m3-on-surface">New Conversation</h2>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-gray-800">
+        <div className="flex border-b border-m3-outline-variant dark:border-m3-outline-variant">
           <button
             onClick={() => setTab('direct')}
             className={`flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
               tab === 'direct'
-                ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                ? 'border-b-2 border-m3-primary text-m3-primary dark:text-m3-primary'
+                : 'text-m3-outline hover:text-m3-on-surface-variant dark:hover:text-m3-outline-variant'
             }`}
           >
             <MessageSquare className="h-4 w-4" />
@@ -119,8 +119,8 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
             onClick={() => setTab('group')}
             className={`flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
               tab === 'group'
-                ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                ? 'border-b-2 border-m3-primary text-m3-primary dark:text-m3-primary'
+                : 'text-m3-outline hover:text-m3-on-surface-variant dark:hover:text-m3-outline-variant'
             }`}
           >
             <Users className="h-4 w-4" />
@@ -130,7 +130,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
 
         <div className="p-4">
           {error && (
-            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
+            <div className="mb-3 rounded-lg border border-m3-error bg-m3-error-container px-4 py-3 text-sm text-m3-error dark:border-m3-error/50 dark:bg-m3-error-container/20 dark:text-m3-error">
               {error}
             </div>
           )}
@@ -138,21 +138,21 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
           {tab === 'direct' ? (
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
+                <label className="mb-1.5 block text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">
                   Matrix User ID
                 </label>
                 <div className="relative">
-                  <AtSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                  <AtSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant" />
                   <input
                     type="text"
                     placeholder={`username:${domain}`}
                     value={userId}
                     onChange={e => setUserId(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleDirectChat()}
-                    className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                    className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low py-2.5 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                   />
                 </div>
-                <p className="mt-1 text-xs text-gray-600">
+                <p className="mt-1 text-xs text-m3-on-surface-variant">
                   e.g. user:{domain} or @user:{domain}
                 </p>
               </div>
@@ -160,7 +160,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
               <button
                 onClick={handleDirectChat}
                 disabled={isCreating || !userId.trim()}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-m3-primary py-2.5 text-sm font-medium text-white transition-colors hover:bg-m3-primary disabled:opacity-50"
               >
                 {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
                 Start Chat
@@ -169,18 +169,18 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
           ) : (
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Group name</label>
+                <label className="mb-1.5 block text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Group name</label>
                 <input
                   type="text"
                   placeholder="My Group"
                   value={groupName}
                   onChange={e => setGroupName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low px-4 py-2.5 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
+                <label className="mb-1.5 block text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">
                   Members (comma-separated Matrix IDs)
                 </label>
                 <textarea
@@ -188,12 +188,12 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                   value={groupMembers}
                   onChange={e => setGroupMembers(e.target.value)}
                   rows={3}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low px-4 py-2.5 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
+                <label className="mb-1.5 block text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">
                   Topic (optional)
                 </label>
                 <input
@@ -201,44 +201,44 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                   placeholder="What is this room about?"
                   value={groupTopic}
                   onChange={e => setGroupTopic(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low px-4 py-2.5 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center justify-between rounded-lg border border-m3-outline-variant bg-m3-surface-container-low px-4 py-3 dark:border-m3-outline-variant dark:bg-m3-surface-container-high">
                 <div className="flex items-center gap-2">
-                  <Lock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Enable encryption</span>
+                  <Lock className="h-4 w-4 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <span className="text-sm text-m3-on-surface dark:text-m3-on-surface-variant">Enable encryption</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEnableEncryption(!enableEncryption)}
                   className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                    enableEncryption ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
+                    enableEncryption ? 'bg-m3-primary' : 'bg-m3-outline-variant dark:bg-m3-outline'
                   }`}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
+                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-m3-surface-container-lowest shadow ring-0 transition-transform ${
                       enableEncryption ? 'translate-x-4' : 'translate-x-0'
                     }`}
                   />
                 </button>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center justify-between rounded-lg border border-m3-outline-variant bg-m3-surface-container-low px-4 py-3 dark:border-m3-outline-variant dark:bg-m3-surface-container-high">
                 <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Public room</span>
+                  <Globe className="h-4 w-4 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <span className="text-sm text-m3-on-surface dark:text-m3-on-surface-variant">Public room</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsPublic(!isPublic)}
                   className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                    isPublic ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
+                    isPublic ? 'bg-m3-primary' : 'bg-m3-outline-variant dark:bg-m3-outline'
                   }`}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${
+                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-m3-surface-container-lowest shadow ring-0 transition-transform ${
                       isPublic ? 'translate-x-4' : 'translate-x-0'
                     }`}
                   />
@@ -248,7 +248,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
               <button
                 onClick={handleCreateGroup}
                 disabled={isCreating || !groupName.trim() || !groupMembers.trim()}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-m3-primary py-2.5 text-sm font-medium text-white transition-colors hover:bg-m3-primary disabled:opacity-50"
               >
                 {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
                 Create Group

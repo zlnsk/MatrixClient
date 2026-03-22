@@ -397,14 +397,14 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900 md:px-4 md:py-3" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>
+    <div className="border-t border-m3-outline-variant bg-m3-surface-container-lowest px-3 py-2.5 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4 md:py-3" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>
       {/* Command status */}
       {commandStatus && (
         <div
           className={`mb-3 flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
             commandStatus.type === 'success'
               ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-              : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+              : 'bg-m3-error-container text-m3-on-error-container dark:bg-m3-error-container/20 dark:text-m3-error'
           }`}
         >
           <span>{commandStatus.message}</span>
@@ -419,17 +419,17 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
 
       {/* Reply preview */}
       {replyTo && (
-        <div className="mb-3 flex items-center gap-2 rounded-lg border-l-2 border-indigo-500 bg-gray-100 px-3 py-2 animate-slide-in dark:bg-gray-800">
-          <Reply className="h-4 w-4 flex-shrink-0 text-indigo-400" />
+        <div className="mb-3 flex items-center gap-2 rounded-lg border-l-2 border-m3-primary bg-m3-surface-container px-3 py-2 animate-slide-in dark:bg-m3-surface-container-high">
+          <Reply className="h-4 w-4 flex-shrink-0 text-m3-primary" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
+            <p className="text-xs font-medium text-m3-primary dark:text-m3-primary">
               Replying to {replyTo.senderName}
             </p>
-            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{replyTo.content}</p>
+            <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">{replyTo.content}</p>
           </div>
           <button
             onClick={onCancelReply}
-            className="flex-shrink-0 rounded p-1 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-white"
+            className="flex-shrink-0 rounded p-1 text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
@@ -444,24 +444,24 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
             return (
               <div
                 key={`${file.name}-${idx}`}
-                className="group relative flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                className="group relative flex items-center gap-2 rounded-lg border border-m3-outline-variant bg-m3-surface-container-low p-2 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high"
               >
                 {preview ? (
                   <img src={preview} alt={file.name} className="h-12 w-12 rounded object-cover" />
                 ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded bg-gray-200 dark:bg-gray-700">
+                  <div className="flex h-12 w-12 items-center justify-center rounded bg-m3-surface-container-high dark:bg-m3-surface-container-highest">
                     {getFileIcon(file)}
                   </div>
                 )}
                 {!file.type.startsWith('image/') && (
                   <div className="max-w-[120px]">
-                    <p className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{file.name}</p>
-                    <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
+                    <p className="truncate text-xs font-medium text-m3-on-surface dark:text-m3-on-surface-variant">{file.name}</p>
+                    <p className="text-xs text-m3-outline">{(file.size / 1024).toFixed(0)} KB</p>
                   </div>
                 )}
                 <button
                   onClick={() => removePendingFile(idx)}
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition-transform hover:scale-110"
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-m3-error-container0 text-white shadow-sm transition-transform hover:scale-110"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -485,7 +485,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         {/* Attachment button */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:hover:bg-gray-800 dark:hover:text-white dark:active:bg-gray-700 md:h-11 md:w-11"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high dark:hover:text-white dark:active:bg-m3-surface-container-highest md:h-11 md:w-11"
           title="Attach file"
           aria-label="Attach file"
         >
@@ -496,23 +496,23 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         <div className="relative hidden sm:block" ref={emojiRef}>
           <button
             onClick={() => setShowEmoji(!showEmoji)}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:hover:bg-gray-800 dark:hover:text-white dark:active:bg-gray-700 md:h-11 md:w-11"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high dark:hover:text-white dark:active:bg-m3-surface-container-highest md:h-11 md:w-11"
             aria-label="Emoji picker"
           >
             <Smile className="h-5 w-5" />
           </button>
           {showEmoji && (
-            <div className="absolute bottom-12 left-0 z-20 w-80 rounded-xl border border-gray-200 bg-white p-3 shadow-xl animate-slide-in dark:border-gray-700 dark:bg-gray-800">
+            <div className="absolute bottom-12 left-0 z-20 w-80 rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest p-3 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high">
               {/* Category tabs */}
-              <div className="mb-2 flex gap-1 overflow-x-auto border-b border-gray-200 pb-2 dark:border-gray-700">
+              <div className="mb-2 flex gap-1 overflow-x-auto border-b border-m3-outline-variant pb-2 dark:border-m3-outline-variant">
                 {Object.keys(EMOJI_CATEGORIES).map(cat => (
                   <button
                     key={cat}
                     onClick={() => setEmojiCategory(cat)}
                     className={`whitespace-nowrap rounded-md px-2 py-1 text-xs transition-colors ${
                       emojiCategory === cat
-                        ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
-                        : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-m3-primary-container text-m3-primary dark:bg-m3-primary-container/30 dark:text-m3-primary'
+                        : 'text-m3-on-surface-variant hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest'
                     }`}
                   >
                     {cat}
@@ -525,7 +525,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
                   <button
                     key={emoji}
                     onClick={() => handleEmojiClick(emoji)}
-                    className="rounded-lg p-1.5 text-xl transition-transform hover:scale-110 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="rounded-lg p-1.5 text-xl transition-transform hover:scale-110 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
                   >
                     {emoji}
                   </button>
@@ -539,7 +539,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         {mentionQuery !== null && filteredMembers.length > 0 && (
           <div
             ref={mentionRef}
-            className="absolute bottom-full left-0 right-0 mb-1 max-h-52 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 z-30"
+            className="absolute bottom-full left-0 right-0 mb-1 max-h-52 overflow-y-auto rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest shadow-lg dark:border-m3-outline-variant dark:bg-m3-surface-container-high z-30"
           >
             {filteredMembers.map((member, i) => (
               <button
@@ -550,20 +550,20 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
                 }}
                 className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
                   i === mentionIndex
-                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                    : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50'
+                    ? 'bg-m3-primary-container text-m3-on-primary-container dark:bg-m3-primary-container/30 dark:text-m3-primary'
+                    : 'text-m3-on-surface hover:bg-m3-surface-container-low dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest/50'
                 }`}
               >
                 {member.avatarUrl ? (
                   <img src={member.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
                 ) : (
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-m3-primary-container text-xs font-medium text-m3-primary dark:bg-m3-primary-container/40 dark:text-m3-primary">
                     {member.displayName[0]?.toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{member.displayName}</p>
-                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{member.userId}</p>
+                  <p className="truncate text-xs text-m3-outline dark:text-m3-on-surface-variant">{member.userId}</p>
                 </div>
               </button>
             ))}
@@ -572,11 +572,11 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
 
         {/* Text input / Recording indicator */}
         {isRecording ? (
-          <div className="flex flex-1 items-center gap-3 rounded-full border border-red-300 bg-red-50 px-5 py-2.5 dark:border-red-800 dark:bg-red-900/20">
-            <span className="h-3 w-3 animate-pulse rounded-full bg-red-500" />
-            <span className="text-sm font-medium text-red-600 dark:text-red-400">Recording {formatDuration(recordingDuration)}</span>
+          <div className="flex flex-1 items-center gap-3 rounded-full border border-red-300 bg-m3-error-container px-5 py-2.5 dark:border-red-800 dark:bg-m3-error-container/20">
+            <span className="h-3 w-3 animate-pulse rounded-full bg-m3-error-container0" />
+            <span className="text-sm font-medium text-m3-error dark:text-m3-error">Recording {formatDuration(recordingDuration)}</span>
             <div className="flex-1" />
-            <button onClick={cancelRecording} className="rounded-full p-1 text-gray-400 hover:text-red-500" title="Cancel">
+            <button onClick={cancelRecording} className="rounded-full p-1 text-m3-outline hover:text-m3-error" title="Cancel">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -591,7 +591,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               placeholder="Type a message..."
               rows={1}
               enterKeyHint="send"
-              className="max-h-32 min-h-[42px] w-full resize-none rounded-full border border-gray-200 bg-gray-50 px-4 py-2.5 text-base text-gray-900 placeholder-gray-400 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 md:min-h-[44px] md:px-5 md:py-3 md:text-sm"
+              className="max-h-32 min-h-[42px] w-full resize-none rounded-full border border-m3-outline-variant bg-m3-surface-container-low px-4 py-2.5 text-base text-m3-on-surface placeholder-m3-outline transition-colors focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:px-5 md:py-3 md:text-sm"
             />
           </div>
         )}
@@ -600,7 +600,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         {isRecording ? (
           <button
             onClick={stopRecording}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-red-500 active:bg-red-700 md:h-11 md:w-11"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-m3-error-container0 active:bg-red-700 md:h-11 md:w-11"
             title="Stop recording"
             aria-label="Stop recording"
           >
@@ -609,7 +609,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         ) : !content.trim() && pendingFiles.length === 0 ? (
           <button
             onClick={startRecording}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-600 transition-all hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:active:bg-gray-500 md:h-11 md:w-11"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-m3-surface-container-high text-m3-on-surface-variant transition-all hover:bg-m3-outline-variant active:bg-m3-outline-variant dark:bg-m3-surface-container-highest dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:active:bg-m3-surface-container-low0 md:h-11 md:w-11"
             title="Record voice message"
             aria-label="Record voice message"
           >
@@ -619,7 +619,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
           <button
             onClick={handleSubmit}
             disabled={(!content.trim() && pendingFiles.length === 0) || isSending || isUploading}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white transition-all hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-indigo-600 md:h-11 md:w-11"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary text-white transition-all hover:bg-m3-primary active:bg-m3-primary/80 disabled:opacity-40 disabled:hover:bg-m3-primary md:h-11 md:w-11"
             aria-label="Send message"
           >
             {isUploading ? (
