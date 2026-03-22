@@ -88,14 +88,14 @@ function isPlaceholderImage(img: HTMLImageElement): boolean {
       buckets.set(key, (buckets.get(key) || 0) + 1)
     }
 
-    // Real photos at 16×16 typically produce 15+ distinct color buckets.
-    // Simple icons/placeholders produce ≤6.
-    if (buckets.size > 6) return false
+    // Real photos at 16×16 typically produce 12+ distinct color buckets.
+    // Simple icons/placeholders (like Signal's dashed circle) produce ≤10.
+    if (buckets.size > 10) return false
 
-    // Additionally check that the top 2 buckets cover ≥80% of all pixels
+    // If the single most dominant color covers ≥50% of pixels, it's likely
+    // a simple icon on a solid background, not a real photo.
     const sorted = [...buckets.values()].sort((a, b) => b - a)
-    const topTwo = (sorted[0] || 0) + (sorted[1] || 0)
-    return topTwo > total * 0.8
+    return sorted[0] > total * 0.5
   } catch {
     return false
   }
