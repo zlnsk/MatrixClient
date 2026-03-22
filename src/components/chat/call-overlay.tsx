@@ -21,7 +21,6 @@ import {
   Minimize,
   Minimize2,
   Maximize2,
-  X,
   Sparkles,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'

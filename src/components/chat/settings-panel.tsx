@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { getHomeserverUrl, getHomeserverDomain, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient, generateSecurityKey } from '@/lib/matrix/client'
 import {
-  X,
   LogOut,
   User,
   Shield,
@@ -155,8 +154,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex h-[500px] w-full max-w-2xl animate-slide-in overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex h-[500px] w-full max-w-2xl animate-slide-in overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900" onClick={e => e.stopPropagation()}>
         {/* Left nav */}
         <div className="w-48 flex-shrink-0 border-r border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
           <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">Settings</h2>
@@ -198,14 +197,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6">
             <h3 className="text-lg font-bold text-gray-900 capitalize dark:text-white">{activeSection}</h3>
-            <button
-              onClick={onClose}
-              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
 
           {activeSection === 'profile' && (

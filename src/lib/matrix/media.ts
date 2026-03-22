@@ -91,7 +91,7 @@ export async function fetchAuthenticatedThumbnail(
   const media = encodeURIComponent(parsed.mediaId)
   const qs = `width=${width}&height=${height}&method=crop`
 
-  // Try authenticated v1 endpoint first
+  // Try authenticated v1 thumbnail endpoint first
   try {
     const v1Url = `${hs}/_matrix/client/v1/media/thumbnail/${server}/${media}?${qs}`
     const res = await fetch(v1Url, {
@@ -99,19 +99,46 @@ export async function fetchAuthenticatedThumbnail(
     })
     if (res.ok) {
       const blob = await res.blob()
-      return URL.createObjectURL(blob)
+      if (blob.size > 0) return URL.createObjectURL(blob)
     }
-  } catch { /* fall through to legacy */ }
+  } catch { /* fall through */ }
 
-  // Fallback: legacy unauthenticated endpoint
-  const legacyUrl = `${hs}/_matrix/media/v3/thumbnail/${server}/${media}?${qs}`
-  const res = await fetch(legacyUrl, {
-    headers: { 'Authorization': `Bearer ${accessToken}` },
-  })
-  if (!res.ok) throw new Error(`Thumbnail fetch failed: ${res.status}`)
+  // Fallback: legacy thumbnail endpoint
+  try {
+    const legacyUrl = `${hs}/_matrix/media/v3/thumbnail/${server}/${media}?${qs}`
+    const res = await fetch(legacyUrl, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    })
+    if (res.ok) {
+      const blob = await res.blob()
+      if (blob.size > 0) return URL.createObjectURL(blob)
+    }
+  } catch { /* fall through */ }
 
-  const blob = await res.blob()
-  return URL.createObjectURL(blob)
+  // Final fallback: download the full image (some servers fail to thumbnail remote media)
+  try {
+    const downloadUrl = `${hs}/_matrix/client/v1/media/download/${server}/${media}`
+    const res = await fetch(downloadUrl, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    })
+    if (res.ok) {
+      const blob = await res.blob()
+      if (blob.size > 0) return URL.createObjectURL(blob)
+    }
+  } catch { /* fall through */ }
+
+  try {
+    const legacyDownload = `${hs}/_matrix/media/v3/download/${server}/${media}`
+    const res = await fetch(legacyDownload, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    })
+    if (res.ok) {
+      const blob = await res.blob()
+      if (blob.size > 0) return URL.createObjectURL(blob)
+    }
+  } catch { /* fall through */ }
+
+  throw new Error(`Thumbnail fetch failed for ${mxcUrl}`)
 }
 
 /**

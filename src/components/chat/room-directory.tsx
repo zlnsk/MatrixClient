@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { getMatrixClient } from '@/lib/matrix/client'
 import { useChatStore } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
-import { X, Search, Globe, Loader2, Users, Lock, Hash } from 'lucide-react'
+import { Search, Globe, Loader2, Users, Lock, Hash } from 'lucide-react'
 
 interface RoomDirectoryProps {
   onClose: () => void
@@ -85,17 +85,12 @@ export function RoomDirectory({ onClose, onRoomJoined }: RoomDirectoryProps) {
   const joinedRoomIds = new Set((client?.getRooms() || []).filter(r => r.getMyMembership() === 'join').map(r => r.roomId))
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex h-[600px] w-full max-w-2xl animate-slide-in flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex h-[600px] w-full max-w-2xl animate-slide-in flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
-          <div className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-indigo-500" />
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Room Directory</h2>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white">
-            <X className="h-5 w-5" />
-          </button>
+        <div className="flex items-center gap-2 border-b border-gray-200 p-4 dark:border-gray-800">
+          <Globe className="h-5 w-5 text-indigo-500" />
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Room Directory</h2>
         </div>
 
         {/* Search */}

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useChatStore } from '@/stores/chat-store'
 import { getHomeserverDomain } from '@/lib/matrix/client'
 import {
-  X,
   MessageSquare,
   Users,
   Loader2,
@@ -96,17 +95,11 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md animate-slide-in rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md animate-slide-in rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
+        <div className="border-b border-gray-200 p-4 dark:border-gray-800">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Conversation</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         {/* Tabs */}
