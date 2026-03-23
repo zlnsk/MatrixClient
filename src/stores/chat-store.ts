@@ -74,6 +74,7 @@ export interface MatrixMessage {
   msgtype: string
   readBy: ReadReceipt[]
   status: 'sending' | 'sent' | 'delivered' | 'read'
+  isStateEvent?: boolean
 }
 
 interface ChatState {
@@ -228,6 +229,71 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   // Accept message events, encrypted events, and stickers
   const isMessage = effectiveType === 'm.room.message' || effectiveType === 'm.sticker'
   const isEncrypted = wireType === 'm.room.encrypted' || effectiveType === 'm.room.encrypted'
+
+  // Handle state events as system messages
+  const isStateEvent = effectiveType === 'm.room.encryption' || effectiveType === 'm.room.member' || effectiveType === 'm.room.name' || effectiveType === 'm.room.topic'
+  if (isStateEvent) {
+    const sender = event.getSender()!
+    const member = room.getMember(sender)
+    const senderName = cleanDisplayName(member?.name || sender)
+    let stateContent = ''
+
+    if (effectiveType === 'm.room.encryption') {
+      stateContent = `${senderName} enabled end-to-end encryption`
+    } else if (effectiveType === 'm.room.member') {
+      const membership = event.getContent()?.membership
+      const prevMembership = event.getPrevContent?.()?.membership
+      const targetName = cleanDisplayName(event.getContent()?.displayname || event.getStateKey?.() || sender)
+      if (membership === 'join' && prevMembership === 'invite') {
+        stateContent = `${targetName} joined the room`
+      } else if (membership === 'join' && prevMembership === 'join') {
+        stateContent = `${targetName} updated their profile`
+      } else if (membership === 'join') {
+        stateContent = `${targetName} joined the room`
+      } else if (membership === 'invite') {
+        stateContent = `${senderName} invited ${targetName}`
+      } else if (membership === 'leave') {
+        if (event.getStateKey?.() === sender) {
+          stateContent = `${targetName} left the room`
+        } else {
+          stateContent = `${senderName} removed ${targetName}`
+        }
+      } else if (membership === 'ban') {
+        stateContent = `${senderName} banned ${targetName}`
+      } else {
+        stateContent = `${targetName} membership changed to ${membership}`
+      }
+    } else if (effectiveType === 'm.room.name') {
+      const newName = event.getContent()?.name
+      stateContent = newName ? `${senderName} changed the room name to "${newName}"` : `${senderName} removed the room name`
+    } else if (effectiveType === 'm.room.topic') {
+      const newTopic = event.getContent()?.topic
+      stateContent = newTopic ? `${senderName} changed the topic to "${newTopic}"` : `${senderName} removed the topic`
+    }
+
+    return {
+      eventId: event.getId()!,
+      roomId: room.roomId,
+      senderId: sender,
+      senderName,
+      senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
+      type: 'm.text',
+      msgtype: 'm.text',
+      content: stateContent,
+      formattedContent: null,
+      timestamp: event.getTs(),
+      isEdited: false,
+      isRedacted: false,
+      replyToEvent: null,
+      reactions: new Map(),
+      mediaUrl: null,
+      mediaInfo: null,
+      encryptedFile: null,
+      readBy: [],
+      status: 'sent',
+      isStateEvent: true,
+    }
+  }
 
   if (!isMessage && !isEncrypted) return null
 

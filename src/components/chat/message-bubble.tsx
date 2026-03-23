@@ -348,6 +348,16 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
     }
   }
 
+  if (message.isStateEvent) {
+    return (
+      <div className="flex justify-center my-2">
+        <span className="rounded-full bg-m3-surface-container px-4 py-1.5 text-xs text-m3-on-surface-variant shadow-sm dark:bg-m3-surface-container-high dark:text-m3-outline">
+          {message.content}
+        </span>
+      </div>
+    )
+  }
+
   if (message.isRedacted) {
     return (
       <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-3' : 'mt-0.5'}`}>
@@ -426,13 +436,13 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             {message.replyToEvent && !isEditing && (
               <div className={`mb-2 rounded-lg px-3 py-1.5 text-xs ${
                 isOwn
-                  ? 'border-l-2 border-white/40 bg-black/15'
+                  ? 'border-l-2 border-white/60 bg-white/20'
                   : 'border-l-2 border-m3-outline bg-m3-surface-container/80 dark:border-m3-outline dark:bg-m3-surface-container-highest/50'
               }`}>
                 <p className={`font-semibold ${isOwn ? 'text-white' : 'text-m3-on-surface dark:text-m3-on-surface-variant'}`}>
                   {message.replyToEvent.senderName}
                 </p>
-                <p className={`truncate ${isOwn ? 'text-white/70' : 'text-m3-on-surface-variant dark:text-m3-outline'}`}>
+                <p className={`truncate ${isOwn ? 'text-white/80' : 'text-m3-on-surface-variant dark:text-m3-outline'}`}>
                   {message.replyToEvent.content}
                 </p>
               </div>
@@ -588,12 +598,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
           {/* Emoji picker (desktop only) */}
           {showEmojiPicker && (
-            <div className={`absolute bottom-full mb-1 z-20 hidden md:grid grid-cols-5 gap-0.5 rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest p-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high ${isOwn ? 'right-0' : 'left-0'}`}>
+            <div className={`absolute bottom-full mb-2 z-30 hidden md:grid grid-cols-5 gap-1 rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest p-2.5 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high ${isOwn ? 'right-0' : 'left-0'}`}>
               {QUICK_EMOJIS.map(emoji => (
                 <button
                   key={emoji}
                   onClick={() => handleReaction(emoji)}
-                  className="rounded-lg p-1.5 text-lg transition-transform hover:scale-125 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-xl transition-transform hover:scale-125 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
                 >
                   {emoji}
                 </button>
@@ -603,7 +613,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
           {/* Context menu (desktop only) */}
           {showContextMenu && (
-            <div className={`absolute top-0 z-20 hidden md:block min-w-[160px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high ${isOwn ? 'right-full mr-1' : 'left-full ml-1'}`}>
+            <div className={`absolute top-0 z-30 hidden md:block min-w-[160px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high ${isOwn ? 'right-full mr-1' : 'left-full ml-1'}`}>
               <button
                 onClick={handleCopy}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
@@ -785,7 +795,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
           {/* Reactions */}
           {message.reactions.size > 0 && (
-            <div className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <div className={`relative z-10 mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
               {Array.from(message.reactions.entries()).map(([emoji, data]) => (
                 <div key={emoji} className="group/reaction relative">
                   <button

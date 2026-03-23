@@ -256,7 +256,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
           </div>
         )}
 
-        {activeRooms.length === 0 && !showArchived ? (
+        {activeRooms.length === 0 && !showArchived && !(searchFilter.trim() && archivedRooms.length > 0) ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <MessageSquare className="h-10 w-10 text-m3-outline-variant dark:text-m3-on-surface" />
             <p className="mt-3 text-sm text-m3-on-surface-variant">
@@ -298,7 +298,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
               Archived ({archivedRooms.length})
               <span className="ml-auto text-m3-outline">{showArchived ? '▲' : '▼'}</span>
             </button>
-            {showArchived && (
+            {(showArchived || searchFilter.trim()) && (
               <div className="space-y-0.5 py-1">
                 {archivedRooms.map(room => (
                   <RoomListItem
