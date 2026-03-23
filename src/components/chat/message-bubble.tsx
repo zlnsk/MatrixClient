@@ -64,9 +64,8 @@ function parseDisplayName(senderName: string, senderId: string): { displayName: 
     // Show clean localpart, full ID as subtitle
     return { displayName: localpart, matrixId: senderId }
   }
-  // Clean name, only show Matrix ID if it's a bridged/bot user (contains UUID-like patterns)
-  const hasUuid = /[0-9a-f]{8}-[0-9a-f]{4}/.test(senderId)
-  return { displayName: senderName, matrixId: hasUuid ? senderId : null }
+  // Clean name — hide Matrix ID for bridge users (signal_, telegram_, etc.) since it's just noise
+  return { displayName: senderName, matrixId: null }
 }
 
 function renderRichContent(content: string, formattedContent: string | null): string {
