@@ -12,7 +12,7 @@ import { useChatStore } from './chat-store'
 import { useCallStore } from './call-store'
 
 // H-5: Session idle timeout — auto-logout after inactivity
-const IDLE_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
+const IDLE_TIMEOUT_MS = 8 * 60 * 60 * 1000 // 8 hours
 let idleTimer: ReturnType<typeof setTimeout> | null = null
 let idleListenersAttached = false
 
@@ -32,7 +32,7 @@ function resetIdleTimer() {
 function attachIdleListeners() {
   if (idleListenersAttached || typeof window === 'undefined') return
   idleListenersAttached = true
-  const events = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const
+  const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'] as const
   events.forEach(evt => window.addEventListener(evt, resetIdleTimer, { passive: true }))
   resetIdleTimer()
 }
@@ -41,7 +41,7 @@ function detachIdleListeners() {
   if (!idleListenersAttached || typeof window === 'undefined') return
   idleListenersAttached = false
   if (idleTimer) { clearTimeout(idleTimer); idleTimer = null }
-  const events = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const
+  const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'] as const
   events.forEach(evt => window.removeEventListener(evt, resetIdleTimer))
 }
 

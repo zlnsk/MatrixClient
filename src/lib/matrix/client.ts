@@ -12,7 +12,7 @@ let matrixClient: sdk.MatrixClient | null = null
 export function getHomeserverUrl(): string | null {
   if (typeof window === 'undefined') return null
   try {
-    const session = sessionStorage.getItem('matrix_session')
+    const session = localStorage.getItem('matrix_session')
     if (session) {
       return JSON.parse(session).homeserverUrl || null
     }
@@ -483,7 +483,7 @@ export async function loginWithPassword(
   await initCrypto(matrixClient)
 
   // Persist session
-  sessionStorage.setItem(
+  localStorage.setItem(
     'matrix_session',
     JSON.stringify({
       accessToken: response.access_token,
@@ -497,7 +497,7 @@ export async function loginWithPassword(
 }
 
 export function restoreSession(): sdk.MatrixClient | null {
-  const stored = sessionStorage.getItem('matrix_session')
+  const stored = localStorage.getItem('matrix_session')
   if (!stored) return null
 
   try {
@@ -505,7 +505,7 @@ export function restoreSession(): sdk.MatrixClient | null {
 
     // Validate session data
     if (!session.accessToken || !session.userId || !session.deviceId || !session.homeserverUrl) {
-      sessionStorage.removeItem('matrix_session')
+      localStorage.removeItem('matrix_session')
       return null
     }
 
@@ -513,7 +513,7 @@ export function restoreSession(): sdk.MatrixClient | null {
     try {
       new URL(session.homeserverUrl)
     } catch {
-      sessionStorage.removeItem('matrix_session')
+      localStorage.removeItem('matrix_session')
       return null
     }
 
@@ -530,7 +530,7 @@ export function restoreSession(): sdk.MatrixClient | null {
     })
     return matrixClient
   } catch {
-    sessionStorage.removeItem('matrix_session')
+    localStorage.removeItem('matrix_session')
     return null
   }
 }
@@ -562,7 +562,7 @@ export async function startSync(): Promise<void> {
         console.warn('Sync returned 401 — token rejected, forcing logout')
         matrixClient?.stopClient()
         matrixClient = null
-        sessionStorage.removeItem('matrix_session')
+        localStorage.removeItem('matrix_session')
         window.location.href = '/login'
       }
     }
@@ -583,7 +583,7 @@ export async function logout(): Promise<void> {
     }
   }
   matrixClient = null
-  sessionStorage.removeItem('matrix_session')
+  localStorage.removeItem('matrix_session')
 }
 
 export function getAvatarUrl(
