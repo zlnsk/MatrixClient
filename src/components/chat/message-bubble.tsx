@@ -793,17 +793,17 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           )}
           </div>{/* end bubble wrapper */}
 
-          {/* Reactions */}
+          {/* Reactions — overlapping bottom edge of bubble like Google Messages */}
           {message.reactions.size > 0 && (
-            <div className={`relative z-10 mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <div className={`relative z-10 -mt-2.5 mb-0.5 flex flex-wrap gap-1 px-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
               {Array.from(message.reactions.entries()).map(([emoji, data]) => (
                 <div key={emoji} className="group/reaction relative">
                   <button
                     onClick={() => handleReaction(emoji)}
-                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all hover:scale-105 ${
+                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs shadow-sm transition-all hover:scale-105 ${
                       data.includesMe
                         ? 'border-m3-primary/50 bg-m3-primary-container text-m3-primary dark:border-m3-primary/50 dark:bg-m3-primary-container/30 dark:text-m3-primary'
-                        : 'border-m3-outline-variant bg-m3-surface-container-lowest text-m3-on-surface-variant hover:border-m3-outline hover:bg-m3-surface-container-low dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-outline dark:hover:border-m3-outline'
+                        : 'border-m3-outline-variant bg-white text-m3-on-surface-variant hover:border-m3-outline hover:bg-m3-surface-container-low dark:border-m3-outline-variant dark:bg-m3-surface-container dark:text-m3-outline dark:hover:border-m3-outline'
                     }`}
                   >
                     <span>{emoji}</span>
