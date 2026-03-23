@@ -25,7 +25,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const client = getMatrixClient()
     if (!client) return
 
-    const { loadRooms, loadMessages, unarchiveRoom } = useChatStore.getState()
+    const { loadRooms, loadMessages, unarchiveRoom, markAsRead } = useChatStore.getState()
 
     // --- Debounce helpers ---
     // Debounce loadRooms so rapid-fire events batch together
@@ -94,14 +94,26 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         debouncedLoadMessages(room.roomId)
       }
 
+      // If a live message arrived in the active room, mark it as read immediately
+      // so the sidebar unread badge stays cleared
+      if (
+        (eventType === 'm.room.message' || eventType === 'm.room.encrypted') &&
+        data?.liveEvent &&
+        currentActiveRoom?.roomId === room.roomId
+      ) {
+        markAsRead(room.roomId)
+      }
+
       // Sound + browser notification for messages from others
       if (
         (eventType === 'm.room.message' || eventType === 'm.room.encrypted') &&
         event.getSender() !== user.userId &&
         data?.liveEvent
       ) {
-        // Play sound regardless of tab visibility
-        playNotificationSound()
+        // Only play sound if the message is NOT in the active room, or if the tab is hidden
+        if (!currentActiveRoom || currentActiveRoom.roomId !== room.roomId || document.hidden) {
+          playNotificationSound()
+        }
 
         // Show browser notification only when tab is hidden
         if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
