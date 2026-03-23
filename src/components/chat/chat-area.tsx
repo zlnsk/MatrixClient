@@ -30,6 +30,7 @@ import {
   Pin,
   Image as ImageIcon,
   FileText,
+  AtSign,
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
 import { decryptMediaAttachment, fetchAuthenticatedMedia } from '@/lib/matrix/media'
@@ -526,10 +527,11 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         </span>
       </div>
 
-      {/* Room Info Panel — full-width overlay replacing chat content */}
+      {/* Room Info Panel — Google Messages style full-page overlay */}
       {showRoomInfo && (
-        <div className="absolute inset-0 z-40 flex flex-col bg-white dark:bg-m3-surface animate-fade-in">
-          <div className="flex items-center gap-3 border-b border-m3-outline-variant bg-white px-4 py-3 dark:border-m3-outline-variant dark:bg-m3-surface-container">
+        <div className="absolute inset-0 z-40 flex flex-col bg-white dark:bg-m3-surface">
+          {/* Header with back arrow */}
+          <div className="flex items-center gap-3 border-b border-m3-outline-variant bg-white px-2 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4">
             <button
               onClick={() => setShowRoomInfo(false)}
               className="rounded-full p-2 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
@@ -538,68 +540,56 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             </button>
             <h3 className="text-base font-medium text-m3-on-surface dark:text-m3-on-surface">Details</h3>
           </div>
-          <div className="flex-1 overflow-y-auto">
 
-          <div className="mx-auto w-full max-w-lg p-6 space-y-5">
-            {/* Room avatar + name */}
-            <div className="flex flex-col items-center gap-3">
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Avatar + name hero section */}
+            <div className="flex flex-col items-center px-6 pb-6 pt-8">
               <Avatar
                 src={activeRoom.isDirect ? otherMember?.avatarUrl : activeRoom.avatarUrl}
                 name={roomDisplayName}
                 size="lg"
               />
-              <div className="w-full text-center">
+              <div className="mt-4 w-full text-center">
                 {editingName ? (
-                  <div className="flex items-center gap-2">
+                  <div className="mx-auto flex max-w-xs items-center gap-2">
                     <input
                       type="text"
                       value={nameInput}
                       onChange={e => setNameInput(e.target.value)}
                       autoFocus
-                      className="flex-1 rounded-lg border border-m3-outline bg-m3-surface-container-lowest px-3 py-1.5 text-sm text-m3-on-surface focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline dark:bg-m3-surface-container-high dark:text-m3-on-surface"
+                      className="flex-1 border-b-2 border-m3-primary bg-transparent px-1 py-1.5 text-center text-lg font-medium text-m3-on-surface focus:outline-none dark:text-m3-on-surface"
                       onKeyDown={async e => {
                         if (e.key === 'Enter' && nameInput.trim()) {
                           setSavingName(true)
-                          try {
-                            await setRoomName(activeRoom.roomId, nameInput.trim())
-                          } catch { /* handled in store */ }
-                          setSavingName(false)
-                          setEditingName(false)
-                        } else if (e.key === 'Escape') {
-                          setEditingName(false)
-                        }
+                          try { await setRoomName(activeRoom.roomId, nameInput.trim()) } catch {}
+                          setSavingName(false); setEditingName(false)
+                        } else if (e.key === 'Escape') setEditingName(false)
                       }}
                     />
                     <button
                       onClick={async () => {
                         if (!nameInput.trim()) return
                         setSavingName(true)
-                        try {
-                          await setRoomName(activeRoom.roomId, nameInput.trim())
-                        } catch { /* handled in store */ }
-                        setSavingName(false)
-                        setEditingName(false)
+                        try { await setRoomName(activeRoom.roomId, nameInput.trim()) } catch {}
+                        setSavingName(false); setEditingName(false)
                       }}
                       disabled={savingName}
-                      className="rounded-lg p-1.5 text-green-600 transition-colors hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
+                      className="rounded-full p-1.5 text-m3-primary transition-colors hover:bg-m3-primary-container"
                     >
                       {savingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                     </button>
-                    <button
-                      onClick={() => setEditingName(false)}
-                      className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
-                    >
+                    <button onClick={() => setEditingName(false)} className="rounded-full p-1.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2">
-                    <h4 className="text-lg font-bold text-m3-on-surface dark:text-m3-on-surface">{roomDisplayName}</h4>
+                    <h4 className="text-xl font-medium text-m3-on-surface dark:text-m3-on-surface">{roomDisplayName}</h4>
                     {!activeRoom.isDirect && (
                       <button
                         onClick={() => { setNameInput(activeRoom.name); setEditingName(true) }}
-                        className="rounded-lg p-1 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
-                        title="Edit room name"
+                        className="rounded-full p-1.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
@@ -608,60 +598,48 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                 )}
 
                 {editingTopic ? (
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="mx-auto mt-2 flex max-w-xs items-center gap-2">
                     <input
                       type="text"
                       value={topicInput}
                       onChange={e => setTopicInput(e.target.value)}
                       placeholder="Set a topic..."
                       autoFocus
-                      className="flex-1 rounded-lg border border-m3-outline bg-m3-surface-container-lowest px-3 py-1.5 text-sm text-m3-on-surface focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline dark:bg-m3-surface-container-high dark:text-m3-on-surface"
+                      className="flex-1 border-b border-m3-primary bg-transparent px-1 py-1 text-center text-sm text-m3-on-surface focus:outline-none dark:text-m3-on-surface"
                       onKeyDown={async e => {
                         if (e.key === 'Enter') {
                           setSavingTopic(true)
-                          try {
-                            await setRoomTopic(activeRoom.roomId, topicInput.trim())
-                          } catch { /* handled in store */ }
-                          setSavingTopic(false)
-                          setEditingTopic(false)
-                        } else if (e.key === 'Escape') {
-                          setEditingTopic(false)
-                        }
+                          try { await setRoomTopic(activeRoom.roomId, topicInput.trim()) } catch {}
+                          setSavingTopic(false); setEditingTopic(false)
+                        } else if (e.key === 'Escape') setEditingTopic(false)
                       }}
                     />
                     <button
                       onClick={async () => {
                         setSavingTopic(true)
-                        try {
-                          await setRoomTopic(activeRoom.roomId, topicInput.trim())
-                        } catch { /* handled in store */ }
-                        setSavingTopic(false)
-                        setEditingTopic(false)
+                        try { await setRoomTopic(activeRoom.roomId, topicInput.trim()) } catch {}
+                        setSavingTopic(false); setEditingTopic(false)
                       }}
                       disabled={savingTopic}
-                      className="rounded-lg p-1.5 text-green-600 transition-colors hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
+                      className="rounded-full p-1 text-m3-primary transition-colors hover:bg-m3-primary-container"
                     >
-                      {savingTopic ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                      {savingTopic ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                     </button>
-                    <button
-                      onClick={() => setEditingTopic(false)}
-                      className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
-                    >
-                      <X className="h-4 w-4" />
+                    <button onClick={() => setEditingTopic(false)} className="rounded-full p-1 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container">
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ) : (
                   <div className="mt-1 flex items-center justify-center gap-1">
                     {activeRoom.topic ? (
                       <p className="text-sm text-m3-on-surface-variant dark:text-m3-outline">{activeRoom.topic}</p>
-                    ) : (
+                    ) : !activeRoom.isDirect ? (
                       <p className="text-sm italic text-m3-outline dark:text-m3-on-surface-variant">No topic set</p>
-                    )}
+                    ) : null}
                     {!activeRoom.isDirect && (
                       <button
                         onClick={() => { setTopicInput(activeRoom.topic || ''); setEditingTopic(true) }}
-                        className="rounded-lg p-1 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
-                        title="Edit room topic"
+                        className="rounded-full p-1 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                       >
                         <Pencil className="h-3 w-3" />
                       </button>
@@ -671,238 +649,200 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
               </div>
             </div>
 
-            {/* Room ID */}
-            <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-3 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-              <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Room ID</p>
-              <p className="mt-1 font-mono text-xs text-m3-on-surface dark:text-m3-on-surface-variant break-all">{activeRoom.roomId}</p>
+            {/* Action buttons row — Google Messages style */}
+            <div className="flex justify-center gap-6 border-b border-m3-outline-variant px-6 pb-5 dark:border-m3-outline-variant">
+              {activeRoom.encrypted ? (
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/20">
+                    <Shield className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <span className="text-xs text-green-600 dark:text-green-400">Encrypted</span>
+                </div>
+              ) : (
+                <button
+                  onClick={async () => { try { await enableEncryption(activeRoom.roomId) } catch {} }}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-m3-surface-container transition-colors hover:bg-m3-surface-container-high dark:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest">
+                    <Lock className="h-5 w-5 text-m3-on-surface-variant" />
+                  </div>
+                  <span className="text-xs text-m3-on-surface-variant">Encrypt</span>
+                </button>
+              )}
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  onClick={() => setNotifSetting(notifSetting === 'mute' ? 'all' : 'mute')}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-m3-surface-container transition-colors hover:bg-m3-surface-container-high dark:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest"
+                >
+                  {notifSetting === 'mute' ? <BellOff className="h-5 w-5 text-m3-error" /> : <Bell className="h-5 w-5 text-m3-on-surface-variant" />}
+                </button>
+                <span className="text-xs text-m3-on-surface-variant">{notifSetting === 'mute' ? 'Muted' : 'Notifications'}</span>
+              </div>
             </div>
 
-            {/* Encryption */}
-            <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-3 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {activeRoom.encrypted ? (
-                    <>
-                      <Shield className="h-4 w-4 text-green-500" />
-                      <span className="text-sm font-medium text-green-600 dark:text-green-400">End-to-end encrypted</span>
-                    </>
-                  ) : (
-                    <>
-                      <Shield className="h-4 w-4 text-m3-outline" />
-                      <span className="text-sm font-medium text-m3-on-surface-variant dark:text-m3-outline">Not encrypted</span>
-                    </>
-                  )}
+            {/* List-style sections */}
+            <div className="divide-y divide-m3-outline-variant dark:divide-m3-outline-variant">
+              {/* Room ID — subtle, compact */}
+              <button
+                onClick={() => { navigator.clipboard.writeText(activeRoom.roomId) }}
+                className="flex w-full items-start gap-4 px-6 py-4 text-left transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+              >
+                <AtSign className="mt-0.5 h-5 w-5 flex-shrink-0 text-m3-on-surface-variant dark:text-m3-outline" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-m3-on-surface dark:text-m3-on-surface break-all font-mono">{activeRoom.roomId}</p>
+                  <p className="mt-0.5 text-xs text-m3-on-surface-variant dark:text-m3-outline">Tap to copy</p>
                 </div>
-                {!activeRoom.encrypted && (
+              </button>
+
+              {/* Notification settings — expanded */}
+              <div className="px-6 py-4">
+                <div className="flex items-center gap-4">
+                  <Bell className="h-5 w-5 flex-shrink-0 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <p className="text-sm text-m3-on-surface dark:text-m3-on-surface">Notifications</p>
+                </div>
+                <div className="mt-3 ml-9 flex gap-2">
+                  {(['all', 'mentions', 'mute'] as const).map(setting => (
+                    <button
+                      key={setting}
+                      onClick={() => setNotifSetting(setting)}
+                      className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                        notifSetting === setting
+                          ? setting === 'mute'
+                            ? 'bg-m3-error-container text-m3-error dark:bg-m3-error-container/30'
+                            : 'bg-m3-primary-container text-m3-on-primary-container dark:bg-m3-primary-container/30 dark:text-m3-primary'
+                          : 'bg-m3-surface-container text-m3-on-surface-variant hover:bg-m3-surface-container-high dark:bg-m3-surface-container-high dark:text-m3-outline dark:hover:bg-m3-surface-container-highest'
+                      }`}
+                    >
+                      {setting === 'mute' ? 'Mute' : setting.charAt(0).toUpperCase() + setting.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Invite Member */}
+              <div className="px-6 py-4">
+                <div className="flex items-center gap-4">
+                  <UserPlus className="h-5 w-5 flex-shrink-0 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <p className="text-sm text-m3-on-surface dark:text-m3-on-surface">Invite member</p>
+                </div>
+                <div className="mt-3 ml-9 flex gap-2">
+                  <input
+                    type="text"
+                    value={inviteInput}
+                    onChange={e => { setInviteInput(e.target.value); setInviteError('') }}
+                    placeholder="@user:server.com"
+                    className="flex-1 border-b border-m3-outline-variant bg-transparent py-1.5 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none dark:border-m3-outline dark:text-m3-on-surface dark:placeholder-m3-outline"
+                    onKeyDown={async e => {
+                      if (e.key === 'Enter') {
+                        const matrixIdRegex = /^@[a-zA-Z0-9._=\-/+]+:[a-zA-Z0-9.-]+$/
+                        if (!matrixIdRegex.test(inviteInput.trim())) { setInviteError('Invalid Matrix user ID format'); return }
+                        setInviting(true); setInviteError('')
+                        try { await inviteMember(activeRoom.roomId, inviteInput.trim()); setInviteInput('') }
+                        catch (err) { setInviteError(err instanceof Error ? err.message : 'Failed to invite') }
+                        setInviting(false)
+                      }
+                    }}
+                  />
                   <button
                     onClick={async () => {
-                      try {
-                        await enableEncryption(activeRoom.roomId)
-                      } catch { /* handled in store */ }
-                    }}
-                    className="flex items-center gap-1 rounded-lg bg-m3-primary px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-m3-primary/90"
-                  >
-                    <Lock className="h-3 w-3" />
-                    Enable
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Notification Settings */}
-            <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-3 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-              <div className="flex items-center gap-2 mb-3">
-                <Bell className="h-4 w-4 text-m3-on-surface-variant" />
-                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Notifications</p>
-              </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setNotifSetting('all')}
-                  className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
-                    notifSetting === 'all'
-                      ? 'bg-m3-primary-container text-m3-on-primary-container dark:bg-m3-primary-container/50 dark:text-m3-primary'
-                      : 'text-m3-on-surface-variant hover:bg-m3-surface-container-high dark:text-m3-outline dark:hover:bg-m3-surface-container-highest'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setNotifSetting('mentions')}
-                  className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
-                    notifSetting === 'mentions'
-                      ? 'bg-m3-primary-container text-m3-on-primary-container dark:bg-m3-primary-container/50 dark:text-m3-primary'
-                      : 'text-m3-on-surface-variant hover:bg-m3-surface-container-high dark:text-m3-outline dark:hover:bg-m3-surface-container-highest'
-                  }`}
-                >
-                  Mentions
-                </button>
-                <button
-                  onClick={() => setNotifSetting('mute')}
-                  className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
-                    notifSetting === 'mute'
-                      ? 'bg-red-100 text-m3-on-error-container dark:bg-m3-error-container/50 dark:text-red-300'
-                      : 'text-m3-on-surface-variant hover:bg-m3-surface-container-high dark:text-m3-outline dark:hover:bg-m3-surface-container-highest'
-                  }`}
-                >
-                  <BellOff className="mx-auto h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Invite Member */}
-            <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-3 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-              <div className="flex items-center gap-2 mb-3">
-                <UserPlus className="h-4 w-4 text-m3-on-surface-variant" />
-                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Invite Member</p>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={inviteInput}
-                  onChange={e => { setInviteInput(e.target.value); setInviteError('') }}
-                  placeholder="@user:server.com"
-                  className="flex-1 rounded-lg border border-m3-outline bg-m3-surface-container-lowest px-3 py-1.5 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
-                  onKeyDown={async e => {
-                    if (e.key === 'Enter') {
                       const matrixIdRegex = /^@[a-zA-Z0-9._=\-/+]+:[a-zA-Z0-9.-]+$/
-                      if (!matrixIdRegex.test(inviteInput.trim())) {
-                        setInviteError('Invalid Matrix user ID format')
-                        return
-                      }
-                      setInviting(true)
-                      setInviteError('')
-                      try {
-                        await inviteMember(activeRoom.roomId, inviteInput.trim())
-                        setInviteInput('')
-                      } catch (err) {
-                        setInviteError(err instanceof Error ? err.message : 'Failed to invite')
-                      }
+                      if (!matrixIdRegex.test(inviteInput.trim())) { setInviteError('Invalid Matrix user ID format'); return }
+                      setInviting(true); setInviteError('')
+                      try { await inviteMember(activeRoom.roomId, inviteInput.trim()); setInviteInput('') }
+                      catch (err) { setInviteError(err instanceof Error ? err.message : 'Failed to invite') }
                       setInviting(false)
-                    }
-                  }}
-                />
-                <button
-                  onClick={async () => {
-                    const matrixIdRegex = /^@[a-zA-Z0-9._=\-/+]+:[a-zA-Z0-9.-]+$/
-                    if (!matrixIdRegex.test(inviteInput.trim())) {
-                      setInviteError('Invalid Matrix user ID format')
-                      return
-                    }
-                    setInviting(true)
-                    setInviteError('')
-                    try {
-                      await inviteMember(activeRoom.roomId, inviteInput.trim())
-                      setInviteInput('')
-                    } catch (err) {
-                      setInviteError(err instanceof Error ? err.message : 'Failed to invite')
-                    }
-                    setInviting(false)
-                  }}
-                  disabled={inviting || !inviteInput.trim()}
-                  className="rounded-lg bg-m3-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-m3-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-                </button>
+                    }}
+                    disabled={inviting || !inviteInput.trim()}
+                    className="rounded-full bg-m3-primary p-2 text-white transition-colors hover:bg-m3-primary/90 disabled:opacity-50"
+                  >
+                    {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                  </button>
+                </div>
+                {inviteError && <p className="ml-9 mt-1.5 text-xs text-m3-error">{inviteError}</p>}
               </div>
-              {inviteError && (
-                <p className="mt-1.5 text-xs text-m3-error dark:text-m3-error">{inviteError}</p>
-              )}
-            </div>
 
-            {/* Members */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Users className="h-4 w-4 text-m3-on-surface-variant" />
-                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">
-                  Members ({activeRoom.members.length})
-                </h4>
-              </div>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {activeRoom.members.map(member => (
-                  <div key={member.userId} className="flex items-center gap-3 rounded-lg p-2 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
-                    <Avatar
-                      src={member.avatarUrl}
-                      name={member.displayName}
-                      size="sm"
-                      status={member.presence === 'online' ? 'online' : member.presence === 'unavailable' ? 'away' : null}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">{member.displayName}</p>
-                      <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">{member.userId}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Media Gallery */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <ImageIcon className="h-4 w-4 text-m3-on-surface-variant" />
-                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">Shared Media</h4>
-              </div>
-              <div className="grid grid-cols-3 gap-1 max-h-64 overflow-y-auto rounded-lg">
-                {messages
-                  .filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video'))
-                  .slice(-30)
-                  .reverse()
-                  .map(m => (
-                    <div
-                      key={m.eventId}
-                      className="aspect-square overflow-hidden rounded-lg bg-m3-surface-container dark:bg-m3-surface-container-high"
-                    >
-                      <MediaThumbnail message={m} />
+              {/* Members */}
+              <div className="px-6 py-4">
+                <div className="flex items-center gap-4 mb-3">
+                  <Users className="h-5 w-5 flex-shrink-0 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">
+                    Members ({activeRoom.members.length})
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  {activeRoom.members.map(member => (
+                    <div key={member.userId} className="flex items-center gap-3 rounded-full px-3 py-2 transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
+                      <Avatar
+                        src={member.avatarUrl}
+                        name={member.displayName}
+                        size="sm"
+                        status={member.presence === 'online' ? 'online' : member.presence === 'unavailable' ? 'away' : null}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm text-m3-on-surface dark:text-m3-on-surface">{member.displayName}</p>
+                        <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">{member.userId}</p>
+                      </div>
                     </div>
                   ))}
-                {messages.filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video')).length === 0 && (
-                  <p className="col-span-3 py-4 text-center text-xs text-m3-outline">No shared media yet</p>
+                </div>
+              </div>
+
+              {/* Media Gallery */}
+              <div className="px-6 py-4">
+                <div className="flex items-center gap-4 mb-3">
+                  <ImageIcon className="h-5 w-5 flex-shrink-0 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">Shared media</p>
+                </div>
+                <div className="grid grid-cols-3 gap-1 overflow-hidden rounded-xl">
+                  {messages
+                    .filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video'))
+                    .slice(-30)
+                    .reverse()
+                    .map(m => (
+                      <div key={m.eventId} className="aspect-square overflow-hidden bg-m3-surface-container dark:bg-m3-surface-container-high">
+                        <MediaThumbnail message={m} />
+                      </div>
+                    ))}
+                  {messages.filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video')).length === 0 && (
+                    <p className="col-span-3 py-6 text-center text-sm text-m3-outline dark:text-m3-on-surface-variant">No shared media yet</p>
+                  )}
+                </div>
+
+                {messages.filter(m => m.mediaUrl && m.type === 'm.file').length > 0 && (
+                  <div className="mt-4 space-y-1">
+                    <p className="mb-2 text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Files</p>
+                    {messages
+                      .filter(m => m.mediaUrl && m.type === 'm.file')
+                      .slice(-10)
+                      .reverse()
+                      .map(m => (
+                        <a key={m.eventId} href={m.mediaUrl!} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                        >
+                          <FileText className="h-4 w-4 flex-shrink-0 text-m3-outline" />
+                          <span className="truncate text-m3-on-surface dark:text-m3-on-surface-variant">{m.content}</span>
+                        </a>
+                      ))}
+                  </div>
                 )}
               </div>
 
-              {/* Shared files */}
-              {messages.filter(m => m.mediaUrl && m.type === 'm.file').length > 0 && (
-                <div className="mt-3 space-y-1">
-                  <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Files</p>
-                  {messages
-                    .filter(m => m.mediaUrl && m.type === 'm.file')
-                    .slice(-10)
-                    .reverse()
-                    .map(m => (
-                      <a
-                        key={m.eventId}
-                        href={m.mediaUrl!}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 rounded-lg p-2 text-sm transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
-                      >
-                        <FileText className="h-4 w-4 flex-shrink-0 text-m3-outline" />
-                        <span className="truncate text-m3-on-surface dark:text-m3-on-surface-variant">{m.content}</span>
-                      </a>
-                    ))}
-                </div>
-              )}
-            </div>
-
-            {/* Leave Room */}
-            <div className="pt-2 border-t border-m3-outline-variant dark:border-m3-outline-variant">
-              <button
-                onClick={async () => {
-                  if (!confirm(`Leave ${activeRoom.isDirect ? 'this conversation' : activeRoom.name}?`)) return
-                  try {
-                    await leaveRoom(activeRoom.roomId)
-                    setShowRoomInfo(false)
-                  } catch (err) {
-                    console.error('Failed to leave room:', err)
-                  }
-                }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-m3-error transition-colors hover:bg-m3-error-container dark:text-m3-error dark:hover:bg-red-900/20"
-              >
-                <LogOut className="h-4 w-4" />
-                {activeRoom.isDirect ? 'Leave Conversation' : 'Leave Room'}
-              </button>
+              {/* Leave Room */}
+              <div className="px-6 py-4">
+                <button
+                  onClick={async () => {
+                    if (!confirm(`Leave ${activeRoom.isDirect ? 'this conversation' : activeRoom.name}?`)) return
+                    try { await leaveRoom(activeRoom.roomId); setShowRoomInfo(false) }
+                    catch (err) { console.error('Failed to leave room:', err) }
+                  }}
+                  className="flex w-full items-center gap-4 rounded-full px-3 py-2.5 text-sm text-m3-error transition-colors hover:bg-m3-error-container dark:text-m3-error dark:hover:bg-red-900/20"
+                >
+                  <LogOut className="h-5 w-5" />
+                  {activeRoom.isDirect ? 'Leave Conversation' : 'Leave Room'}
+                </button>
+              </div>
             </div>
           </div>
-          </div>{/* end overflow-y-auto */}
         </div>
       )}
     </div>

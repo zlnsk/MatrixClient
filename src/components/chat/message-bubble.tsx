@@ -420,7 +420,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
       case 'delivered':
         return <CheckCheck className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant`} />
       case 'read':
-        return <CheckCheck className={`${iconClass} text-blue-400`} />
+        return <CheckCheck className={`${iconClass} text-green-500`} />
       default:
         return <Send className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant`} />
     }
