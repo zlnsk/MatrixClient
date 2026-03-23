@@ -484,9 +484,9 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
       {/* Room Info Panel */}
       {showRoomInfo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center" onClick={() => setShowRoomInfo(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-end pr-4" onClick={() => setShowRoomInfo(false)}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" />
-          <div className="relative z-50 w-80 max-h-[85vh] rounded-2xl bg-m3-surface-container-lowest shadow-2xl animate-slide-in dark:bg-m3-surface-container overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="relative z-50 w-96 max-h-[85vh] rounded-2xl bg-m3-surface-container-lowest shadow-2xl animate-slide-in dark:bg-m3-surface-container overflow-y-auto" onClick={e => e.stopPropagation()}>
           <div className="border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant">
             <h3 className="text-base font-bold text-m3-on-surface dark:text-m3-on-surface">Room Details</h3>
           </div>
