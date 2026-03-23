@@ -15,6 +15,7 @@ import {
   Mic,
   Square,
 } from 'lucide-react'
+import { Avatar } from '@/components/ui/avatar'
 
 interface MessageInputProps {
   onSend: (content: string) => Promise<void>
@@ -522,13 +523,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
                     : 'text-m3-on-surface hover:bg-m3-surface-container-low dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest/50'
                 }`}
               >
-                {member.avatarUrl ? (
-                  <img src={member.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
-                ) : (
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-m3-primary-container text-xs font-medium text-m3-primary dark:bg-m3-primary-container/40 dark:text-m3-primary">
-                    {member.displayName[0]?.toUpperCase()}
-                  </div>
-                )}
+                <Avatar src={member.avatarUrl} name={member.displayName} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{member.displayName}</p>
                   <p className="truncate text-xs text-m3-outline dark:text-m3-on-surface-variant">{member.userId}</p>

@@ -15,9 +15,14 @@ let currentCall: MatrixCall | null = null
  * Enforce relay-only ICE transport to prevent IP leakage.
  * Disables host candidates so all media flows through TURN servers.
  */
+// Tested against matrix-js-sdk 41.2.0 — peerConn is a private property.
+// If the SDK changes this internal, relay enforcement silently breaks.
 function enforceRelayIcePolicy(call: MatrixCall): void {
   const pc = (call as any).peerConn as RTCPeerConnection | undefined
-  if (!pc) return
+  if (!pc) {
+    console.warn('[voip] Cannot enforce relay ICE policy — peerConn not accessible. IP leak possible.')
+    return
+  }
   const config = pc.getConfiguration()
   if (config.iceTransportPolicy !== 'relay') {
     pc.setConfiguration({ ...config, iceTransportPolicy: 'relay' })
@@ -161,24 +166,26 @@ async function applyHdConstraints(call: MatrixCall, isVideo: boolean): Promise<v
     }
   }
 
-  // Boost max bitrate via RTCRtpSender
+  // Boost max bitrate via RTCRtpSender (accesses SDK private peerConn — see enforceRelayIcePolicy)
   const pc = (call as any).peerConn as RTCPeerConnection | undefined
-  if (pc) {
-    for (const sender of pc.getSenders()) {
-      const params = sender.getParameters()
-      if (!params.encodings || params.encodings.length === 0) {
-        params.encodings = [{}]
-      }
-      if (sender.track?.kind === 'video') {
-        params.encodings[0].maxBitrate = 2_500_000 // 2.5 Mbps
-      } else if (sender.track?.kind === 'audio') {
-        params.encodings[0].maxBitrate = 128_000 // 128 kbps
-      }
-      try {
-        await sender.setParameters(params)
-      } catch (e) {
-        console.warn('Could not set sender bitrate:', e)
-      }
+  if (!pc) {
+    console.warn('[voip] Cannot apply HD bitrate — peerConn not accessible')
+    return
+  }
+  for (const sender of pc.getSenders()) {
+    const params = sender.getParameters()
+    if (!params.encodings || params.encodings.length === 0) {
+      params.encodings = [{}]
+    }
+    if (sender.track?.kind === 'video') {
+      params.encodings[0].maxBitrate = 2_500_000 // 2.5 Mbps
+    } else if (sender.track?.kind === 'audio') {
+      params.encodings[0].maxBitrate = 128_000 // 128 kbps
+    }
+    try {
+      await sender.setParameters(params)
+    } catch (e) {
+      console.warn('Could not set sender bitrate:', e)
     }
   }
 }
@@ -205,21 +212,24 @@ async function applyStandardConstraints(call: MatrixCall, isVideo: boolean): Pro
     }
   }
 
+  // Accesses SDK private peerConn — see enforceRelayIcePolicy
   const pc = (call as any).peerConn as RTCPeerConnection | undefined
-  if (pc) {
-    for (const sender of pc.getSenders()) {
-      const params = sender.getParameters()
-      if (!params.encodings || params.encodings.length === 0) continue
-      if (sender.track?.kind === 'video') {
-        params.encodings[0].maxBitrate = 800_000 // 800 kbps
-      } else if (sender.track?.kind === 'audio') {
-        params.encodings[0].maxBitrate = 64_000 // 64 kbps
-      }
-      try {
-        await sender.setParameters(params)
-      } catch (e) {
-        console.warn('Could not revert sender bitrate:', e)
-      }
+  if (!pc) {
+    console.warn('[voip] Cannot revert bitrate — peerConn not accessible')
+    return
+  }
+  for (const sender of pc.getSenders()) {
+    const params = sender.getParameters()
+    if (!params.encodings || params.encodings.length === 0) continue
+    if (sender.track?.kind === 'video') {
+      params.encodings[0].maxBitrate = 800_000 // 800 kbps
+    } else if (sender.track?.kind === 'audio') {
+      params.encodings[0].maxBitrate = 64_000 // 64 kbps
+    }
+    try {
+      await sender.setParameters(params)
+    } catch (e) {
+      console.warn('Could not revert sender bitrate:', e)
     }
   }
 }

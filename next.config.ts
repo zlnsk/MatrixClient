@@ -81,25 +81,7 @@ const nextConfig: NextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(self), microphone=(self), geolocation=()',
           },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              // unsafe-eval is required by React/Next.js in development mode only
-              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''} 'wasm-unsafe-eval'`,
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' https: blob: data:",
-              "media-src 'self' https: blob:",
-              "connect-src 'self' https: wss:",
-              "manifest-src 'self' https:",
-              "font-src 'self'",
-              "worker-src 'self'",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'none'",
-            ].join('; '),
-          },
+          // CSP is set per-request by src/middleware.ts (nonce-based script-src)
         ],
       },
     ];
