@@ -499,19 +499,24 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       </div>
 
       {/* Message Input */}
-      <MessageInput
-        onSend={handleSend}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
-        roomId={activeRoom.roomId}
-      />
+      <div className="relative">
+        <MessageInput
+          onSend={handleSend}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          roomId={activeRoom.roomId}
+        />
+        <span className="absolute bottom-1 right-3 text-[9px] text-m3-outline-variant/60 pointer-events-none select-none">
+          v{process.env.NEXT_PUBLIC_BUILD_VERSION}
+        </span>
+      </div>
 
       {/* Room Info Panel */}
       {showRoomInfo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-end pr-4" onClick={() => { setShowRoomInfo(false); setDragPos(null) }}>
+        <div className="fixed inset-0 z-[100]" onClick={() => { setShowRoomInfo(false); setDragPos(null) }}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" />
           <div
-            className="relative z-50 w-96 max-h-[85vh] rounded-2xl bg-m3-surface-container-lowest shadow-2xl animate-slide-in dark:bg-m3-surface-container overflow-y-auto"
+            className="absolute right-16 top-16 z-50 w-96 max-h-[85vh] rounded-2xl bg-m3-surface-container-lowest shadow-2xl animate-slide-in dark:bg-m3-surface-container overflow-y-auto"
             style={dragPos ? { transform: `translate(${dragPos.x}px, ${dragPos.y}px)` } : undefined}
             onClick={e => e.stopPropagation()}
           >
