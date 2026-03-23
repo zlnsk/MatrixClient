@@ -11,6 +11,40 @@ import {
 import { useChatStore } from './chat-store'
 import { useCallStore } from './call-store'
 
+// H-5: Session idle timeout — auto-logout after inactivity
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
+let idleTimer: ReturnType<typeof setTimeout> | null = null
+let idleListenersAttached = false
+
+function resetIdleTimer() {
+  if (idleTimer) clearTimeout(idleTimer)
+  idleTimer = setTimeout(() => {
+    const state = useAuthStore.getState()
+    if (state.isAuthenticated) {
+      console.warn('Session idle timeout — logging out')
+      state.signOut().then(() => {
+        window.location.href = '/login'
+      })
+    }
+  }, IDLE_TIMEOUT_MS)
+}
+
+function attachIdleListeners() {
+  if (idleListenersAttached || typeof window === 'undefined') return
+  idleListenersAttached = true
+  const events = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const
+  events.forEach(evt => window.addEventListener(evt, resetIdleTimer, { passive: true }))
+  resetIdleTimer()
+}
+
+function detachIdleListeners() {
+  if (!idleListenersAttached || typeof window === 'undefined') return
+  idleListenersAttached = false
+  if (idleTimer) { clearTimeout(idleTimer); idleTimer = null }
+  const events = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const
+  events.forEach(evt => window.removeEventListener(evt, resetIdleTimer))
+}
+
 export interface MatrixUser {
   userId: string
   displayName: string
@@ -49,9 +83,10 @@ export const useAuthStore = create<AuthState>((set) => ({
           isAuthenticated: true,
           isLoading: false,
         })
+        attachIdleListeners()
       } catch {
         // Session expired or invalid
-        localStorage.removeItem('matrix_session')
+        sessionStorage.removeItem('matrix_session')
         set({ isLoading: false })
       }
     } else {
@@ -73,9 +108,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: true,
       isLoading: false,
     })
+    attachIdleListeners()
   },
 
   signOut: async () => {
+    detachIdleListeners()
     await logout()
     // Clear all stores to prevent cross-session data leakage
     useChatStore.getState().resetState()

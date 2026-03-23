@@ -69,7 +69,7 @@ export interface MatrixMessage {
   } | null
   reactions: Map<string, { count: number; users: string[]; includesMe: boolean }>
   mediaUrl: string | null
-  mediaInfo: { w?: number; h?: number; mimetype?: string; size?: number } | null
+  mediaInfo: { w?: number; h?: number; mimetype?: string; size?: number; duration?: number } | null
   encryptedFile: { url: string; key: { k: string; alg: string; key_ops: string[]; kty: string; ext: boolean }; iv: string; hashes: Record<string, string>; v: string } | null
   msgtype: string
   readBy: ReadReceipt[]
@@ -893,6 +893,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const MAX_FILE_SIZE = 100 * 1024 * 1024
     if (file.size > MAX_FILE_SIZE) {
       throw new Error('File too large. Maximum size is 100MB.')
+    }
+
+    // Validate file type — block dangerous MIME types and extensions
+    const BLOCKED_MIMES = ['text/html', 'application/xhtml+xml', 'application/x-httpd-php', 'application/javascript', 'text/javascript']
+    const BLOCKED_EXTENSIONS = ['.html', '.htm', '.xhtml', '.php', '.js', '.mjs', '.exe', '.bat', '.cmd', '.msi', '.ps1', '.sh']
+    const ext = ('.' + (file.name.split('.').pop() || '')).toLowerCase()
+    if (BLOCKED_MIMES.includes(file.type)) {
+      throw new Error(`File type "${file.type}" is not allowed for security reasons.`)
+    }
+    if (BLOCKED_EXTENSIONS.includes(ext)) {
+      throw new Error(`File extension "${ext}" is not allowed for security reasons.`)
+    }
+    // Strip SVG files that may contain embedded scripts
+    if (file.type === 'image/svg+xml' || ext === '.svg') {
+      throw new Error('SVG files are not allowed — they can contain executable code.')
     }
 
     // Upload file to Matrix content repository

@@ -6,6 +6,29 @@ import { useAuthStore } from '@/stores/auth-store'
 import { resolveHomeserver } from '@/lib/matrix/client'
 import { Shield, Eye, EyeOff, Loader2, Server } from 'lucide-react'
 
+// Rate limiting state (module-level so it persists across re-renders)
+let failedAttempts = 0
+let lockoutUntil = 0
+
+function mapLoginError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err)
+  if (msg.includes('M_FORBIDDEN') || msg.includes('Invalid password') || msg.includes('403'))
+    return 'Incorrect username or password'
+  if (msg.includes('M_USER_DEACTIVATED'))
+    return 'This account has been deactivated'
+  if (msg.includes('M_LIMIT_EXCEEDED'))
+    return 'Too many requests — please wait and try again'
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_'))
+    return 'Cannot reach the homeserver — check the address and your connection'
+  if (msg.includes('M_UNKNOWN_TOKEN'))
+    return 'Session expired — please sign in again'
+  if (msg.includes('ENOTFOUND') || msg.includes('ECONNREFUSED'))
+    return 'Homeserver not found — check the address'
+  return 'Sign-in failed. Please check your credentials and try again.'
+}
+
+const MAX_INPUT_LENGTH = 512
+
 export default function LoginPage() {
   const [server, setServer] = useState('')
   const [username, setUsername] = useState('')
@@ -39,6 +62,14 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
 
+    // H-4: Rate limiting — exponential backoff after failed attempts
+    const now = Date.now()
+    if (lockoutUntil > now) {
+      const secs = Math.ceil((lockoutUntil - now) / 1000)
+      setError(`Too many failed attempts. Please wait ${secs}s before trying again.`)
+      return
+    }
+
     const s = server.trim()
     if (!s) {
       setError('Please enter a homeserver address')
@@ -49,9 +80,17 @@ export default function LoginPage() {
     try {
       const homeserverUrl = resolvedUrl || await resolveHomeserver(s)
       await signIn(username, password, homeserverUrl)
+      failedAttempts = 0
+      lockoutUntil = 0
       router.push('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in')
+      failedAttempts++
+      // Exponential backoff: 2s, 4s, 8s, 16s, 30s cap
+      if (failedAttempts >= 3) {
+        const delay = Math.min(2000 * Math.pow(2, failedAttempts - 3), 30000)
+        lockoutUntil = Date.now() + delay
+      }
+      setError(mapLoginError(err))
     } finally {
       setIsLoading(false)
     }
@@ -105,9 +144,10 @@ export default function LoginPage() {
                 <input
                   type="text"
                   value={server}
-                  onChange={e => { setServer(e.target.value); setResolvedUrl(null) }}
+                  onChange={e => { setServer(e.target.value.slice(0, MAX_INPUT_LENGTH)); setResolvedUrl(null) }}
                   onBlur={handleServerBlur}
                   placeholder="matrix.org"
+                  maxLength={MAX_INPUT_LENGTH}
                   required
                   className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low py-3 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                 />
@@ -133,8 +173,9 @@ export default function LoginPage() {
                 <input
                   type="text"
                   value={username}
-                  onChange={e => setUsername(e.target.value)}
+                  onChange={e => setUsername(e.target.value.slice(0, MAX_INPUT_LENGTH))}
                   placeholder="username"
+                  maxLength={MAX_INPUT_LENGTH}
                   required
                   autoComplete="username"
                   className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low py-3 pl-8 pr-4 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
@@ -156,8 +197,9 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => setPassword(e.target.value.slice(0, MAX_INPUT_LENGTH))}
                   placeholder="Enter your password"
+                  maxLength={MAX_INPUT_LENGTH}
                   required
                   autoComplete="current-password"
                   className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low px-4 py-3 pr-11 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"

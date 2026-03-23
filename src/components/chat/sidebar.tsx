@@ -406,14 +406,16 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                       </div>
                       <p className="truncate text-xs text-m3-on-surface-variant">
                         <span className="text-m3-outline">{result.sender}: </span>
-                        <span dangerouslySetInnerHTML={{ __html: (() => {
+                        <span>{(() => {
                           const escaped = searchFilter.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
                           if (escaped.length < 2) return result.body
-                          return result.body.replace(
-                            new RegExp(`(${escaped})`, 'gi'),
-                            '<mark class="rounded-sm bg-yellow-300/80 text-inherit dark:bg-yellow-500/40">$1</mark>'
+                          const parts = result.body.split(new RegExp(`(${escaped})`, 'gi'))
+                          return parts.map((part, i) =>
+                            i % 2 === 1
+                              ? <mark key={i} className="rounded-sm bg-yellow-300/80 text-inherit dark:bg-yellow-500/40">{part}</mark>
+                              : part
                           )
-                        })() }} />
+                        })()}</span>
                       </p>
                     </div>
                   </button>

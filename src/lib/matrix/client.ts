@@ -12,7 +12,7 @@ let matrixClient: sdk.MatrixClient | null = null
 export function getHomeserverUrl(): string | null {
   if (typeof window === 'undefined') return null
   try {
-    const session = localStorage.getItem('matrix_session')
+    const session = sessionStorage.getItem('matrix_session')
     if (session) {
       return JSON.parse(session).homeserverUrl || null
     }
@@ -133,76 +133,9 @@ function isSuppressed(args: any[]): boolean {
   return SUPPRESSED_PATTERNS.some(p => msg.includes(p))
 }
 
-// Monkey-patch global console.warn and console.error to suppress Rust WASM crypto noise.
-// The Rust crypto module (matrix_sdk_crypto) compiled to WASM calls console.warn/error
-// directly, bypassing the JS SDK's logger interface.
-if (typeof window !== 'undefined') {
-  const originalWarn = console.warn
-  const originalError = console.error
-  const originalTrace = console.trace
-  console.warn = (...args: any[]) => {
-    if (!isSuppressed(args)) originalWarn.apply(console, args)
-  }
-  console.error = (...args: any[]) => {
-    if (!isSuppressed(args)) originalError.apply(console, args)
-  }
-  console.trace = (...args: any[]) => {
-    if (!isSuppressed(args)) originalTrace.apply(console, args)
-  }
-
-  // Intercept fetch to suppress browser console noise from room_keys 404 responses.
-  // The SDK's PerSessionKeyBackupDownloader makes GET requests to
-  // /_matrix/client/v3/room_keys/keys/{roomId}/{sessionId}?version=N
-  // which return 404 for sessions not in the backup. The browser logs
-  // "Failed to load resource: 404" at the network level for every real HTTP 404.
-  // This cannot be suppressed after the fact — the only way to prevent it is to
-  // never make the real HTTP request. Instead we return a synthetic 404 Response
-  // immediately. The SDK's PerSessionKeyBackupDownloader handles M_NOT_FOUND
-  // gracefully by marking the session as not found in backup.
-  //
-  // SECURITY: This interceptor is scoped to only process requests destined
-  // for the user's Matrix homeserver. All other requests (e.g., link previews,
-  // external images) pass through to the original fetch without modification,
-  // preventing accidental access token leakage to third-party URLs.
-  const originalFetch = window.fetch.bind(window)
-  window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
-    const url = typeof args[0] === 'string' ? args[0] : args[0] instanceof URL ? args[0].href : (args[0] as Request).url
-
-    // Only intercept requests to the user's Matrix homeserver
-    const homeserverUrl = getHomeserverUrl()
-    let isHomeserverRequest = false
-    if (homeserverUrl) {
-      try {
-        const requestOrigin = new URL(url).origin
-        const homeserverOrigin = new URL(homeserverUrl).origin
-        isHomeserverRequest = requestOrigin === homeserverOrigin
-      } catch {
-        // If URL parsing fails, don't intercept
-      }
-    }
-
-    if (!isHomeserverRequest) {
-      return originalFetch(...args)
-    }
-
-    // Block per-session key backup GET requests entirely — return synthetic 404
-    // without making the real HTTP request. This prevents the browser from logging
-    // "Failed to load resource: the server responded with a status of 404" for
-    // every session ID not in the backup (which is the common case).
-    // Only block GET requests to per-session endpoints (with roomId/sessionId path segments).
-    // Bulk key backup operations (PUT, POST to /room_keys/keys) still go through.
-    const isPerSessionKeyRequest = url.includes('/room_keys/keys/') &&
-      (!args[1] || !args[1].method || args[1].method === 'GET')
-    if (isPerSessionKeyRequest) {
-      return new Response(
-        JSON.stringify({ errcode: 'M_NOT_FOUND', error: 'No room_keys found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    return originalFetch(...args)
-  }
-}
+// Log suppression is handled exclusively via filteredLogger passed to the SDK.
+// Global console monkey-patching is intentionally avoided to prevent masking
+// errors from the application or third-party libraries.
 
 /**
  * A logger that filters out noisy crypto decryption warnings.
@@ -259,13 +192,11 @@ async function initCrypto(client: sdk.MatrixClient): Promise<void> {
     }
   }
 
-  // Set the global policy to auto-accept room key requests and
-  // trust devices for faster decryption experience
-  const crypto = client.getCrypto()
-  if (crypto) {
-    // Auto-verify own device cross-signing
-    await crypto.setDeviceVerified(client.getUserId()!, client.getDeviceId()!)
-  }
+  // Device verification is intentionally NOT auto-applied here.
+  // The user must complete verification via recovery key or interactive
+  // emoji verification (NewSessionBanner) to mark the device as trusted.
+  // Auto-verifying bypasses the cross-signing trust model and would allow
+  // a compromised device to be silently trusted.
 }
 
 async function enableKeyBackup(client: sdk.MatrixClient): Promise<void> {
@@ -545,14 +476,14 @@ export async function loginWithPassword(
     logger: filteredLogger,
     cryptoCallbacks,
     timelineSupport: true,
-    fallbackICEServerAllowed: true,
+    fallbackICEServerAllowed: false,
     iceCandidatePoolSize: 20,
   })
 
   await initCrypto(matrixClient)
 
   // Persist session
-  localStorage.setItem(
+  sessionStorage.setItem(
     'matrix_session',
     JSON.stringify({
       accessToken: response.access_token,
@@ -566,7 +497,7 @@ export async function loginWithPassword(
 }
 
 export function restoreSession(): sdk.MatrixClient | null {
-  const stored = localStorage.getItem('matrix_session')
+  const stored = sessionStorage.getItem('matrix_session')
   if (!stored) return null
 
   try {
@@ -574,7 +505,7 @@ export function restoreSession(): sdk.MatrixClient | null {
 
     // Validate session data
     if (!session.accessToken || !session.userId || !session.deviceId || !session.homeserverUrl) {
-      localStorage.removeItem('matrix_session')
+      sessionStorage.removeItem('matrix_session')
       return null
     }
 
@@ -582,7 +513,7 @@ export function restoreSession(): sdk.MatrixClient | null {
     try {
       new URL(session.homeserverUrl)
     } catch {
-      localStorage.removeItem('matrix_session')
+      sessionStorage.removeItem('matrix_session')
       return null
     }
 
@@ -594,12 +525,12 @@ export function restoreSession(): sdk.MatrixClient | null {
       logger: filteredLogger,
       cryptoCallbacks,
       timelineSupport: true,
-      fallbackICEServerAllowed: true,
+      fallbackICEServerAllowed: false,
       iceCandidatePoolSize: 20,
     })
     return matrixClient
   } catch {
-    localStorage.removeItem('matrix_session')
+    sessionStorage.removeItem('matrix_session')
     return null
   }
 }
@@ -621,10 +552,18 @@ export async function startSync(): Promise<void> {
 
   // Wait for initial sync
   await new Promise<void>((resolve) => {
-    const onSync = (state: string) => {
+    const onSync = (state: string, _prev: string | null, data?: any) => {
       if (state === 'PREPARED') {
         matrixClient?.removeListener(sdk.ClientEvent.Sync, onSync)
         resolve()
+      }
+      // L-7: Force logout on 401 — access token rejected by server
+      if (state === 'ERROR' && data?.error?.httpStatus === 401) {
+        console.warn('Sync returned 401 — token rejected, forcing logout')
+        matrixClient?.stopClient()
+        matrixClient = null
+        sessionStorage.removeItem('matrix_session')
+        window.location.href = '/login'
       }
     }
     matrixClient?.on(sdk.ClientEvent.Sync, onSync)
@@ -644,7 +583,7 @@ export async function logout(): Promise<void> {
     }
   }
   matrixClient = null
-  localStorage.removeItem('matrix_session')
+  sessionStorage.removeItem('matrix_session')
 }
 
 export function getAvatarUrl(
