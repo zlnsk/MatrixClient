@@ -52,6 +52,18 @@ const PURIFY_CONFIG_PLAIN = {
  * that the SDK appends (e.g. "Łukasz (@signal_xxx:server.com)" → "Łukasz").
  * Returns { displayName, matrixId } where matrixId is the raw @user:server part if present.
  */
+/** Highlight search term in HTML string — only highlights text outside of tags */
+function applySearchHighlight(html: string, term: string): string {
+  if (!term || term.length < 2) return html
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'gi')
+  // Split by HTML tags to avoid highlighting inside tags/attributes
+  return html.replace(/(<[^>]*>)|([^<]+)/g, (match, tag, text) => {
+    if (tag) return tag
+    return text.replace(regex, '<mark class="rounded-sm bg-yellow-300/80 text-inherit dark:bg-yellow-500/40">$1</mark>')
+  })
+}
+
 function parseDisplayName(senderName: string, senderId: string): { displayName: string; matrixId: string | null } {
   // If name contains " (@user:server)", strip it
   const match = senderName.match(/^(.+?)\s*\(@[^)]+\)$/)
@@ -152,11 +164,12 @@ interface MessageBubbleProps {
   onReply: () => void
   roomId: string
   isPinned?: boolean
+  searchHighlight?: string
 }
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🎉', '🙏', '💯', '✅']
 
-export const MessageBubble = memo(function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isPinned }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isPinned, searchHighlight }: MessageBubbleProps) {
   const user = useAuthStore(s => s.user)
   const { sendReaction, editMessage, redactMessage, pinMessage, unpinMessage, forwardMessage, rooms } = useChatStore()
   const [showActions, setShowActions] = useState(false)
@@ -512,7 +525,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 <span className="font-medium not-italic">{message.senderName}</span>{' '}
                 <span
                   dangerouslySetInnerHTML={{
-                    __html: renderRichContent(message.content, message.formattedContent),
+                    __html: applySearchHighlight(renderRichContent(message.content, message.formattedContent), searchHighlight || ''),
                   }}
                 />
               </div>
@@ -520,7 +533,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               <div
                 className={`rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words ${message.msgtype === 'm.notice' ? 'italic opacity-70' : ''}`}
                 dangerouslySetInnerHTML={{
-                  __html: renderRichContent(message.content, message.formattedContent),
+                  __html: applySearchHighlight(renderRichContent(message.content, message.formattedContent), searchHighlight || ''),
                 }}
               />
             )}

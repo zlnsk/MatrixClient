@@ -473,6 +473,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                         onReply={() => setReplyTo(msg)}
                         roomId={activeRoom.roomId}
                         isPinned={pinnedEventIds.includes(msg.eventId)}
+                        searchHighlight={chatSearch}
                       />
                     )
                   })}
