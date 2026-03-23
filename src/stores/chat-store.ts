@@ -617,6 +617,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Ensure chronological order (bridged/decrypted events can arrive out of order)
       newMessages.sort((a, b) => a.timestamp - b.timestamp)
 
+      // Propagate read status backwards: if a later own message is 'read',
+      // all earlier own messages should also be 'read' (read receipts in Matrix
+      // are implicit acknowledgement of all prior messages).
+      let sawRead = false
+      for (let i = newMessages.length - 1; i >= 0; i--) {
+        const msg = newMessages[i]
+        if (msg.senderId !== userId) continue
+        if (msg.status === 'read') {
+          sawRead = true
+        } else if (sawRead && (msg.status === 'delivered' || msg.status === 'sent')) {
+          msg.status = 'read'
+        }
+      }
+
       // Quick equality check: skip setState if messages haven't actually changed.
       // Compare by length, then key fields of each message to avoid unnecessary re-renders.
       const existing = get().messages
