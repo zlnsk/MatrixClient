@@ -526,25 +526,21 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         </span>
       </div>
 
-      {/* Room Info Panel — Google Messages style slide-in */}
+      {/* Room Info Panel — full-width overlay replacing chat content */}
       {showRoomInfo && (
-        <div className="fixed inset-0 z-[100] md:relative md:inset-auto md:z-auto" onClick={() => setShowRoomInfo(false)}>
-          <div className="absolute inset-0 bg-black/40 md:hidden" />
-          <div
-            className="absolute inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl animate-slide-in dark:bg-m3-surface-container md:relative md:w-80 md:max-w-none md:border-l md:border-m3-outline-variant md:shadow-none md:animate-none lg:w-96 overflow-y-auto"
-            onClick={e => e.stopPropagation()}
-          >
-          <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-m3-outline-variant bg-white px-4 py-3 dark:border-m3-outline-variant dark:bg-m3-surface-container">
+        <div className="absolute inset-0 z-40 flex flex-col bg-white dark:bg-m3-surface animate-fade-in">
+          <div className="flex items-center gap-3 border-b border-m3-outline-variant bg-white px-4 py-3 dark:border-m3-outline-variant dark:bg-m3-surface-container">
             <button
               onClick={() => setShowRoomInfo(false)}
               className="rounded-full p-2 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
             >
-              <X className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5" />
             </button>
             <h3 className="text-base font-medium text-m3-on-surface dark:text-m3-on-surface">Details</h3>
           </div>
+          <div className="flex-1 overflow-y-auto">
 
-          <div className="p-4 space-y-5">
+          <div className="mx-auto w-full max-w-lg p-6 space-y-5">
             {/* Room avatar + name */}
             <div className="flex flex-col items-center gap-3">
               <Avatar
@@ -906,7 +902,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
               </button>
             </div>
           </div>
-          </div>
+          </div>{/* end overflow-y-auto */}
         </div>
       )}
     </div>
