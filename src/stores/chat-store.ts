@@ -683,7 +683,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const replySender = replyEvent.getSender()
         msgContent.body = `> <${replySender}> ${replyBody}\n\n${content}`
         msgContent.format = 'org.matrix.custom.html'
-        msgContent.formatted_body = `<mx-reply><blockquote><a href="https://matrix.to/#/${roomId}/${replyToEventId}">In reply to</a> <a href="https://matrix.to/#/${replySender}">${replySender}</a><br>${replyBody}</blockquote></mx-reply>${content}`
+        // Escape HTML in reply body and content to prevent XSS
+        const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        msgContent.formatted_body = `<mx-reply><blockquote><a href="https://matrix.to/#/${encodeURIComponent(roomId)}/${encodeURIComponent(replyToEventId)}">In reply to</a> <a href="https://matrix.to/#/${encodeURIComponent(replySender || '')}">${escHtml(replySender || '')}</a><br>${escHtml(replyBody)}</blockquote></mx-reply>${escHtml(content)}`
         msgContent['m.relates_to'] = {
           'm.in_reply_to': { event_id: replyToEventId },
         }

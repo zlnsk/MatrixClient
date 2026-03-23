@@ -491,7 +491,7 @@ export async function loginWithPassword(
     iceCandidatePoolSize: 20,
   })
 
-  await initCrypto(matrixClient)
+  // Crypto is initialized in startSync() — no need to call initCrypto here
 
   // Persist session
   localStorage.setItem(

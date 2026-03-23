@@ -19,6 +19,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid server name' }, { status: 400 })
   }
 
+  // Block internal/private network addresses (SSRF protection)
+  const hostname = cleaned.split(':')[0].toLowerCase()
+  if (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
+    hostname === '[::1]' ||
+    hostname.startsWith('10.') ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('172.') && (() => { const b = parseInt(hostname.split('.')[1], 10); return b >= 16 && b <= 31 })() ||
+    hostname.startsWith('169.254.') ||
+    hostname.endsWith('.local') ||
+    hostname.endsWith('.internal')
+  ) {
+    return NextResponse.json({ error: 'Private/internal addresses are not allowed' }, { status: 400 })
+  }
+
   const directUrl = `https://${cleaned}`
 
   // Run direct check and .well-known discovery in parallel for speed
