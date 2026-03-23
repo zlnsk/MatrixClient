@@ -10,13 +10,17 @@ function getBuildVersion(): string {
 
   const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
   let gitInfo = ''
+  let buildNum = ''
   try {
     const sha = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
     const date = execSync('git log -1 --format=%cs', { encoding: 'utf-8' }).trim()
+    // Build number = total commit count — always increments
+    const count = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim()
+    buildNum = ` build ${count}`
     gitInfo = ` (${sha} ${date})`
   } catch { /* not a git repo or git unavailable */ }
 
-  return `${pkg.version}${gitInfo}`
+  return `${pkg.version}${buildNum}${gitInfo}`
 }
 
 const nextConfig: NextConfig = {
