@@ -86,7 +86,7 @@ export function LinkPreview({ url }: LinkPreviewProps) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-2 block max-w-sm overflow-hidden rounded-xl border border-m3-outline-variant bg-m3-surface-container-low shadow-sm transition-colors hover:bg-m3-surface-container dark:border-m3-outline-variant dark:bg-m3-surface-container-high/80 dark:hover:bg-m3-surface-container-high"
+      className="-mx-4 mt-2 block overflow-hidden border-t border-m3-outline-variant/50 bg-m3-surface-container-low/50 transition-colors hover:bg-m3-surface-container dark:border-m3-outline-variant/50 dark:bg-m3-surface-container-high/40 dark:hover:bg-m3-surface-container-high"
     >
       {preview.imageUrl && (
         <img
@@ -96,7 +96,7 @@ export function LinkPreview({ url }: LinkPreviewProps) {
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
         />
       )}
-      <div className="p-3">
+      <div className="px-4 py-3">
         {preview.siteName && (
           <p className="mb-0.5 flex items-center gap-1 text-xs text-m3-outline">
             <ExternalLink className="h-3 w-3" />
