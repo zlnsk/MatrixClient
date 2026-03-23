@@ -426,10 +426,10 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 setEditContent(message.content)
               }
             }}
-            className={`rounded-2xl overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'p-3 w-fit' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
+            className={`rounded-[20px] overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'p-3 w-fit' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
               isOwn
                 ? 'bg-m3-primary text-white'
-                : 'bg-m3-surface-container text-m3-on-surface dark:bg-m3-surface-container-high dark:text-m3-on-surface'
+                : 'border border-m3-outline-variant/50 bg-m3-surface-container-lowest text-m3-on-surface dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high dark:text-m3-on-surface'
             }`}
           >
             {/* Inline reply quote */}

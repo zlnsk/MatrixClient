@@ -104,8 +104,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const [chatSearch, setChatSearch] = useState('')
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [showRoomInfo, setShowRoomInfo] = useState(false)
-  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
-  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+
+
 
   // Room settings state
   const [editingName, setEditingName] = useState(false)
@@ -268,27 +268,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     return groups
   }, [filteredMessages])
 
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    const currentX = dragPos?.x ?? 0
-    const currentY = dragPos?.y ?? 0
-    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: currentX, origY: currentY }
 
-    const onMove = (ev: MouseEvent) => {
-      if (!dragRef.current) return
-      setDragPos({
-        x: dragRef.current.origX + (ev.clientX - dragRef.current.startX),
-        y: dragRef.current.origY + (ev.clientY - dragRef.current.startY),
-      })
-    }
-    const onUp = () => {
-      dragRef.current = null
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }, [dragPos])
+
 
   return (
     <div className="relative flex flex-1 flex-col min-h-0 bg-white dark:bg-m3-surface">
@@ -471,7 +452,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       )}
 
       {/* Messages */}
-      <div ref={scrollContainerRef} className="message-scroll-container min-h-0 flex-1 overflow-y-auto bg-white px-4 pt-4 pb-6 dark:bg-m3-surface md:px-8 md:pb-8">
+      <div ref={scrollContainerRef} className="message-scroll-container min-h-0 flex-1 overflow-y-auto bg-gray-50 px-4 pt-4 pb-6 dark:bg-m3-surface md:px-8 md:pb-8">
         {isLoadingMessages ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-m3-primary" />
@@ -489,7 +470,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {groupedMessages.map(group => (
               <div key={group.date}>
                 <div className="flex items-center justify-center py-4">
-                  <span className="rounded-full bg-m3-surface-container-lowest px-4 py-1.5 text-xs font-medium text-m3-on-surface-variant shadow-md shadow-gray-200/50 dark:bg-m3-surface-container-high dark:text-m3-outline dark:shadow-black/20">
+                  <span className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">
                     {group.date}
                   </span>
                 </div>
@@ -517,7 +498,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {/* Typing indicator */}
             {typingUsers.length > 0 && (
               <div className="flex items-end gap-2 animate-fade-in">
-                <div className="rounded-2xl bg-m3-surface-container px-4 py-3 dark:bg-m3-surface-container-high">
+                <div className="rounded-[20px] border border-m3-outline-variant/50 bg-m3-surface-container-lowest px-4 py-3 dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high">
                   <div className="flex gap-1">
                     <span className="typing-dot h-2.5 w-2.5 rounded-full bg-m3-primary" />
                     <span className="typing-dot h-2.5 w-2.5 rounded-full bg-m3-primary" />
@@ -545,20 +526,22 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         </span>
       </div>
 
-      {/* Room Info Panel */}
+      {/* Room Info Panel — Google Messages style slide-in */}
       {showRoomInfo && (
-        <div className="fixed inset-0 z-[100]" onClick={() => { setShowRoomInfo(false); setDragPos(null) }}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" />
+        <div className="fixed inset-0 z-[100] md:relative md:inset-auto md:z-auto" onClick={() => setShowRoomInfo(false)}>
+          <div className="absolute inset-0 bg-black/40 md:hidden" />
           <div
-            className="absolute right-16 top-16 z-50 w-96 max-h-[85vh] rounded-2xl bg-m3-surface-container-lowest shadow-2xl animate-slide-in dark:bg-m3-surface-container overflow-y-auto"
-            style={dragPos ? { transform: `translate(${dragPos.x}px, ${dragPos.y}px)` } : undefined}
+            className="absolute inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl animate-slide-in dark:bg-m3-surface-container md:relative md:w-80 md:max-w-none md:border-l md:border-m3-outline-variant md:shadow-none md:animate-none lg:w-96 overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
-          <div
-            className="border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant cursor-grab active:cursor-grabbing select-none"
-            onMouseDown={handleDragStart}
-          >
-            <h3 className="text-base font-bold text-m3-on-surface dark:text-m3-on-surface">Room Details</h3>
+          <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-m3-outline-variant bg-white px-4 py-3 dark:border-m3-outline-variant dark:bg-m3-surface-container">
+            <button
+              onClick={() => setShowRoomInfo(false)}
+              className="rounded-full p-2 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="text-base font-medium text-m3-on-surface dark:text-m3-on-surface">Details</h3>
           </div>
 
           <div className="p-4 space-y-5">
