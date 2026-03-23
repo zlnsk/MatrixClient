@@ -503,59 +503,6 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
           accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.tar,.gz"
         />
 
-        {/* Attachment button */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high dark:hover:text-white dark:active:bg-m3-surface-container-highest md:h-11 md:w-11"
-          title="Attach file"
-          aria-label="Attach file"
-        >
-          <Paperclip className="h-5 w-5" />
-        </button>
-
-        {/* Emoji button — hidden on small mobile to save space */}
-        <div className="relative hidden sm:block" ref={emojiRef}>
-          <button
-            onClick={() => setShowEmoji(!showEmoji)}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high dark:hover:text-white dark:active:bg-m3-surface-container-highest md:h-11 md:w-11"
-            aria-label="Emoji picker"
-          >
-            <Smile className="h-5 w-5" />
-          </button>
-          {showEmoji && (
-            <div className="absolute bottom-12 left-0 z-20 w-80 rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest p-3 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high">
-              {/* Category tabs */}
-              <div className="mb-2 flex gap-1 overflow-x-auto border-b border-m3-outline-variant pb-2 dark:border-m3-outline-variant">
-                {Object.keys(EMOJI_CATEGORIES).map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setEmojiCategory(cat)}
-                    className={`whitespace-nowrap rounded-md px-2 py-1 text-xs transition-colors ${
-                      emojiCategory === cat
-                        ? 'bg-m3-primary-container text-m3-primary dark:bg-m3-primary-container/30 dark:text-m3-primary'
-                        : 'text-m3-on-surface-variant hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-              {/* Emoji grid */}
-              <div className="grid max-h-48 grid-cols-8 gap-0.5 overflow-y-auto">
-                {EMOJI_CATEGORIES[emojiCategory].map(emoji => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleEmojiClick(emoji)}
-                    className="rounded-lg p-1.5 text-xl transition-transform hover:scale-110 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Mention autocomplete popup */}
         {mentionQuery !== null && filteredMembers.length > 0 && (
           <div
@@ -591,7 +538,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
           </div>
         )}
 
-        {/* Text input / Recording indicator */}
+        {/* Unified input bar — Google Messages style: pill contains input + action buttons */}
         {isRecording ? (
           <div className="flex flex-1 items-center gap-3 rounded-full border border-red-300 bg-m3-error-container px-5 py-2.5 dark:border-red-800 dark:bg-m3-error-container/20">
             <span className="h-3 w-3 animate-pulse rounded-full bg-m3-error-container0" />
@@ -602,7 +549,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
             </button>
           </div>
         ) : (
-          <div className="flex-1">
+          <div className="flex flex-1 items-center rounded-full border border-m3-outline-variant/60 bg-m3-surface-container dark:border-m3-outline-variant/40 dark:bg-m3-surface-container-high">
             <textarea
               ref={inputRef}
               value={content}
@@ -612,16 +559,90 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               placeholder="Type a message..."
               rows={1}
               enterKeyHint="send"
-              className="max-h-32 min-h-[42px] w-full resize-none rounded-full bg-m3-surface-container px-5 py-2.5 text-sm text-m3-on-surface placeholder-m3-on-surface-variant transition-colors focus:outline-none dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3"
+              className="max-h-32 min-h-[42px] flex-1 resize-none bg-transparent px-5 py-2.5 text-sm text-m3-on-surface placeholder-m3-on-surface-variant focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3"
             />
+            {/* Action buttons inside the pill */}
+            <div className="flex flex-shrink-0 items-center gap-0.5 pr-2">
+              {/* Emoji button */}
+              <div className="relative" ref={emojiRef}>
+                <button
+                  onClick={() => setShowEmoji(!showEmoji)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
+                  aria-label="Emoji picker"
+                >
+                  <Smile className="h-5 w-5" />
+                </button>
+                {showEmoji && (
+                  <div className="absolute bottom-12 right-0 z-20 w-80 rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest p-3 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high">
+                    {/* Category tabs */}
+                    <div className="mb-2 flex gap-1 overflow-x-auto border-b border-m3-outline-variant pb-2 dark:border-m3-outline-variant">
+                      {Object.keys(EMOJI_CATEGORIES).map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setEmojiCategory(cat)}
+                          className={`whitespace-nowrap rounded-md px-2 py-1 text-xs transition-colors ${
+                            emojiCategory === cat
+                              ? 'bg-m3-primary-container text-m3-primary dark:bg-m3-primary-container/30 dark:text-m3-primary'
+                              : 'text-m3-on-surface-variant hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Emoji grid */}
+                    <div className="grid max-h-48 grid-cols-8 gap-0.5 overflow-y-auto">
+                      {EMOJI_CATEGORIES[emojiCategory].map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleEmojiClick(emoji)}
+                          className="rounded-lg p-1.5 text-xl transition-transform hover:scale-110 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Attachment button */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
+                title="Attach file"
+                aria-label="Attach file"
+              >
+                <Paperclip className="h-5 w-5" />
+              </button>
+
+              {/* Image button */}
+              <button
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.accept = 'image/*'
+                    fileInputRef.current.click()
+                    // Reset accept after click
+                    requestAnimationFrame(() => {
+                      if (fileInputRef.current) fileInputRef.current.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.tar,.gz'
+                    })
+                  }
+                }}
+                className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
+                title="Send image"
+                aria-label="Send image"
+              >
+                <ImageIcon className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Send / Stop / Mic button */}
+        {/* Send / Stop / Mic button — outside the pill */}
         {isRecording ? (
           <button
             onClick={stopRecording}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-m3-error-container0 active:bg-red-700 md:h-11 md:w-11"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-m3-error-container0 active:bg-red-700"
             title="Stop recording"
             aria-label="Stop recording"
           >
@@ -630,7 +651,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         ) : !content.trim() && pendingFiles.length === 0 ? (
           <button
             onClick={startRecording}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-m3-surface-container-high text-m3-on-surface-variant transition-all hover:bg-m3-outline-variant active:bg-m3-outline-variant dark:bg-m3-surface-container-highest dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:active:bg-m3-surface-container-low0 md:h-11 md:w-11"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-m3-surface-container-high text-m3-on-surface-variant transition-all hover:bg-m3-outline-variant active:bg-m3-outline-variant dark:bg-m3-surface-container-highest dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
             title="Record voice message"
             aria-label="Record voice message"
           >
@@ -640,7 +661,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
           <button
             onClick={handleSubmit}
             disabled={(!content.trim() && pendingFiles.length === 0) || isSending || isUploading}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary text-white transition-all hover:bg-m3-primary/90 active:bg-m3-primary/80 disabled:opacity-30 md:h-11 md:w-11"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary text-white transition-all hover:bg-m3-primary/90 active:bg-m3-primary/80 disabled:opacity-30"
             aria-label="Send message"
           >
             {isUploading ? (
