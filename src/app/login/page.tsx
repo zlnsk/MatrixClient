@@ -175,7 +175,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-m3-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-m3-primary/90 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-m3-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-m3-primary/90 disabled:opacity-50"
             >
               {isLoading ? (
                 <>

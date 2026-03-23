@@ -25,6 +25,8 @@ import {
   RefreshCw,
   Clock,
   Lock,
+  ArrowLeft,
+  ChevronRight,
 } from 'lucide-react'
 
 interface SettingsPanelProps {
@@ -35,7 +37,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { user, signOut, updateProfile } = useAuthStore()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [activeSection, setActiveSection] = useState<'profile' | 'security' | 'about'>('profile')
+  const [activeSection, setActiveSection] = useState<'main' | 'profile' | 'security' | 'about'>('main')
   const [recoveryKey, setRecoveryKey] = useState('')
   const [isRestoring, setIsRestoring] = useState(false)
   const [restoreResult, setRestoreResult] = useState<string | null>(null)
@@ -104,13 +106,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     try {
       const hsUrl = getHomeserverUrl()
       if (!hsUrl) { setServerStatus('error'); return }
-
-      // Measure latency via versions endpoint (no auth needed)
       const start = performance.now()
       const res = await fetch(`${hsUrl}/_matrix/client/versions`)
       const latency = Math.round(performance.now() - start)
       setServerLatency(latency)
-
       if (res.ok) {
         const data = await res.json()
         setClientVersions(data.versions || [])
@@ -157,10 +156,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     try {
       const client = getMatrixClient()
       if (!client) throw new Error('Not connected')
-      const uploadResponse = await client.uploadContent(file, {
-        name: file.name,
-        type: file.type,
-      })
+      const uploadResponse = await client.uploadContent(file, { name: file.name, type: file.type })
       const mxcUrl = uploadResponse.content_uri
       await client.setAvatarUrl(mxcUrl)
       const httpUrl = client.mxcUrlToHttp(mxcUrl) || undefined
@@ -183,148 +179,139 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const client = getMatrixClient()
   const currentDeviceId = client?.getDeviceId() || 'unknown'
 
-  const sections = [
-    { id: 'profile' as const, label: 'Profile', icon: User },
-    { id: 'security' as const, label: 'Security', icon: Shield },
-    { id: 'about' as const, label: 'About', icon: Info },
-  ]
+  const goBack = () => {
+    if (activeSection === 'main') onClose()
+    else setActiveSection('main')
+  }
+
+  const sectionTitle = activeSection === 'main' ? 'Settings' : activeSection === 'profile' ? 'Profile' : activeSection === 'security' ? 'Security' : 'About'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="relative flex h-[560px] w-full max-w-2xl animate-slide-in overflow-hidden rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest shadow-2xl dark:border-m3-outline-variant dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
-        {/* Left nav */}
-        <div className="flex w-48 flex-shrink-0 flex-col border-r border-m3-outline-variant bg-m3-surface-container-low p-4 dark:border-m3-outline-variant dark:bg-m3-surface-container">
-          <h2 className="mb-4 text-lg font-bold text-m3-on-surface dark:text-m3-on-surface">Settings</h2>
-          <nav className="space-y-1">
-            {sections.map(s => (
-              <button
-                key={s.id}
-                onClick={() => setActiveSection(s.id)}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                  activeSection === s.id
-                    ? 'bg-white text-m3-on-surface shadow-sm dark:bg-m3-surface-container-high dark:text-m3-on-surface'
-                    : 'text-m3-on-surface-variant hover:bg-m3-surface-container hover:text-m3-on-surface dark:text-m3-outline dark:hover:bg-m3-surface-container-high/60 dark:hover:text-m3-outline-variant'
-                }`}
-              >
-                <s.icon className="h-4 w-4" />
-                {s.label}
-              </button>
-            ))}
-          </nav>
+    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-m3-surface animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-m3-outline-variant bg-white px-2 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4">
+        <button
+          onClick={goBack}
+          className="rounded-full p-2 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h2 className="text-base font-medium text-m3-on-surface dark:text-m3-on-surface">{sectionTitle}</h2>
+      </div>
 
-          <div className="mt-auto pt-6">
-            <button
-              onClick={handleSignOut}
-              disabled={isLoggingOut}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-m3-error transition-colors hover:bg-m3-error-container dark:text-m3-error dark:hover:bg-red-900/20"
-            >
-              {isLoggingOut ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <LogOut className="h-4 w-4" />
-              )}
-              Sign out
-            </button>
-            <p className="mt-3 px-3 text-[10px] text-m3-outline dark:text-m3-on-surface-variant select-all">
-              v{process.env.NEXT_PUBLIC_BUILD_VERSION}
-            </p>
-          </div>
-        </div>
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-lg">
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5">
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-m3-on-surface capitalize dark:text-m3-on-surface">{activeSection}</h3>
-          </div>
-
-          {/* ===== PROFILE ===== */}
-          {activeSection === 'profile' && (
-            <div className="space-y-6">
-              {/* Avatar + name */}
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <Avatar
-                    src={user?.avatarUrl}
-                    name={user?.displayName || 'U'}
-                    size="lg"
-                  />
-                  <button
-                    onClick={() => avatarInputRef.current?.click()}
-                    disabled={isUploadingAvatar}
-                    className="absolute -bottom-1 -right-1 rounded-full border-2 border-white bg-m3-primary p-1 text-white transition-colors hover:bg-m3-primary dark:border-m3-surface-container"
-                    title="Change avatar"
-                  >
-                    {isUploadingAvatar ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Camera className="h-3 w-3" />
-                    )}
-                  </button>
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="hidden"
-                  />
-                </div>
-                <div className="flex-1">
-                  {isEditingName ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={newDisplayName}
-                        onChange={e => setNewDisplayName(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleSaveDisplayName()
-                          if (e.key === 'Escape') setIsEditingName(false)
-                        }}
-                        autoFocus
-                        className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low px-3 py-1.5 text-sm text-m3-on-surface focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface"
-                      />
-                      <button
-                        onClick={handleSaveDisplayName}
-                        disabled={isSavingName}
-                        className="rounded-lg bg-m3-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-m3-primary disabled:opacity-50"
-                      >
-                        {isSavingName ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
-                      </button>
-                      <button
-                        onClick={() => { setIsEditingName(false); setNewDisplayName(user?.displayName || '') }}
-                        className="rounded-lg px-3 py-1.5 text-xs font-medium text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">{user?.displayName}</p>
-                      <button
-                        onClick={() => { setNewDisplayName(user?.displayName || ''); setIsEditingName(true) }}
-                        className="rounded p-1 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-high dark:hover:text-m3-outline-variant"
-                        title="Change display name"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-                  <p className="text-xs text-m3-on-surface-variant">{user?.userId}</p>
+          {/* ===== MAIN MENU ===== */}
+          {activeSection === 'main' && (
+            <div>
+              {/* User card at top */}
+              <div className="flex items-center gap-4 px-6 py-5 border-b border-m3-outline-variant dark:border-m3-outline-variant">
+                <Avatar src={user?.avatarUrl} name={user?.displayName || 'U'} size="lg" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-medium text-m3-on-surface dark:text-m3-on-surface">{user?.displayName}</p>
+                  <p className="text-sm text-m3-on-surface-variant dark:text-m3-outline">{user?.userId}</p>
+                  <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline mt-0.5">{homeserverDomain}</p>
                 </div>
               </div>
 
-              {profileError && (
-                <div className="rounded-lg border border-m3-error bg-m3-error-container px-4 py-3 text-sm text-m3-error dark:border-m3-error/50 dark:bg-m3-error-container/20 dark:text-m3-error">
-                  {profileError}
+              {/* Navigation items */}
+              <div className="divide-y divide-m3-outline-variant dark:divide-m3-outline-variant">
+                <button onClick={() => setActiveSection('profile')} className="flex w-full items-center gap-4 px-6 py-4 text-left transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
+                  <User className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <div className="flex-1">
+                    <p className="text-sm text-m3-on-surface dark:text-m3-on-surface">Profile</p>
+                    <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">Name, avatar, homeserver</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-m3-outline" />
+                </button>
+
+                <button onClick={() => setActiveSection('security')} className="flex w-full items-center gap-4 px-6 py-4 text-left transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
+                  <Shield className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <div className="flex-1">
+                    <p className="text-sm text-m3-on-surface dark:text-m3-on-surface">Security</p>
+                    <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">Keys, sessions, encryption</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-m3-outline" />
+                </button>
+
+                <button onClick={() => setActiveSection('about')} className="flex w-full items-center gap-4 px-6 py-4 text-left transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
+                  <Info className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <div className="flex-1">
+                    <p className="text-sm text-m3-on-surface dark:text-m3-on-surface">About</p>
+                    <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">Server, protocol, version</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-m3-outline" />
+                </button>
+
+                <button
+                  onClick={handleSignOut}
+                  disabled={isLoggingOut}
+                  className="flex w-full items-center gap-4 px-6 py-4 text-left transition-colors hover:bg-m3-error-container dark:hover:bg-red-900/20"
+                >
+                  {isLoggingOut ? <Loader2 className="h-5 w-5 animate-spin text-m3-error" /> : <LogOut className="h-5 w-5 text-m3-error" />}
+                  <p className="text-sm text-m3-error">Sign out</p>
+                </button>
+              </div>
+
+              <p className="px-6 py-4 text-xs text-m3-outline dark:text-m3-on-surface-variant select-all">
+                v{process.env.NEXT_PUBLIC_BUILD_VERSION}
+              </p>
+            </div>
+          )}
+
+          {/* ===== PROFILE ===== */}
+          {activeSection === 'profile' && (
+            <div>
+              {/* Avatar hero */}
+              <div className="flex flex-col items-center px-6 pb-6 pt-8 border-b border-m3-outline-variant dark:border-m3-outline-variant">
+                <div className="relative">
+                  <Avatar src={user?.avatarUrl} name={user?.displayName || 'U'} size="lg" />
+                  <button
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="absolute -bottom-1 -right-1 rounded-full border-2 border-white bg-m3-primary p-1.5 text-white transition-colors hover:bg-m3-primary/90 dark:border-m3-surface"
+                  >
+                    {isUploadingAvatar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                  </button>
+                  <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                 </div>
+
+                {isEditingName ? (
+                  <div className="mt-4 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newDisplayName}
+                      onChange={e => setNewDisplayName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleSaveDisplayName(); if (e.key === 'Escape') setIsEditingName(false) }}
+                      autoFocus
+                      className="border-b-2 border-m3-primary bg-transparent px-1 py-1 text-center text-lg font-medium text-m3-on-surface focus:outline-none dark:text-m3-on-surface"
+                    />
+                    <button onClick={handleSaveDisplayName} disabled={isSavingName} className="rounded-full p-1.5 text-m3-primary hover:bg-m3-primary-container">
+                      {isSavingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => { setNewDisplayName(user?.displayName || ''); setIsEditingName(true) }} className="mt-4 flex items-center gap-2 rounded-full px-3 py-1 transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
+                    <span className="text-xl font-medium text-m3-on-surface dark:text-m3-on-surface">{user?.displayName}</span>
+                    <Pencil className="h-3.5 w-3.5 text-m3-on-surface-variant" />
+                  </button>
+                )}
+                <p className="mt-1 text-sm text-m3-on-surface-variant dark:text-m3-outline">{user?.userId}</p>
+              </div>
+
+              {profileError && (
+                <div className="mx-6 mt-4 rounded-lg bg-m3-error-container px-4 py-3 text-sm text-m3-error dark:bg-m3-error-container/20">{profileError}</div>
               )}
 
-              {/* Homeserver */}
-              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-                <div className="flex items-center gap-3">
-                  <Server className="h-5 w-5 text-m3-outline" />
+              {/* Info rows */}
+              <div className="divide-y divide-m3-outline-variant dark:divide-m3-outline-variant">
+                <div className="flex items-center gap-4 px-6 py-4">
+                  <Server className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
                   <div>
-                    <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">Homeserver</p>
-                    <p className="text-xs text-m3-on-surface-variant">{homeserverDomain}</p>
+                    <p className="text-sm text-m3-on-surface dark:text-m3-on-surface">Homeserver</p>
+                    <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">{homeserverDomain}</p>
                   </div>
                 </div>
               </div>
@@ -333,71 +320,52 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
           {/* ===== SECURITY ===== */}
           {activeSection === 'security' && (
-            <div className="space-y-6">
-              {/* Generate Security Key */}
-              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-                <div className="flex items-center gap-2 mb-3">
-                  <ShieldPlus className="h-4 w-4 text-m3-on-surface-variant" />
-                  <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">Security Key</h4>
+            <div className="divide-y divide-m3-outline-variant dark:divide-m3-outline-variant">
+              {/* Security Key */}
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <ShieldPlus className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">Security Key</p>
                 </div>
                 {generatedKey ? (
-                  <div className="space-y-3">
+                  <div className="space-y-3 ml-8">
                     <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                      Cross-signing and key backup are set up. Save this security key — you'll need it to verify new sessions.
+                      Cross-signing and key backup are set up. Save this security key.
                     </p>
-                    <div className="relative rounded-lg border border-indigo-200 bg-m3-surface-container-lowest p-3 font-mono text-xs text-m3-on-surface break-all dark:border-indigo-800 dark:bg-m3-surface-container dark:text-m3-on-surface">
+                    <div className="relative rounded-lg bg-m3-surface-container p-3 font-mono text-xs text-m3-on-surface break-all dark:bg-m3-surface-container-high">
                       {generatedKey}
                       <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(generatedKey)
-                          setKeyCopied(true)
-                          setTimeout(() => setKeyCopied(false), 2000)
-                        }}
-                        className="absolute top-2 right-2 rounded p-1 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
-                        title="Copy to clipboard"
+                        onClick={() => { navigator.clipboard.writeText(generatedKey); setKeyCopied(true); setTimeout(() => setKeyCopied(false), 2000) }}
+                        className="absolute top-2 right-2 rounded-full p-1.5 text-m3-on-surface-variant hover:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest"
                       >
                         {keyCopied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
                       </button>
                     </div>
-                    <p className="text-[10px] text-m3-error dark:text-m3-error">
-                      Store this key securely. If you lose it, you won't be able to decrypt message history on new devices.
-                    </p>
+                    <p className="text-[10px] text-m3-error">Store this key securely. If you lose it, you won't be able to decrypt message history on new devices.</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <p className="text-xs text-m3-on-surface-variant">
-                      Set up cross-signing and key backup for this account. This generates a security key that other sessions can use to verify and decrypt messages.
+                  <div className="space-y-3 ml-8">
+                    <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">
+                      Set up cross-signing and key backup. This generates a security key for verifying other sessions.
                     </p>
                     <input
                       type="password"
                       value={generateKeyPassword}
                       onChange={e => { setGenerateKeyPassword(e.target.value); setGenerateKeyError(null) }}
-                      placeholder="Account password (required for signing)"
-                      className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-lowest px-3 py-2 text-xs text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
+                      placeholder="Account password"
+                      className="w-full border-b border-m3-outline-variant bg-transparent py-2 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline"
                     />
-                    {generateKeyError && (
-                      <p className="text-xs text-m3-error">{generateKeyError}</p>
-                    )}
+                    {generateKeyError && <p className="text-xs text-m3-error">{generateKeyError}</p>}
                     <button
                       onClick={async () => {
-                        if (!generateKeyPassword.trim()) {
-                          setGenerateKeyError('Password is required')
-                          return
-                        }
-                        setIsGeneratingKey(true)
-                        setGenerateKeyError(null)
-                        try {
-                          const key = await generateSecurityKey(generateKeyPassword)
-                          setGeneratedKey(key)
-                          setGenerateKeyPassword('')
-                        } catch (err) {
-                          setGenerateKeyError(err instanceof Error ? err.message : 'Failed to generate security key')
-                        } finally {
-                          setIsGeneratingKey(false)
-                        }
+                        if (!generateKeyPassword.trim()) { setGenerateKeyError('Password is required'); return }
+                        setIsGeneratingKey(true); setGenerateKeyError(null)
+                        try { const key = await generateSecurityKey(generateKeyPassword); setGeneratedKey(key); setGenerateKeyPassword('') }
+                        catch (err) { setGenerateKeyError(err instanceof Error ? err.message : 'Failed to generate security key') }
+                        finally { setIsGeneratingKey(false) }
                       }}
                       disabled={isGeneratingKey || !generateKeyPassword.trim()}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-m3-primary py-2 text-xs font-medium text-white transition-colors hover:bg-m3-primary disabled:opacity-50"
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-m3-primary py-2.5 text-xs font-medium text-white transition-colors hover:bg-m3-primary/90 disabled:opacity-50"
                     >
                       {isGeneratingKey ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldPlus className="h-3.5 w-3.5" />}
                       {isGeneratingKey ? 'Setting up...' : 'Generate Security Key'}
@@ -407,96 +375,83 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               </div>
 
               {/* Recovery Key Restore */}
-              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-                <div className="flex items-center gap-2 mb-3">
-                  <Key className="h-4 w-4 text-m3-on-surface-variant" />
-                  <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">Key Backup Recovery</h4>
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <Key className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">Key Backup Recovery</p>
                 </div>
-                <p className="text-xs text-m3-on-surface-variant mb-3">
-                  Enter your security key or passphrase to decrypt messages sent before this device logged in.
-                  You can find it in another Matrix client (e.g. Element) under Settings &gt; Security &gt; Encryption.
-                </p>
-                <textarea
-                  value={recoveryKey}
-                  onChange={e => { setRecoveryKey(e.target.value); setRestoreError(null); setRestoreResult(null) }}
-                  placeholder="Security key (EsTC j9gP noRq ...) or passphrase..."
-                  rows={2}
-                  className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-lowest px-3 py-2 font-mono text-xs text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
-                />
-                {restoreError && (
-                  <p className="mt-2 text-xs text-m3-error">{restoreError}</p>
-                )}
-                {restoreResult && (
-                  <div className="mt-2 flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
-                    <CheckCircle className="h-3.5 w-3.5" />
-                    {restoreResult}
-                  </div>
-                )}
-                <button
-                  onClick={async () => {
-                    if (!recoveryKey.trim()) return
-                    setIsRestoring(true)
-                    setRestoreError(null)
-                    setRestoreResult(null)
-                    try {
-                      await restoreFromRecoveryKey(recoveryKey)
-                      setRestoreResult('Device verified and keys restored')
-                      setRecoveryKey('')
-                    } catch (err) {
-                      setRestoreError(err instanceof Error ? err.message : 'Failed to restore keys')
-                    } finally {
-                      setIsRestoring(false)
-                    }
-                  }}
-                  disabled={isRestoring || !recoveryKey.trim()}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-m3-primary py-2 text-xs font-medium text-white transition-colors hover:bg-m3-primary disabled:opacity-50"
-                >
-                  {isRestoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Key className="h-3.5 w-3.5" />}
-                  {isRestoring ? 'Restoring keys...' : 'Restore from Recovery Key'}
-                </button>
+                <div className="ml-8 space-y-3">
+                  <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">
+                    Enter your security key or passphrase to decrypt older messages.
+                  </p>
+                  <textarea
+                    value={recoveryKey}
+                    onChange={e => { setRecoveryKey(e.target.value); setRestoreError(null); setRestoreResult(null) }}
+                    placeholder="Security key (EsTC j9gP noRq ...) or passphrase..."
+                    rows={2}
+                    className="w-full border-b border-m3-outline-variant bg-transparent py-2 font-mono text-xs text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none resize-none dark:text-m3-on-surface dark:placeholder-m3-outline"
+                  />
+                  {restoreError && <p className="text-xs text-m3-error">{restoreError}</p>}
+                  {restoreResult && (
+                    <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                      <CheckCircle className="h-3.5 w-3.5" />{restoreResult}
+                    </div>
+                  )}
+                  <button
+                    onClick={async () => {
+                      if (!recoveryKey.trim()) return
+                      setIsRestoring(true); setRestoreError(null); setRestoreResult(null)
+                      try { await restoreFromRecoveryKey(recoveryKey); setRestoreResult('Device verified and keys restored'); setRecoveryKey('') }
+                      catch (err) { setRestoreError(err instanceof Error ? err.message : 'Failed to restore keys') }
+                      finally { setIsRestoring(false) }
+                    }}
+                    disabled={isRestoring || !recoveryKey.trim()}
+                    className="flex w-full items-center justify-center gap-2 rounded-full bg-m3-primary py-2.5 text-xs font-medium text-white transition-colors hover:bg-m3-primary/90 disabled:opacity-50"
+                  >
+                    {isRestoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Key className="h-3.5 w-3.5" />}
+                    {isRestoring ? 'Restoring keys...' : 'Restore from Recovery Key'}
+                  </button>
+                </div>
               </div>
 
               {/* Active Sessions */}
-              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-                <div className="flex items-center gap-2 mb-3">
-                  <Monitor className="h-4 w-4 text-m3-on-surface-variant" />
-                  <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">Active Sessions</h4>
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <Monitor className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">Active Sessions</p>
                 </div>
                 {loadingDevices ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-m3-outline" />
-                  </div>
+                  <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-m3-outline" /></div>
                 ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <div className="space-y-1">
                     {devices.map(device => {
                       const isCurrent = device.deviceId === currentDeviceId
                       const isConfirming = showDeleteConfirm === device.deviceId
                       return (
-                        <div key={device.deviceId} className={`rounded-lg p-2 ${isCurrent ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
+                        <div key={device.deviceId} className={`rounded-xl px-3 py-3 ${isCurrent ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
                           <div className="flex items-center gap-3">
-                            <Monitor className={`h-4 w-4 flex-shrink-0 ${isCurrent ? 'text-green-500' : 'text-m3-outline'}`} />
+                            <Monitor className={`h-5 w-5 flex-shrink-0 ${isCurrent ? 'text-green-500' : 'text-m3-outline'}`} />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">
+                              <p className="text-sm text-m3-on-surface dark:text-m3-on-surface-variant">
                                 {device.displayName || device.deviceId}
                                 {isCurrent && <span className="ml-1.5 text-xs text-green-600 dark:text-green-400">(this device)</span>}
                               </p>
-                              <p className="text-xs text-m3-outline">
-                                {device.deviceId}
-                                {device.lastSeenTs ? ` · Last seen ${new Date(device.lastSeenTs).toLocaleDateString()}` : ''}
+                              <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">
+                                {device.deviceId}{device.lastSeenTs ? ` · ${new Date(device.lastSeenTs).toLocaleDateString()}` : ''}
                               </p>
                             </div>
                             {!isCurrent && !isConfirming && (
                               <button
                                 onClick={() => { setShowDeleteConfirm(device.deviceId); setDeviceError(null); setDeletePassword('') }}
-                                className="flex-shrink-0 rounded px-2 py-1 text-xs text-m3-error transition-colors hover:bg-m3-error-container dark:hover:bg-red-900/20"
+                                className="rounded-full px-3 py-1 text-xs text-m3-error transition-colors hover:bg-m3-error-container dark:hover:bg-red-900/20"
                               >
                                 Sign out
                               </button>
                             )}
                           </div>
                           {isConfirming && (
-                            <div className="mt-2 ml-7 space-y-2">
-                              <p className="text-xs text-m3-on-surface-variant">Enter your account password to sign out this session:</p>
+                            <div className="mt-3 ml-8 space-y-3">
+                              <p className="text-xs text-m3-on-surface-variant">Enter password to sign out this session:</p>
                               <input
                                 type="password"
                                 value={deletePassword}
@@ -504,21 +459,21 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                                 onKeyDown={e => { if (e.key === 'Enter') handleDeleteDevice(device.deviceId) }}
                                 placeholder="Account password"
                                 autoFocus
-                                className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-lowest px-3 py-1.5 text-xs text-m3-on-surface focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface"
+                                className="w-full border-b border-m3-outline-variant bg-transparent py-1.5 text-sm text-m3-on-surface focus:border-m3-primary focus:outline-none dark:text-m3-on-surface"
                               />
                               {deviceError && <p className="text-xs text-m3-error">{deviceError}</p>}
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => handleDeleteDevice(device.deviceId)}
                                   disabled={deletingDevice === device.deviceId}
-                                  className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                                  className="flex items-center gap-1.5 rounded-full bg-m3-error px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-m3-error/90 disabled:opacity-50"
                                 >
                                   {deletingDevice === device.deviceId ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
-                                  Confirm sign out
+                                  Confirm
                                 </button>
                                 <button
                                   onClick={() => { setShowDeleteConfirm(null); setDeletePassword(''); setDeviceError(null) }}
-                                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                                  className="rounded-full px-4 py-1.5 text-xs text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                                 >
                                   Cancel
                                 </button>
@@ -536,95 +491,61 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
           {/* ===== ABOUT ===== */}
           {activeSection === 'about' && (
-            <div className="space-y-5">
-              {/* Connection Status */}
-              <div className={`rounded-xl border p-4 shadow-sm ${
-                serverStatus === 'connected'
-                  ? 'border-green-200 bg-green-50 dark:border-green-800/50 dark:bg-green-900/20'
-                  : serverStatus === 'error'
-                    ? 'border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-900/20'
-                    : 'border-m3-outline-variant bg-m3-surface-container-low dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {serverStatus === 'checking' ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-m3-outline" />
-                    ) : serverStatus === 'connected' ? (
-                      <Wifi className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    ) : (
-                      <WifiOff className="h-5 w-5 text-red-600 dark:text-red-400" />
-                    )}
-                    <div>
-                      <p className={`text-sm font-medium ${
-                        serverStatus === 'connected' ? 'text-green-700 dark:text-green-300'
-                          : serverStatus === 'error' ? 'text-red-700 dark:text-red-300'
-                            : 'text-m3-on-surface dark:text-m3-on-surface-variant'
-                      }`}>
-                        {serverStatus === 'connected' ? 'Connected' : serverStatus === 'error' ? 'Connection Error' : 'Checking...'}
-                      </p>
-                      <p className="text-xs text-m3-on-surface-variant">
-                        {getHomeserverUrl() || 'No homeserver'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {serverLatency !== null && (
-                      <div className="flex items-center gap-1 text-xs text-m3-on-surface-variant">
-                        <Clock className="h-3 w-3" />
-                        <span className={`font-mono ${serverLatency < 200 ? 'text-green-600 dark:text-green-400' : serverLatency < 500 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {serverLatency}ms
-                        </span>
-                      </div>
-                    )}
-                    <button
-                      onClick={checkServerStatus}
-                      disabled={serverStatus === 'checking'}
-                      className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high"
-                      title="Refresh"
-                    >
-                      <RefreshCw className={`h-3.5 w-3.5 ${serverStatus === 'checking' ? 'animate-spin' : ''}`} />
-                    </button>
-                  </div>
+            <div className="divide-y divide-m3-outline-variant dark:divide-m3-outline-variant">
+              {/* Connection status */}
+              <div className="flex items-center gap-4 px-6 py-4">
+                {serverStatus === 'checking' ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-m3-outline" />
+                ) : serverStatus === 'connected' ? (
+                  <Wifi className="h-5 w-5 text-green-600 dark:text-green-400" />
+                ) : (
+                  <WifiOff className="h-5 w-5 text-m3-error" />
+                )}
+                <div className="flex-1">
+                  <p className={`text-sm ${serverStatus === 'connected' ? 'text-green-700 dark:text-green-300' : serverStatus === 'error' ? 'text-m3-error' : 'text-m3-on-surface'}`}>
+                    {serverStatus === 'connected' ? 'Connected' : serverStatus === 'error' ? 'Connection Error' : 'Checking...'}
+                  </p>
+                  <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">{getHomeserverUrl() || 'No homeserver'}</p>
                 </div>
-              </div>
-
-              {/* Protocol & Standards */}
-              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant mb-3">Protocol & Standards</h4>
-                <div className="space-y-2.5">
-                  <InfoRow label="Protocol" value="Matrix" />
-                  <InfoRow label="Encryption" value="Megolm (m.megolm.v1.aes-sha2)" icon={<Lock className="h-3 w-3 text-green-500" />} />
-                  <InfoRow label="Key Exchange" value="Olm (m.olm.v1.curve25519-aes-sha2-256)" />
-                  <InfoRow label="Key Verification" value="SAS (Short Authentication String)" />
-                  {clientVersions.length > 0 && (
-                    <InfoRow label="Client-Server API" value={clientVersions[clientVersions.length - 1]} />
+                <div className="flex items-center gap-2">
+                  {serverLatency !== null && (
+                    <span className={`font-mono text-xs ${serverLatency < 200 ? 'text-green-600 dark:text-green-400' : serverLatency < 500 ? 'text-yellow-600' : 'text-m3-error'}`}>
+                      {serverLatency}ms
+                    </span>
                   )}
+                  <button onClick={checkServerStatus} disabled={serverStatus === 'checking'} className="rounded-full p-2 text-m3-on-surface-variant hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
+                    <RefreshCw className={`h-4 w-4 ${serverStatus === 'checking' ? 'animate-spin' : ''}`} />
+                  </button>
                 </div>
               </div>
 
-              {/* Client Info */}
-              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant mb-3">Client</h4>
-                <div className="space-y-2.5">
-                  <InfoRow label="App Version" value={`v${process.env.NEXT_PUBLIC_BUILD_VERSION || '?'}`} />
-                  <InfoRow label="SDK" value="matrix-js-sdk" />
-                  <InfoRow label="Crypto" value="@matrix-org/matrix-sdk-crypto-wasm" />
-                  <InfoRow label="Framework" value="Next.js" />
-                  <InfoRow label="Device ID" value={currentDeviceId} mono />
-                </div>
+              {/* Protocol info */}
+              <div className="px-6 py-4 space-y-3">
+                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Protocol & Standards</p>
+                <InfoRow label="Protocol" value="Matrix" />
+                <InfoRow label="Encryption" value="Megolm" icon={<Lock className="h-3 w-3 text-green-500" />} />
+                <InfoRow label="Key Exchange" value="Olm" />
+                <InfoRow label="Verification" value="SAS" />
+                {clientVersions.length > 0 && <InfoRow label="API" value={clientVersions[clientVersions.length - 1]} />}
               </div>
 
-              {/* Server Info */}
-              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant mb-3">Server</h4>
-                <div className="space-y-2.5">
-                  <InfoRow label="Homeserver" value={homeserverDomain} />
-                  <InfoRow label="URL" value={getHomeserverUrl() || 'unknown'} mono />
-                  <InfoRow label="User ID" value={user?.userId || 'unknown'} mono />
-                  {clientVersions.length > 0 && (
-                    <InfoRow label="Supported APIs" value={clientVersions.join(', ')} />
-                  )}
-                </div>
+              {/* Client info */}
+              <div className="px-6 py-4 space-y-3">
+                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Client</p>
+                <InfoRow label="Version" value={`v${process.env.NEXT_PUBLIC_BUILD_VERSION || '?'}`} />
+                <InfoRow label="SDK" value="matrix-js-sdk" />
+                <InfoRow label="Crypto" value="matrix-sdk-crypto-wasm" />
+                <InfoRow label="Framework" value="Next.js" />
+                <InfoRow label="Device ID" value={currentDeviceId} mono />
+              </div>
+
+              {/* Server info */}
+              <div className="px-6 py-4 space-y-3">
+                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Server</p>
+                <InfoRow label="Homeserver" value={homeserverDomain} />
+                <InfoRow label="URL" value={getHomeserverUrl() || 'unknown'} mono />
+                <InfoRow label="User ID" value={user?.userId || 'unknown'} mono />
+                {clientVersions.length > 0 && <InfoRow label="APIs" value={clientVersions.join(', ')} />}
               </div>
             </div>
           )}
@@ -634,11 +555,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   )
 }
 
-/** Small helper for consistent info rows in About section */
 function InfoRow({ label, value, mono, icon }: { label: string; value: string; mono?: boolean; icon?: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4">
-      <span className="text-xs text-m3-on-surface-variant flex-shrink-0">{label}</span>
+      <span className="text-xs text-m3-on-surface-variant dark:text-m3-outline flex-shrink-0">{label}</span>
       <span className={`text-xs text-right text-m3-on-surface dark:text-m3-on-surface-variant flex items-center gap-1 ${mono ? 'font-mono' : ''}`}>
         {icon}{value}
       </span>

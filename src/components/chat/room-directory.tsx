@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { getMatrixClient } from '@/lib/matrix/client'
 import { useChatStore } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
-import { Search, Globe, Loader2, Users, Lock, Hash } from 'lucide-react'
+import { Search, Loader2, Users, Hash, ArrowLeft } from 'lucide-react'
 
 interface RoomDirectoryProps {
   onClose: () => void
@@ -34,7 +34,6 @@ export function RoomDirectory({ onClose, onRoomJoined }: RoomDirectoryProps) {
   const searchRooms = async () => {
     const client = getMatrixClient()
     if (!client) return
-
     setIsLoading(true)
     setError('')
     setHasSearched(true)
@@ -43,7 +42,6 @@ export function RoomDirectory({ onClose, onRoomJoined }: RoomDirectoryProps) {
         limit: 50,
         filter: searchTerm.trim() ? { generic_search_term: searchTerm.trim() } : undefined,
       })
-
       setRooms(
         (response.chunk || []).map((r: any) => ({
           roomId: r.room_id,
@@ -66,7 +64,6 @@ export function RoomDirectory({ onClose, onRoomJoined }: RoomDirectoryProps) {
   const joinRoom = async (roomId: string) => {
     const client = getMatrixClient()
     if (!client) return
-
     setJoiningRoom(roomId)
     try {
       await client.joinRoom(roomId)
@@ -80,77 +77,79 @@ export function RoomDirectory({ onClose, onRoomJoined }: RoomDirectoryProps) {
     }
   }
 
-  // Check if user is already in a room
   const client = getMatrixClient()
   const joinedRoomIds = new Set((client?.getRooms() || []).filter(r => r.getMyMembership() === 'join').map(r => r.roomId))
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="relative flex h-[600px] w-full max-w-2xl animate-slide-in flex-col overflow-hidden rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest shadow-2xl dark:border-m3-outline-variant dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center gap-2 border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant">
-          <Globe className="h-5 w-5 text-m3-primary" />
-          <h2 className="text-lg font-bold text-m3-on-surface dark:text-m3-on-surface">Room Directory</h2>
-        </div>
+    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-m3-surface animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-m3-outline-variant bg-white px-2 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4">
+        <button onClick={onClose} className="rounded-full p-2 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h2 className="text-base font-medium text-m3-on-surface dark:text-m3-on-surface">Room Directory</h2>
+      </div>
 
-        {/* Search */}
-        <div className="border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-outline" />
-              <input
-                type="text"
-                placeholder="Search public rooms..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && searchRooms()}
-                className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low py-2.5 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
-              />
-            </div>
-            <button
-              onClick={searchRooms}
-              disabled={isLoading}
-              className="rounded-lg bg-m3-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-m3-primary disabled:opacity-50"
-            >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
-            </button>
+      {/* Search bar */}
+      <div className="border-b border-m3-outline-variant px-4 py-3 dark:border-m3-outline-variant md:px-6">
+        <div className="mx-auto flex max-w-lg gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-outline" />
+            <input
+              type="text"
+              placeholder="Search public rooms..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && searchRooms()}
+              autoFocus
+              className="w-full rounded-full bg-m3-surface-container py-2.5 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline focus:outline-none focus:ring-2 focus:ring-m3-primary dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
+            />
           </div>
-          {error && <p className="mt-2 text-xs text-m3-error">{error}</p>}
+          <button
+            onClick={searchRooms}
+            disabled={isLoading}
+            className="rounded-full bg-m3-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-m3-primary/90 disabled:opacity-50"
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
+          </button>
         </div>
+        {error && <p className="mx-auto mt-2 max-w-lg text-xs text-m3-error">{error}</p>}
+      </div>
 
-        {/* Room list */}
-        <div className="flex-1 overflow-y-auto p-2">
+      {/* Room list */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-lg">
           {!hasSearched ? (
-            <div className="flex h-full items-center justify-center text-m3-outline">
-              <p className="text-sm">Search for public rooms to browse</p>
+            <div className="flex h-64 items-center justify-center">
+              <p className="text-sm text-m3-outline dark:text-m3-on-surface-variant">Search for public rooms to browse</p>
             </div>
           ) : rooms.length === 0 && !isLoading ? (
-            <div className="flex h-full items-center justify-center text-m3-outline">
-              <p className="text-sm">No rooms found</p>
+            <div className="flex h-64 items-center justify-center">
+              <p className="text-sm text-m3-outline dark:text-m3-on-surface-variant">No rooms found</p>
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="divide-y divide-m3-outline-variant dark:divide-m3-outline-variant">
               {rooms.map(room => (
-                <div key={room.roomId} className="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-m3-surface-container-low dark:hover:bg-m3-surface-container-high/50">
+                <div key={room.roomId} className="flex items-center gap-3 px-6 py-3 transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
                   <Avatar src={room.avatarUrl} name={room.name} size="md" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-m3-on-surface dark:text-m3-on-surface">{room.name}</p>
+                      <p className="truncate text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">{room.name}</p>
                       <Hash className="h-3 w-3 flex-shrink-0 text-m3-outline" />
                     </div>
                     {room.alias && <p className="truncate text-xs text-m3-primary">{room.alias}</p>}
                     {room.topic && <p className="mt-0.5 truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">{room.topic}</p>}
-                    <div className="mt-1 flex items-center gap-3 text-xs text-m3-outline">
-                      <span className="flex items-center gap-1"><Users className="h-3 w-3" />{room.memberCount}</span>
+                    <div className="mt-0.5 flex items-center gap-1 text-xs text-m3-outline">
+                      <Users className="h-3 w-3" />{room.memberCount}
                     </div>
                   </div>
                   {joinedRoomIds.has(room.roomId) ? (
-                    <span className="rounded-lg bg-green-100 px-3 py-1.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">Joined</span>
+                    <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">Joined</span>
                   ) : (
                     <button
                       onClick={() => joinRoom(room.roomId)}
                       disabled={joiningRoom === room.roomId}
-                      className="rounded-lg bg-m3-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-m3-primary disabled:opacity-50"
+                      className="rounded-full bg-m3-primary px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-m3-primary/90 disabled:opacity-50"
                     >
                       {joiningRoom === room.roomId ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Join'}
                     </button>
