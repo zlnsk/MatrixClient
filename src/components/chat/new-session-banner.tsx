@@ -1,19 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ShieldAlert, Monitor, Key, Loader2, X, CheckCircle } from 'lucide-react'
 
 interface NewSessionBannerProps {
   onVerifyWithSession: () => void
   onVerifyWithKey: (key: string) => Promise<void>
   onDismiss: () => void
+  sessionVerifyError?: string | null
 }
 
-export function NewSessionBanner({ onVerifyWithSession, onVerifyWithKey, onDismiss }: NewSessionBannerProps) {
+export function NewSessionBanner({ onVerifyWithSession, onVerifyWithKey, onDismiss, sessionVerifyError }: NewSessionBannerProps) {
   const [mode, setMode] = useState<'prompt' | 'key'>('prompt')
   const [securityKey, setSecurityKey] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Auto-switch to key mode when session verification fails
+  useEffect(() => {
+    if (sessionVerifyError) {
+      setMode('key')
+      setError(sessionVerifyError)
+    }
+  }, [sessionVerifyError])
 
   const handleKeySubmit = async () => {
     if (!securityKey.trim()) return

@@ -17,6 +17,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
   const [verificationRequest, setVerificationRequest] = useState<VerificationRequest | null>(null)
   const [showNewSessionBanner, setShowNewSessionBanner] = useState(false)
+  const [sessionVerifyError, setSessionVerifyError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -269,11 +270,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   const handleVerifyWithSession = useCallback(async () => {
     try {
+      setSessionVerifyError(null)
       const request = await requestSelfVerification()
       setVerificationRequest(request)
       setShowNewSessionBanner(false)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to request self-verification:', err)
+      const msg = err?.message || String(err)
+      if (msg.toLowerCase().includes('not implemented') || msg.toLowerCase().includes('not supported')) {
+        setSessionVerifyError('Interactive verification is not available. Please use a security key instead.')
+      } else {
+        setSessionVerifyError('Failed to start verification. Please try the security key method.')
+      }
     }
   }, [])
 
@@ -290,6 +298,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         <NewSessionBanner
           onVerifyWithSession={handleVerifyWithSession}
           onVerifyWithKey={handleVerifyWithKey}
+          sessionVerifyError={sessionVerifyError}
           onDismiss={() => {
             localStorage.setItem('matrix_verify_banner_dismissed', 'true')
             setShowNewSessionBanner(false)
