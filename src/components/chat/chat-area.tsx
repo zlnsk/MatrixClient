@@ -793,7 +793,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                   <ImageIcon className="h-5 w-5 flex-shrink-0 text-m3-on-surface-variant dark:text-m3-outline" />
                   <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">Shared media</p>
                 </div>
-                <div className="grid grid-cols-3 gap-1 overflow-hidden rounded-xl">
+                <div className="grid grid-cols-4 gap-0.5 overflow-hidden rounded-xl">
                   {messages
                     .filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video'))
                     .slice(-30)
@@ -804,7 +804,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                       </div>
                     ))}
                   {messages.filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video')).length === 0 && (
-                    <p className="col-span-3 py-6 text-center text-sm text-m3-outline dark:text-m3-on-surface-variant">No shared media yet</p>
+                    <p className="col-span-4 py-6 text-center text-sm text-m3-outline dark:text-m3-on-surface-variant">No shared media yet</p>
                   )}
                 </div>
 
