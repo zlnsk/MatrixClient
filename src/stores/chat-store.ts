@@ -113,6 +113,7 @@ interface ChatState {
   setRoomName: (roomId: string, name: string) => Promise<void>
   setRoomTopic: (roomId: string, topic: string) => Promise<void>
   inviteMember: (roomId: string, userId: string) => Promise<void>
+  enableEncryption: (roomId: string) => Promise<void>
   pinMessage: (roomId: string, eventId: string) => Promise<void>
   unpinMessage: (roomId: string, eventId: string) => Promise<void>
   forwardMessage: (fromRoomId: string, eventId: string, toRoomId: string) => Promise<void>
@@ -920,6 +921,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
       get().refreshRoom(roomId)
     } catch (err) {
       console.error('Failed to invite member:', err)
+      throw err
+    }
+  },
+
+  enableEncryption: async (roomId: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await client.sendStateEvent(roomId, 'm.room.encryption', {
+        algorithm: 'm.megolm.v1.aes-sha2',
+      }, '')
+      get().loadRooms()
+      get().refreshRoom(roomId)
+    } catch (err) {
+      console.error('Failed to enable encryption:', err)
       throw err
     }
   },

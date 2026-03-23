@@ -95,7 +95,7 @@ interface ChatAreaProps {
 
 export function ChatArea({ onBackClick }: ChatAreaProps) {
   const user = useAuthStore(s => s.user)
-  const { activeRoom, messages, isLoadingMessages, sendMessage, typingUsers, archiveRoom, unarchiveRoom, setActiveRoom, leaveRoom, setRoomName, setRoomTopic, inviteMember } = useChatStore()
+  const { activeRoom, messages, isLoadingMessages, sendMessage, typingUsers, archiveRoom, unarchiveRoom, setActiveRoom, leaveRoom, setRoomName, setRoomTopic, inviteMember, enableEncryption } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [replyTo, setReplyTo] = useState<MatrixMessage | null>(null)
@@ -630,17 +630,32 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
             {/* Encryption */}
             <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-3 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-              <div className="flex items-center gap-2">
-                {activeRoom.encrypted ? (
-                  <>
-                    <Shield className="h-4 w-4 text-green-500" />
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400">End-to-end encrypted</span>
-                  </>
-                ) : (
-                  <>
-                    <Shield className="h-4 w-4 text-m3-outline" />
-                    <span className="text-sm font-medium text-m3-on-surface-variant dark:text-m3-outline">Not encrypted</span>
-                  </>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {activeRoom.encrypted ? (
+                    <>
+                      <Shield className="h-4 w-4 text-green-500" />
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">End-to-end encrypted</span>
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="h-4 w-4 text-m3-outline" />
+                      <span className="text-sm font-medium text-m3-on-surface-variant dark:text-m3-outline">Not encrypted</span>
+                    </>
+                  )}
+                </div>
+                {!activeRoom.encrypted && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await enableEncryption(activeRoom.roomId)
+                      } catch { /* handled in store */ }
+                    }}
+                    className="flex items-center gap-1 rounded-lg bg-m3-primary px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-m3-primary/90"
+                  >
+                    <Lock className="h-3 w-3" />
+                    Enable
+                  </button>
                 )}
               </div>
             </div>
