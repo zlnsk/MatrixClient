@@ -376,7 +376,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   {displayName}
                 </span>
                 {matrixId && (
-                  <span className="text-[10px] font-normal text-white/60 dark:text-m3-outline truncate max-w-[180px] select-text" title={matrixId}>
+                  <span className="text-[10px] font-normal text-m3-on-surface-variant dark:text-m3-outline truncate max-w-[180px] select-text" title={matrixId}>
                     {matrixId}
                   </span>
                 )}
@@ -404,7 +404,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 setEditContent(message.content)
               }
             }}
-            className={`rounded-2xl transition-shadow duration-150 ${message.type === 'm.image' || message.type === 'm.video' ? 'px-4 py-3 w-fit' : 'px-4 py-3'} ${isOwn ? 'cursor-pointer ' : ''}${
+            className={`rounded-2xl overflow-hidden transition-shadow duration-150 ${message.type === 'm.image' || message.type === 'm.video' ? 'p-3 w-fit' : 'px-4 py-3'} ${isOwn ? 'cursor-pointer ' : ''}${
               isOwn
                 ? 'bg-m3-primary text-white shadow-sm'
                 : 'bg-white text-m3-on-surface shadow-sm dark:bg-m3-surface-container-high dark:text-m3-on-surface'
@@ -505,7 +505,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   </a>
                 )}
                 {message.content && message.type === 'm.image' && !/\.\w{2,5}$/i.test(message.content) && (
-                  <p className="mt-1.5 px-2.5 pb-1 text-sm">{message.content}</p>
+                  <p className="mt-2 text-sm">{message.content}</p>
                 )}
               </div>
             ) : message.msgtype === 'm.emote' ? (
