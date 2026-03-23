@@ -35,7 +35,8 @@ export function getHomeserverDomain(): string | null {
 
 /**
  * Resolve a Matrix server name to a homeserver base URL.
- * Tries .well-known discovery first, then falls back to https://server.
+ * Uses a server-side API route for .well-known discovery to avoid browser
+ * CORS issues (e.g. when behind Pangolin or other auth-gating proxies).
  */
 export async function resolveHomeserver(server: string): Promise<string> {
   // If user typed a full URL, use it directly
@@ -50,7 +51,20 @@ export async function resolveHomeserver(server: string): Promise<string> {
     throw new Error('Insecure homeserver URLs (http://) are not allowed. Use https:// instead.')
   }
 
-  // Try .well-known discovery with timeout and validation
+  // Use server-side API route for discovery — avoids browser CORS issues
+  // when .well-known host doesn't serve CORS headers or when a reverse
+  // proxy (Pangolin) intercepts /_matrix/* requests.
+  try {
+    const res = await fetch(`/api/resolve-homeserver?server=${encodeURIComponent(server)}`)
+    if (res.ok) {
+      const data = await res.json()
+      if (data?.homeserverUrl) {
+        return data.homeserverUrl
+      }
+    }
+  } catch { /* server-side resolution failed, try client-side fallback */ }
+
+  // Client-side fallback: try .well-known directly (may fail due to CORS)
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10_000)
@@ -61,7 +75,6 @@ export async function resolveHomeserver(server: string): Promise<string> {
       const base = data?.['m.homeserver']?.base_url
       if (base) {
         const cleanUrl = base.replace(/\/+$/, '')
-        // Validate returned URL is HTTPS to prevent downgrade attacks
         if (!cleanUrl.startsWith('https://')) {
           if (process.env.NODE_ENV !== 'development' || !cleanUrl.startsWith('http://')) {
             throw new Error(`Untrusted .well-known base_url: ${cleanUrl} — must use HTTPS`)
@@ -71,9 +84,7 @@ export async function resolveHomeserver(server: string): Promise<string> {
       }
     }
   } catch (err) {
-    // If it's our own validation error, propagate it
     if (err instanceof Error && err.message.startsWith('Untrusted')) throw err
-    /* discovery failed, fall back */
   }
 
   return `https://${server}`
