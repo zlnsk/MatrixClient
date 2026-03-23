@@ -504,7 +504,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 setEditContent(message.content)
               }
             }}
-            className={`rounded-[20px] overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'p-3 w-fit' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
+            className={`rounded-[20px] overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'w-fit' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
               isOwn
                 ? 'bg-m3-primary text-white'
                 : 'border border-m3-outline-variant/50 bg-m3-surface-container-lowest text-m3-on-surface dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high dark:text-m3-on-surface'
@@ -512,7 +512,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           >
             {/* Inline reply quote */}
             {message.replyToEvent && !isEditing && (
-              <div className={`mb-2 rounded-lg px-3 py-1.5 text-xs ${
+              <div className={`mb-2 rounded-lg px-3 py-1.5 text-xs ${(message.type === 'm.image' || message.type === 'm.video') ? 'mx-3 mt-3 ' : ''}${
                 isOwn
                   ? 'border-l-2 border-white/60 bg-white/20'
                   : 'border-l-2 border-m3-outline bg-m3-surface-container/80 dark:border-m3-outline dark:bg-m3-surface-container-highest/50'
@@ -554,7 +554,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                       <img
                         src={effectiveMediaUrl}
                         alt={message.content || 'Shared image'}
-                        className="block min-w-[200px] max-w-full rounded-xl object-contain cursor-pointer transition-opacity hover:opacity-90"
+                        className="block min-w-[200px] max-w-full object-contain cursor-pointer transition-opacity hover:opacity-90"
                         style={{
                           maxHeight: 480,
                           width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
@@ -603,7 +603,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   </a>
                 )}
                 {message.content && message.type === 'm.image' && !/\.\w{2,5}$/i.test(message.content) && (
-                  <p className="mt-2 text-sm">{message.content}</p>
+                  <p className="px-3 pb-1 pt-2 text-sm">{message.content}</p>
                 )}
               </div>
             ) : message.msgtype === 'm.emote' ? (
