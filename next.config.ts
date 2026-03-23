@@ -9,16 +9,23 @@ function getBuildVersion(): string {
   if (process.env.BUILD_VERSION) return process.env.BUILD_VERSION
 
   const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
-  let gitInfo = ''
-  let buildNum = ''
+  let sha = ''
+  let date = ''
+  let count = ''
+
+  // Try git CLI first (works locally and in most CIs)
   try {
-    const sha = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
-    const date = execSync('git log -1 --format=%cs', { encoding: 'utf-8' }).trim()
-    // Build number = total commit count — always increments
-    const count = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim()
-    buildNum = ` build ${count}`
-    gitInfo = ` (${sha} ${date})`
-  } catch { /* not a git repo or git unavailable */ }
+    sha = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
+    date = execSync('git log -1 --format=%cs', { encoding: 'utf-8' }).trim()
+    count = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim()
+  } catch {
+    // Fallback to Vercel env vars (shallow clone / no .git directory)
+    sha = (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7)
+    date = new Date().toISOString().slice(0, 10)
+  }
+
+  const buildNum = count ? ` build ${count}` : ''
+  const gitInfo = sha ? ` (${sha} ${date})` : ''
 
   return `${pkg.version}${buildNum}${gitInfo}`
 }
