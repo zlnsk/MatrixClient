@@ -484,15 +484,11 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
       {/* Room Info Panel */}
       {showRoomInfo && (
-        <div className="absolute right-0 top-0 z-40 h-full w-80 border-l border-m3-outline-variant bg-m3-surface-container-lowest shadow-2xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container overflow-y-auto">
-          <div className="flex items-center justify-between border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant">
+        <div className="absolute inset-0 z-40 flex items-center justify-center" onClick={() => setShowRoomInfo(false)}>
+          <div className="absolute inset-0 bg-black/40 animate-fade-in" />
+          <div className="relative z-50 w-80 max-h-[85vh] rounded-2xl bg-m3-surface-container-lowest shadow-2xl animate-slide-in dark:bg-m3-surface-container overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant">
             <h3 className="text-base font-bold text-m3-on-surface dark:text-m3-on-surface">Room Details</h3>
-            <button
-              onClick={() => setShowRoomInfo(false)}
-              className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
 
           <div className="p-4 space-y-5">
@@ -841,6 +837,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                 {activeRoom.isDirect ? 'Leave Conversation' : 'Leave Room'}
               </button>
             </div>
+          </div>
           </div>
         </div>
       )}
