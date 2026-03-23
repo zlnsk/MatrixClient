@@ -327,13 +327,22 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
         <div className="flex items-center">
           {!activeRoom.isBridged && (
-            <button
-              onClick={() => placeCall(activeRoom.roomId, false)}
-              className="hidden sm:flex rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
-              title="Voice call"
-            >
-              <Phone className="h-5 w-5" />
-            </button>
+            <>
+              <button
+                onClick={() => placeCall(activeRoom.roomId, false)}
+                className="hidden sm:flex rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
+                title="Voice call"
+              >
+                <Phone className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => placeCall(activeRoom.roomId, true)}
+                className="hidden sm:flex rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
+                title="Video call"
+              >
+                <Video className="h-5 w-5" />
+              </button>
+            </>
           )}
           {/* Kebab menu (3 dots) */}
           <div className="relative" ref={kebabRef}>
