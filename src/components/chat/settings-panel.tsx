@@ -19,6 +19,12 @@ import {
   ShieldPlus,
   Copy,
   Check,
+  Info,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  Clock,
+  Lock,
 } from 'lucide-react'
 
 interface SettingsPanelProps {
@@ -29,7 +35,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { user, signOut, updateProfile } = useAuthStore()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [activeSection, setActiveSection] = useState<'profile' | 'security'>('profile')
+  const [activeSection, setActiveSection] = useState<'profile' | 'security' | 'about'>('profile')
   const [recoveryKey, setRecoveryKey] = useState('')
   const [isRestoring, setIsRestoring] = useState(false)
   const [restoreResult, setRestoreResult] = useState<string | null>(null)
@@ -51,6 +57,9 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [generateKeyPassword, setGenerateKeyPassword] = useState('')
   const [generateKeyError, setGenerateKeyError] = useState<string | null>(null)
   const [keyCopied, setKeyCopied] = useState(false)
+  const [serverLatency, setServerLatency] = useState<number | null>(null)
+  const [serverStatus, setServerStatus] = useState<'connected' | 'error' | 'checking'>('checking')
+  const [clientVersions, setClientVersions] = useState<string[]>([])
 
   const handleDeleteDevice = async (deviceId: string) => {
     if (!deletePassword.trim()) {
@@ -71,12 +80,6 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     }
   }
 
-  useEffect(() => {
-    if (activeSection === 'security') {
-      loadDevices()
-    }
-  }, [activeSection])
-
   const loadDevices = async () => {
     const client = getMatrixClient()
     if (!client) return
@@ -95,6 +98,36 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
       setLoadingDevices(false)
     }
   }
+
+  const checkServerStatus = async () => {
+    setServerStatus('checking')
+    try {
+      const hsUrl = getHomeserverUrl()
+      if (!hsUrl) { setServerStatus('error'); return }
+
+      // Measure latency via versions endpoint (no auth needed)
+      const start = performance.now()
+      const res = await fetch(`${hsUrl}/_matrix/client/versions`)
+      const latency = Math.round(performance.now() - start)
+      setServerLatency(latency)
+
+      if (res.ok) {
+        const data = await res.json()
+        setClientVersions(data.versions || [])
+        setServerStatus('connected')
+      } else {
+        setServerStatus('error')
+      }
+    } catch {
+      setServerStatus('error')
+      setServerLatency(null)
+    }
+  }
+
+  useEffect(() => {
+    if (activeSection === 'security') loadDevices()
+    if (activeSection === 'about') checkServerStatus()
+  }, [activeSection])
 
   const handleSaveDisplayName = async () => {
     if (!newDisplayName.trim() || newDisplayName.trim() === user?.displayName) {
@@ -147,17 +180,20 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   }
 
   const homeserverDomain = getHomeserverDomain() || 'unknown'
+  const client = getMatrixClient()
+  const currentDeviceId = client?.getDeviceId() || 'unknown'
 
   const sections = [
     { id: 'profile' as const, label: 'Profile', icon: User },
     { id: 'security' as const, label: 'Security', icon: Shield },
+    { id: 'about' as const, label: 'About', icon: Info },
   ]
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="relative flex h-[500px] w-full max-w-2xl animate-slide-in overflow-hidden rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest shadow-2xl dark:border-m3-outline-variant dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
+      <div className="relative flex h-[560px] w-full max-w-2xl animate-slide-in overflow-hidden rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest shadow-2xl dark:border-m3-outline-variant dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
         {/* Left nav */}
-        <div className="w-48 flex-shrink-0 border-r border-m3-outline-variant bg-m3-surface-container-low p-4 dark:border-m3-outline-variant dark:bg-m3-surface-container">
+        <div className="flex w-48 flex-shrink-0 flex-col border-r border-m3-outline-variant bg-m3-surface-container-low p-4 dark:border-m3-outline-variant dark:bg-m3-surface-container">
           <h2 className="mb-4 text-lg font-bold text-m3-on-surface dark:text-m3-on-surface">Settings</h2>
           <nav className="space-y-1">
             {sections.map(s => (
@@ -201,8 +237,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             <h3 className="text-lg font-bold text-m3-on-surface capitalize dark:text-m3-on-surface">{activeSection}</h3>
           </div>
 
+          {/* ===== PROFILE ===== */}
           {activeSection === 'profile' && (
             <div className="space-y-6">
+              {/* Avatar + name */}
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <Avatar
@@ -280,6 +318,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 </div>
               )}
 
+              {/* Homeserver */}
               <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
                 <div className="flex items-center gap-3">
                   <Server className="h-5 w-5 text-m3-outline" />
@@ -289,38 +328,12 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                   </div>
                 </div>
               </div>
-
-              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">Matrix User ID</h4>
-                <p className="mt-1 font-mono text-xs text-m3-primary">{user?.userId}</p>
-              </div>
             </div>
           )}
 
+          {/* ===== SECURITY ===== */}
           {activeSection === 'security' && (
             <div className="space-y-6">
-              <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm dark:border-green-800/50 dark:bg-green-900/20">
-                <div className="flex items-center gap-3">
-                  <Shield className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <div>
-                    <p className="text-sm font-medium text-green-700 dark:text-green-300">Matrix Protocol</p>
-                    <p className="mt-1 text-xs text-green-600/70 dark:text-green-400/70">
-                      Connected via the Matrix Client-Server API. Rooms with encryption enabled use Megolm (m.megolm.v1.aes-sha2).
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">Homeserver URL</h4>
-                <p className="mt-1 font-mono text-xs text-m3-on-surface-variant">{getHomeserverUrl() || 'Not connected'}</p>
-              </div>
-
-              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
-                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant">User ID</h4>
-                <p className="mt-1 font-mono text-xs text-m3-on-surface-variant">{user?.userId}</p>
-              </div>
-
               {/* Generate Security Key */}
               <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
                 <div className="flex items-center gap-2 mb-3">
@@ -456,7 +469,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {devices.map(device => {
-                      const isCurrent = device.deviceId === getMatrixClient()?.getDeviceId()
+                      const isCurrent = device.deviceId === currentDeviceId
                       const isConfirming = showDeleteConfirm === device.deviceId
                       return (
                         <div key={device.deviceId} className={`rounded-lg p-2 ${isCurrent ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
@@ -498,7 +511,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                                 <button
                                   onClick={() => handleDeleteDevice(device.deviceId)}
                                   disabled={deletingDevice === device.deviceId}
-                                  className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-m3-error-container0 disabled:opacity-50"
+                                  className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
                                 >
                                   {deletingDevice === device.deviceId ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
                                   Confirm sign out
@@ -520,8 +533,115 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               </div>
             </div>
           )}
+
+          {/* ===== ABOUT ===== */}
+          {activeSection === 'about' && (
+            <div className="space-y-5">
+              {/* Connection Status */}
+              <div className={`rounded-xl border p-4 shadow-sm ${
+                serverStatus === 'connected'
+                  ? 'border-green-200 bg-green-50 dark:border-green-800/50 dark:bg-green-900/20'
+                  : serverStatus === 'error'
+                    ? 'border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-900/20'
+                    : 'border-m3-outline-variant bg-m3-surface-container-low dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {serverStatus === 'checking' ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-m3-outline" />
+                    ) : serverStatus === 'connected' ? (
+                      <Wifi className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    ) : (
+                      <WifiOff className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    )}
+                    <div>
+                      <p className={`text-sm font-medium ${
+                        serverStatus === 'connected' ? 'text-green-700 dark:text-green-300'
+                          : serverStatus === 'error' ? 'text-red-700 dark:text-red-300'
+                            : 'text-m3-on-surface dark:text-m3-on-surface-variant'
+                      }`}>
+                        {serverStatus === 'connected' ? 'Connected' : serverStatus === 'error' ? 'Connection Error' : 'Checking...'}
+                      </p>
+                      <p className="text-xs text-m3-on-surface-variant">
+                        {getHomeserverUrl() || 'No homeserver'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {serverLatency !== null && (
+                      <div className="flex items-center gap-1 text-xs text-m3-on-surface-variant">
+                        <Clock className="h-3 w-3" />
+                        <span className={`font-mono ${serverLatency < 200 ? 'text-green-600 dark:text-green-400' : serverLatency < 500 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {serverLatency}ms
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      onClick={checkServerStatus}
+                      disabled={serverStatus === 'checking'}
+                      className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high"
+                      title="Refresh"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${serverStatus === 'checking' ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Protocol & Standards */}
+              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
+                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant mb-3">Protocol & Standards</h4>
+                <div className="space-y-2.5">
+                  <InfoRow label="Protocol" value="Matrix" />
+                  <InfoRow label="Encryption" value="Megolm (m.megolm.v1.aes-sha2)" icon={<Lock className="h-3 w-3 text-green-500" />} />
+                  <InfoRow label="Key Exchange" value="Olm (m.olm.v1.curve25519-aes-sha2-256)" />
+                  <InfoRow label="Key Verification" value="SAS (Short Authentication String)" />
+                  {clientVersions.length > 0 && (
+                    <InfoRow label="Client-Server API" value={clientVersions[clientVersions.length - 1]} />
+                  )}
+                </div>
+              </div>
+
+              {/* Client Info */}
+              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
+                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant mb-3">Client</h4>
+                <div className="space-y-2.5">
+                  <InfoRow label="App Version" value={`v${process.env.NEXT_PUBLIC_BUILD_VERSION || '?'}`} />
+                  <InfoRow label="SDK" value="matrix-js-sdk" />
+                  <InfoRow label="Crypto" value="@matrix-org/matrix-sdk-crypto-wasm" />
+                  <InfoRow label="Framework" value="Next.js" />
+                  <InfoRow label="Device ID" value={currentDeviceId} mono />
+                </div>
+              </div>
+
+              {/* Server Info */}
+              <div className="rounded-xl border border-m3-outline-variant bg-m3-surface-container-low p-4 shadow-sm dark:border-m3-outline-variant dark:bg-m3-surface-container-high/50">
+                <h4 className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface-variant mb-3">Server</h4>
+                <div className="space-y-2.5">
+                  <InfoRow label="Homeserver" value={homeserverDomain} />
+                  <InfoRow label="URL" value={getHomeserverUrl() || 'unknown'} mono />
+                  <InfoRow label="User ID" value={user?.userId || 'unknown'} mono />
+                  {clientVersions.length > 0 && (
+                    <InfoRow label="Supported APIs" value={clientVersions.join(', ')} />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/** Small helper for consistent info rows in About section */
+function InfoRow({ label, value, mono, icon }: { label: string; value: string; mono?: boolean; icon?: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-xs text-m3-on-surface-variant flex-shrink-0">{label}</span>
+      <span className={`text-xs text-right text-m3-on-surface dark:text-m3-on-surface-variant flex items-center gap-1 ${mono ? 'font-mono' : ''}`}>
+        {icon}{value}
+      </span>
     </div>
   )
 }
