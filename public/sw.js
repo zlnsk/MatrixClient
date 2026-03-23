@@ -37,9 +37,11 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Never cache Matrix API requests, WebSocket, or auth-related calls
+  // Never cache Matrix API requests, WebSocket, auth, or crypto key endpoints
   if (
     url.pathname.startsWith('/_matrix/') ||
+    url.pathname.includes('/keys/') ||
+    url.pathname.includes('/sync') ||
     url.protocol === 'wss:' ||
     request.method !== 'GET'
   ) {

@@ -50,15 +50,31 @@ export async function resolveHomeserver(server: string): Promise<string> {
     throw new Error('Insecure homeserver URLs (http://) are not allowed. Use https:// instead.')
   }
 
-  // Try .well-known discovery
+  // Try .well-known discovery with timeout and validation
   try {
-    const res = await fetch(`https://${server}/.well-known/matrix/client`)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10_000)
+    const res = await fetch(`https://${server}/.well-known/matrix/client`, { signal: controller.signal })
+    clearTimeout(timeout)
     if (res.ok) {
       const data = await res.json()
       const base = data?.['m.homeserver']?.base_url
-      if (base) return base.replace(/\/+$/, '')
+      if (base) {
+        const cleanUrl = base.replace(/\/+$/, '')
+        // Validate returned URL is HTTPS to prevent downgrade attacks
+        if (!cleanUrl.startsWith('https://')) {
+          if (process.env.NODE_ENV !== 'development' || !cleanUrl.startsWith('http://')) {
+            throw new Error(`Untrusted .well-known base_url: ${cleanUrl} — must use HTTPS`)
+          }
+        }
+        return cleanUrl
+      }
     }
-  } catch { /* discovery failed, fall back */ }
+  } catch (err) {
+    // If it's our own validation error, propagate it
+    if (err instanceof Error && err.message.startsWith('Untrusted')) throw err
+    /* discovery failed, fall back */
+  }
 
   return `https://${server}`
 }

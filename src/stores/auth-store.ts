@@ -8,6 +8,8 @@ import {
   getAvatarUrl,
   getUserId,
 } from '@/lib/matrix/client'
+import { useChatStore } from './chat-store'
+import { useCallStore } from './call-store'
 
 export interface MatrixUser {
   userId: string
@@ -75,6 +77,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signOut: async () => {
     await logout()
+    // Clear all stores to prevent cross-session data leakage
+    useChatStore.getState().resetState()
+    useCallStore.getState().reset()
     set({ user: null, isAuthenticated: false })
   },
 

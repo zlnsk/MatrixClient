@@ -50,6 +50,14 @@ const nextConfig: NextConfig = {
         source: '/(.*)',
         headers: [
           {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+          {
+            key: 'X-Permitted-Cross-Domain-Policies',
+            value: 'none',
+          },
+          {
             key: 'Cross-Origin-Opener-Policy',
             value: 'same-origin',
           },
@@ -85,6 +93,7 @@ const nextConfig: NextConfig = {
               "connect-src 'self' https: wss:",
               "manifest-src 'self' https:",
               "font-src 'self'",
+              "worker-src 'self'",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",

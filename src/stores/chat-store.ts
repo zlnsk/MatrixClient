@@ -119,6 +119,8 @@ interface ChatState {
   unpinMessage: (roomId: string, eventId: string) => Promise<void>
   forwardMessage: (fromRoomId: string, eventId: string, toRoomId: string) => Promise<void>
   searchMessages: (query: string) => Promise<{roomId: string, roomName: string, eventId: string, sender: string, body: string, timestamp: number}[]>
+  /** Clear all state on logout to prevent cross-session data leakage */
+  resetState: () => void
 }
 
 function roomToMatrixRoom(room: Room): MatrixRoom {
@@ -1151,6 +1153,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
       console.error('Failed to forward message:', err)
       throw err
     }
+  },
+
+  resetState: () => {
+    set({
+      rooms: [],
+      pendingInvites: [],
+      activeRoom: null,
+      messages: [],
+      isLoadingMessages: false,
+      typingUsers: [],
+      searchQuery: '',
+    })
   },
 }))
 

@@ -10,6 +10,19 @@ import { useCallStore } from '@/stores/call-store'
 import type { CallInfo } from '@/stores/call-store'
 
 let currentCall: MatrixCall | null = null
+
+/**
+ * Enforce relay-only ICE transport to prevent IP leakage.
+ * Disables host candidates so all media flows through TURN servers.
+ */
+function enforceRelayIcePolicy(call: MatrixCall): void {
+  const pc = (call as any).peerConn as RTCPeerConnection | undefined
+  if (!pc) return
+  const config = pc.getConfiguration()
+  if (config.iceTransportPolicy !== 'relay') {
+    pc.setConfiguration({ ...config, iceTransportPolicy: 'relay' })
+  }
+}
 let durationInterval: ReturnType<typeof setInterval> | null = null
 
 function clearDurationInterval(): void {
@@ -282,6 +295,7 @@ export async function placeCall(roomId: string, isVideo: boolean): Promise<void>
   })
 
   attachCallListeners(call)
+  enforceRelayIcePolicy(call)
 
   try {
     if (isVideo) {
@@ -289,6 +303,8 @@ export async function placeCall(roomId: string, isVideo: boolean): Promise<void>
     } else {
       await call.placeVoiceCall()
     }
+    // Re-apply after call placement in case peerConn was recreated
+    enforceRelayIcePolicy(call)
   } catch (err) {
     console.error('Failed to place call:', err)
     endCallCleanup()
@@ -320,6 +336,7 @@ export function handleIncomingCall(call: MatrixCall): void {
   useCallStore.getState().setStatus('ringing')
 
   attachCallListeners(call)
+  enforceRelayIcePolicy(call)
 }
 
 /**

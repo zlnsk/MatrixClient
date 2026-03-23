@@ -316,9 +316,33 @@ function buildOgg(opusHead: Uint8Array, packets: Uint8Array[]): Uint8Array {
 
 /**
  * Convert a WebM/Opus audio Blob to OGG/Opus.
- * Extracts raw Opus frames from the WebM container and wraps them in OGG pages.
+ * Runs in a Web Worker to avoid blocking the UI thread.
+ * Falls back to main-thread processing if Workers are unavailable.
  */
 export async function convertWebmToOgg(webmBlob: Blob): Promise<Blob> {
+  const arrayBuffer = await webmBlob.arrayBuffer()
+
+  // Try Web Worker first to keep main thread responsive
+  if (typeof Worker !== 'undefined') {
+    try {
+      return await new Promise<Blob>((resolve, reject) => {
+        const worker = new Worker('/audio-worker.js')
+        const timeout = setTimeout(() => { worker.terminate(); reject(new Error('Worker timeout')) }, 30_000)
+        worker.onmessage = (e) => {
+          clearTimeout(timeout)
+          worker.terminate()
+          if (e.data?.error) { reject(new Error(e.data.error)); return }
+          resolve(new Blob([e.data], { type: 'audio/ogg; codecs=opus' }))
+        }
+        worker.onerror = (err) => { clearTimeout(timeout); worker.terminate(); reject(err) }
+        worker.postMessage(arrayBuffer, [arrayBuffer])
+      })
+    } catch {
+      // Fall through to main-thread conversion
+    }
+  }
+
+  // Fallback: main-thread conversion
   const data = new Uint8Array(await webmBlob.arrayBuffer())
   const { opusHead, packets } = extractOpusFromWebm(data)
   const ogg = buildOgg(opusHead, packets)
