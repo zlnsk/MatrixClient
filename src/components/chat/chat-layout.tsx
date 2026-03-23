@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { Sidebar } from './sidebar'
 import { ChatArea } from './chat-area'
 import { useChatStore } from '@/stores/chat-store'
+import { MessageSquare } from 'lucide-react'
 
 // Lazy load heavy modal components — only fetched when opened
 // Retry with full page reload on chunk load failure (stale deployment)
@@ -69,46 +70,31 @@ export function ChatLayout() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const handleBackdropClick = useCallback(() => {
-    useChatStore.getState().setActiveRoom(null)
-    setShowMobileSidebar(true)
-  }, [])
-
   return (
-    <div className="relative h-dvh overflow-hidden bg-m3-surface-container-low dark:bg-m3-surface">
-
-      {/* Sidebar — always visible behind the overlay */}
-      <div className={`absolute inset-0 flex bg-transparent transition-[filter] duration-150 p-2 md:p-4 ${
-        activeRoom ? 'blur-[2px] brightness-[0.85] dark:brightness-75 pointer-events-none' : ''
-      }`}>
-        <div className="flex w-full max-w-md flex-col bg-m3-surface-container-lowest dark:bg-m3-surface-container rounded-2xl overflow-hidden">
-          <Sidebar
-            onSettingsClick={() => setShowSettings(true)}
-            onChatSelect={handleChatSelect}
-          />
-        </div>
+    <div className="flex h-dvh overflow-hidden bg-white dark:bg-m3-surface">
+      {/* Sidebar — full width on mobile, fixed width on desktop */}
+      <div className={`${
+        activeRoom ? 'hidden md:flex' : 'flex'
+      } w-full flex-col border-r border-m3-outline-variant bg-white dark:border-m3-outline-variant dark:bg-m3-surface md:w-[380px] md:flex-shrink-0 lg:w-[420px]`}>
+        <Sidebar
+          onSettingsClick={() => setShowSettings(true)}
+          onChatSelect={handleChatSelect}
+        />
       </div>
 
-      {/* Chat overlay */}
-      {activeRoom && (
-        <>
-          {/* Backdrop — click to dismiss */}
-          <div
-            className="absolute inset-0 z-20 animate-fade-in"
-            onClick={handleBackdropClick}
-          />
-
-          {/* Chat window */}
-          <div className="absolute inset-0 z-30 flex items-center justify-center p-0 md:p-8 lg:p-10 pointer-events-none">
-            <div className="pointer-events-auto relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-none bg-m3-surface-container-lowest shadow-none md:max-h-[85vh] md:rounded-2xl md:shadow-xl dark:bg-m3-surface-container md:border md:border-m3-outline-variant dark:md:border-m3-outline-variant animate-slide-in">
-              <ChatArea onBackClick={handleBackToSidebar} />
-            </div>
-          </div>
-        </>
+      {/* Chat area — full width on mobile, flexible on desktop */}
+      {activeRoom ? (
+        <div className="flex flex-1 flex-col min-w-0">
+          <ChatArea onBackClick={handleBackToSidebar} />
+        </div>
+      ) : (
+        <div className="hidden flex-1 md:flex">
+          <EmptyState />
+        </div>
       )}
 
       {/* Build version */}
-      <span className="fixed bottom-1 right-2 text-[10px] text-m3-outline-variant dark:text-m3-on-surface pointer-events-none select-none z-10">
+      <span className="fixed bottom-1 right-2 text-[9px] text-m3-outline/50 pointer-events-none select-none z-10">
         v{process.env.NEXT_PUBLIC_BUILD_VERSION}
       </span>
 
@@ -125,31 +111,15 @@ export function ChatLayout() {
 function EmptyState() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-m3-surface-container-low p-8 dark:bg-m3-surface">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-m3-surface-container shadow-lg dark:bg-m3-surface-container">
-        <svg
-          className="h-10 w-10 text-m3-on-surface"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-          />
-        </svg>
+      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-m3-primary-container/40 dark:bg-m3-primary-container/20">
+        <MessageSquare className="h-12 w-12 text-m3-primary" />
       </div>
-      <h3 className="mt-6 text-lg font-medium text-m3-on-surface dark:text-m3-on-surface-variant">
-        Welcome to szept
+      <h3 className="mt-6 text-xl font-normal text-m3-on-surface dark:text-m3-on-surface">
+        szept
       </h3>
       <p className="mt-2 max-w-sm text-center text-sm text-m3-on-surface-variant">
-        Select a conversation from the sidebar or start a new chat to begin messaging securely.
+        Select a conversation to start messaging
       </p>
-      <div className="mt-4 flex items-center gap-2 rounded-full bg-green-900/30 px-3 py-1.5">
-        <div className="h-2 w-2 rounded-full bg-green-400" />
-        <span className="text-xs text-green-400">End-to-end encrypted</span>
-      </div>
     </div>
   )
 }

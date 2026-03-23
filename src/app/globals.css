@@ -7,18 +7,18 @@
   --color-surface-secondary: var(--surface-secondary);
   --color-surface-tertiary: var(--surface-tertiary);
 
-  /* M3 Primary — szept brand */
-  --color-indigo-50: #f0eefb;
-  --color-indigo-100: #ddd9f6;
-  --color-indigo-200: #bfb8ee;
-  --color-indigo-300: #9d92e4;
-  --color-indigo-400: #8278d8;
-  --color-indigo-500: #6359dc;
-  --color-indigo-600: #5548c4;
-  --color-indigo-700: #463aa6;
-  --color-indigo-800: #372e85;
-  --color-indigo-900: #2a2366;
-  --color-indigo-950: #1a1540;
+  /* M3 Primary — Google Messages blue */
+  --color-blue-50: #e8f0fe;
+  --color-blue-100: #d2e3fc;
+  --color-blue-200: #aecbfa;
+  --color-blue-300: #8ab4f8;
+  --color-blue-400: #669df6;
+  --color-blue-500: #4285f4;
+  --color-blue-600: #1a73e8;
+  --color-blue-700: #1967d2;
+  --color-blue-800: #185abc;
+  --color-blue-900: #174ea6;
+  --color-blue-950: #0d3b7a;
 
   /* M3 Surface containers */
   --color-m3-surface: var(--m3-surface);
@@ -47,77 +47,77 @@
 }
 
 html {
-  font-size: 17px;
+  font-size: 16px;
 }
 
 /* Slightly larger text on mobile / standalone PWA for better readability */
 @media (max-width: 767px), (display-mode: standalone) {
   html {
-    font-size: 18px;
+    font-size: 16px;
   }
 }
 
-/* ---- M3 Light Scheme ---- */
+/* ---- M3 Light Scheme (Google Messages style) ---- */
 :root {
-  --surface-primary: #faf8ff;
+  --surface-primary: #ffffff;
   --surface-secondary: #ffffff;
-  --surface-tertiary: #f3f0fa;
+  --surface-tertiary: #f6f8fc;
 
-  --m3-surface: #faf8ff;
-  --m3-surface-dim: #dbd8e0;
+  --m3-surface: #ffffff;
+  --m3-surface-dim: #dde3ea;
   --m3-surface-container-lowest: #ffffff;
-  --m3-surface-container-low: #f5f2fa;
-  --m3-surface-container: #efecf4;
-  --m3-surface-container-high: #e9e7ef;
-  --m3-surface-container-highest: #e4e1e9;
-  --m3-on-surface: #1c1b20;
-  --m3-on-surface-variant: #48464f;
-  --m3-outline: #79767f;
-  --m3-outline-variant: #c9c5d0;
-  --m3-primary: #6359dc;
+  --m3-surface-container-low: #f6f8fc;
+  --m3-surface-container: #eef1f6;
+  --m3-surface-container-high: #e8ebf0;
+  --m3-surface-container-highest: #e1e4e9;
+  --m3-on-surface: #1f1f1f;
+  --m3-on-surface-variant: #5f6368;
+  --m3-outline: #80868b;
+  --m3-outline-variant: #dadce0;
+  --m3-primary: #1a73e8;
   --m3-on-primary: #ffffff;
-  --m3-primary-container: #e5deff;
-  --m3-on-primary-container: #1e0061;
-  --m3-secondary-container: #e5dff9;
-  --m3-on-secondary-container: #1e192e;
-  --m3-error: #ba1a1a;
+  --m3-primary-container: #d2e3fc;
+  --m3-on-primary-container: #062e6f;
+  --m3-secondary-container: #e8eaed;
+  --m3-on-secondary-container: #3c4043;
+  --m3-error: #d93025;
   --m3-on-error: #ffffff;
-  --m3-error-container: #ffdad6;
-  --m3-on-error-container: #410002;
-  --m3-inverse-surface: #313036;
-  --m3-inverse-on-surface: #f4eff7;
+  --m3-error-container: #fce8e6;
+  --m3-on-error-container: #5f2120;
+  --m3-inverse-surface: #303134;
+  --m3-inverse-on-surface: #e8eaed;
   color-scheme: light;
 }
 
 /* ---- M3 Dark Scheme ---- */
 .dark {
-  --surface-primary: #131318;
-  --surface-secondary: #1c1b20;
-  --surface-tertiary: #252430;
+  --surface-primary: #1f1f1f;
+  --surface-secondary: #2d2d2d;
+  --surface-tertiary: #353535;
 
-  --m3-surface: #131318;
-  --m3-surface-dim: #131318;
-  --m3-surface-container-lowest: #0e0e13;
-  --m3-surface-container-low: #1c1b20;
-  --m3-surface-container: #201f25;
-  --m3-surface-container-high: #2b292f;
-  --m3-surface-container-highest: #36343a;
-  --m3-on-surface: #e6e1e9;
-  --m3-on-surface-variant: #c9c5d0;
-  --m3-outline: #938f99;
-  --m3-outline-variant: #48464f;
-  --m3-primary: #c9bfff;
-  --m3-on-primary: #32209b;
-  --m3-primary-container: #4a3fb3;
-  --m3-on-primary-container: #e5deff;
-  --m3-secondary-container: #46415b;
-  --m3-on-secondary-container: #e5dff9;
-  --m3-error: #ffb4ab;
-  --m3-on-error: #690005;
-  --m3-error-container: #93000a;
-  --m3-on-error-container: #ffdad6;
-  --m3-inverse-surface: #e6e1e9;
-  --m3-inverse-on-surface: #313036;
+  --m3-surface: #1f1f1f;
+  --m3-surface-dim: #1f1f1f;
+  --m3-surface-container-lowest: #141414;
+  --m3-surface-container-low: #2d2d2d;
+  --m3-surface-container: #353535;
+  --m3-surface-container-high: #3c3c3c;
+  --m3-surface-container-highest: #444444;
+  --m3-on-surface: #e8eaed;
+  --m3-on-surface-variant: #bdc1c6;
+  --m3-outline: #9aa0a6;
+  --m3-outline-variant: #5f6368;
+  --m3-primary: #8ab4f8;
+  --m3-on-primary: #062e6f;
+  --m3-primary-container: #174ea6;
+  --m3-on-primary-container: #d2e3fc;
+  --m3-secondary-container: #5f6368;
+  --m3-on-secondary-container: #e8eaed;
+  --m3-error: #f28b82;
+  --m3-on-error: #5f2120;
+  --m3-error-container: #8c1d18;
+  --m3-on-error-container: #fce8e6;
+  --m3-inverse-surface: #e8eaed;
+  --m3-inverse-on-surface: #303134;
   color-scheme: dark;
 }
 
@@ -126,7 +126,7 @@ html {
 }
 
 .dark * {
-  scrollbar-color: #48464f transparent;
+  scrollbar-color: #5f6368 transparent;
 }
 
 *::-webkit-scrollbar {
@@ -138,19 +138,20 @@ html {
 }
 
 .dark *::-webkit-scrollbar-thumb {
-  background-color: #48464f;
+  background-color: #5f6368;
   border-radius: 3px;
 }
 
 :root *::-webkit-scrollbar-thumb {
-  background-color: #c9c5d0;
+  background-color: #dadce0;
   border-radius: 3px;
 }
 
 body {
   background-color: var(--m3-surface);
   color: var(--m3-on-surface);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -168,7 +169,7 @@ body {
 }
 
 .animate-slide-in {
-  animation: slideIn 0.25s cubic-bezier(0, 0, 0, 1);
+  animation: slideIn 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 @keyframes fadeIn {
@@ -177,7 +178,7 @@ body {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.2s cubic-bezier(0, 0, 0, 1);
+  animation: fadeIn 0.15s cubic-bezier(0.2, 0, 0, 1);
 }
 
 @keyframes pulse-dot {
@@ -215,7 +216,7 @@ body {
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.9em;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
 .rich-content pre {

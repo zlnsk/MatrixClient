@@ -361,7 +361,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   if (message.isRedacted) {
     return (
       <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-3' : 'mt-0.5'}`}>
-        <div className={`${isOwn ? 'mr-12' : 'ml-12'} rounded-2xl bg-m3-surface-container dark:bg-m3-surface-container-high/50 px-4 py-2 shadow-sm`}>
+        <div className={`${isOwn ? 'mr-12' : 'ml-12'} rounded-2xl bg-m3-surface-container dark:bg-m3-surface-container-high/50 px-4 py-2`}>
           <p className="text-sm italic text-m3-outline dark:text-m3-on-surface-variant">This message was deleted</p>
         </div>
       </div>
@@ -426,10 +426,10 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 setEditContent(message.content)
               }
             }}
-            className={`rounded-2xl overflow-hidden transition-shadow duration-150 ${message.type === 'm.image' || message.type === 'm.video' ? 'p-3 w-fit' : 'px-4 py-3'} ${isOwn ? 'cursor-pointer ' : ''}${
+            className={`rounded-2xl overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'p-3 w-fit' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
               isOwn
-                ? 'bg-m3-primary text-white shadow-sm'
-                : 'bg-white text-m3-on-surface shadow-sm dark:bg-m3-surface-container-high dark:text-m3-on-surface'
+                ? 'bg-m3-primary text-white'
+                : 'bg-m3-surface-container text-m3-on-surface dark:bg-m3-surface-container-high dark:text-m3-on-surface'
             }`}
           >
             {/* Inline reply quote */}

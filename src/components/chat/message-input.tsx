@@ -418,7 +418,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const getFilePreview = (file: File) => filePreviewUrls.get(file) ?? null
 
   return (
-    <div className="border-t border-m3-outline-variant bg-m3-surface-container-lowest px-3 py-2.5 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4 md:py-3" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>
+    <div className="bg-white px-3 py-2 dark:bg-m3-surface-container md:px-4 md:py-2.5" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
       {/* Command status */}
       {commandStatus && (
         <div
@@ -612,7 +612,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               placeholder="Type a message..."
               rows={1}
               enterKeyHint="send"
-              className="max-h-32 min-h-[42px] w-full resize-none rounded-full border border-m3-outline-variant bg-m3-surface-container-low px-4 py-2.5 text-base text-m3-on-surface placeholder-m3-outline transition-colors focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:px-5 md:py-3 md:text-sm"
+              className="max-h-32 min-h-[42px] w-full resize-none rounded-full bg-m3-surface-container px-5 py-2.5 text-sm text-m3-on-surface placeholder-m3-on-surface-variant transition-colors focus:outline-none dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3"
             />
           </div>
         )}
@@ -640,7 +640,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
           <button
             onClick={handleSubmit}
             disabled={(!content.trim() && pendingFiles.length === 0) || isSending || isUploading}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary text-white transition-all hover:bg-m3-primary active:bg-m3-primary/80 disabled:opacity-40 disabled:hover:bg-m3-primary md:h-11 md:w-11"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary text-white transition-all hover:bg-m3-primary/90 active:bg-m3-primary/80 disabled:opacity-30 md:h-11 md:w-11"
             aria-label="Send message"
           >
             {isUploading ? (

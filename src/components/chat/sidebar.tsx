@@ -12,7 +12,6 @@ import { formatDistanceToNow } from 'date-fns'
 import {
   Search,
   Settings,
-  Plus,
   Lock,
   Users,
   MessageSquare,
@@ -26,6 +25,8 @@ import {
   Moon,
   Loader2,
   MessageSquareDashed,
+  Menu,
+  MessageCircle,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -44,11 +45,26 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [messageResults, setMessageResults] = useState<{roomId: string, roomName: string, eventId: string, sender: string, body: string, timestamp: number}[]>([])
   const [isSearchingMessages, setIsSearchingMessages] = useState(false)
+  const [showHamburger, setShowHamburger] = useState(false)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hamburgerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (user) loadRooms()
   }, [user, loadRooms])
+
+  // Close hamburger on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (hamburgerRef.current && !hamburgerRef.current.contains(e.target as Node)) {
+        setShowHamburger(false)
+      }
+    }
+    if (showHamburger) {
+      document.addEventListener('mousedown', handleClick)
+      return () => document.removeEventListener('mousedown', handleClick)
+    }
+  }, [showHamburger])
 
   // Debounced message search when query has 3+ characters
   useEffect(() => {
@@ -120,64 +136,94 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
 
   return (
     <>
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant">
-        <div className="flex items-center gap-3">
-          <Avatar
-            src={user?.avatarUrl}
-            name={user?.displayName || 'U'}
-            size="md"
-            status="online"
-          />
-          <div>
-            <h1 className="text-lg font-bold text-m3-on-surface dark:text-m3-on-surface">szept</h1>
-            <p className="text-xs text-m3-on-surface-variant">{user?.userId}</p>
-          </div>
+      {/* Header — Google Messages style */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="relative" ref={hamburgerRef}>
+          <button
+            onClick={() => setShowHamburger(!showHamburger)}
+            className="rounded-full p-2 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high"
+            aria-label="Menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          {/* Hamburger dropdown */}
+          {showHamburger && (
+            <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-2xl border border-m3-outline-variant bg-white py-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+              {/* App title */}
+              <div className="px-6 py-3 border-b border-m3-outline-variant">
+                <h2 className="text-lg font-medium text-m3-on-surface">szept</h2>
+                <p className="text-xs text-m3-on-surface-variant">{user?.userId}</p>
+              </div>
+
+              <div className="py-1">
+                <button
+                  onClick={() => { setShowArchived(!showArchived); setShowHamburger(false) }}
+                  className="flex w-full items-center gap-4 px-6 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                >
+                  <Archive className="h-5 w-5 text-m3-on-surface-variant" />
+                  Archived
+                  {archivedRooms.length > 0 && <span className="ml-auto text-xs text-m3-on-surface-variant">({archivedRooms.length})</span>}
+                </button>
+              </div>
+
+              <div className="border-t border-m3-outline-variant py-1">
+                <button
+                  onClick={() => { onSettingsClick(); setShowHamburger(false) }}
+                  className="flex w-full items-center gap-4 px-6 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                >
+                  <Settings className="h-5 w-5 text-m3-on-surface-variant" />
+                  Settings
+                </button>
+                <button
+                  onClick={() => { toggleTheme(); setShowHamburger(false) }}
+                  className="flex w-full items-center gap-4 px-6 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                >
+                  {theme === 'dark' ? <Sun className="h-5 w-5 text-m3-on-surface-variant" /> : <Moon className="h-5 w-5 text-m3-on-surface-variant" />}
+                  {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowNewChat(true)}
-            className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
-            title="New chat"
-            aria-label="New chat"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-          <button
-            onClick={toggleTheme}
-            className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label="Toggle theme"
-          >
-            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
-          <button
-            onClick={onSettingsClick}
-            className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface dark:hover:bg-m3-surface-container-high dark:hover:text-white"
-            title="Settings"
-            aria-label="Settings"
-          >
-            <Settings className="h-5 w-5" />
-          </button>
-        </div>
+
+        <h1 className="flex-1 text-xl font-normal text-m3-on-surface">szept</h1>
+
+        <Avatar
+          src={user?.avatarUrl}
+          name={user?.displayName || 'U'}
+          size="sm"
+          status="online"
+        />
+      </div>
+
+      {/* FAB — Start chat (Google Messages style) */}
+      <div className="px-4 pb-2">
+        <button
+          onClick={() => setShowNewChat(true)}
+          className="flex items-center gap-3 rounded-2xl bg-m3-primary-container px-5 py-3.5 text-sm font-medium text-m3-on-primary-container shadow-sm transition-all hover:shadow-md active:shadow-sm dark:bg-m3-primary-container dark:text-m3-on-primary-container"
+        >
+          <MessageCircle className="h-5 w-5" />
+          Start chat
+        </button>
       </div>
 
       {/* Search */}
-      <div className="p-3">
+      <div className="px-4 py-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant" />
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant" />
           <input
             type="search"
-            placeholder="Search rooms..."
+            placeholder="Search conversations"
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
             aria-label="Search rooms and messages"
-            className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-low py-2.5 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
+            className="w-full rounded-full bg-m3-surface-container py-2.5 pl-10 pr-10 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:bg-m3-surface-container-high focus:outline-none dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline dark:focus:bg-m3-surface-container-high"
           />
           {searchFilter && (
             <button
               onClick={() => setSearchFilter('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface dark:hover:text-m3-outline-variant"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-m3-on-surface-variant hover:text-m3-on-surface"
             >
               <X className="h-4 w-4" />
             </button>
@@ -186,27 +232,27 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
       </div>
 
       {/* Room list */}
-      <nav className="flex-1 overflow-y-auto px-2" aria-label="Chat rooms">
+      <nav className="flex-1 overflow-y-auto" aria-label="Chat rooms">
         {/* Invitations section */}
         {pendingInvites.length > 0 && (
-          <div className="mb-2">
+          <div className="mb-1">
             <button
               onClick={() => setShowInvites(!showInvites)}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+              className="flex w-full items-center gap-3 px-5 py-2.5 text-xs font-medium text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
             >
-              <Mail className="h-3.5 w-3.5" />
+              <Mail className="h-4 w-4" />
               Invitations ({pendingInvites.length})
               <span className="ml-auto text-m3-outline">{showInvites ? '▲' : '▼'}</span>
             </button>
             {inviteError && (
-              <p className="px-3 py-1 text-xs text-m3-error">{inviteError}</p>
+              <p className="px-5 py-1 text-xs text-m3-error">{inviteError}</p>
             )}
             {showInvites && (
-              <div className="space-y-0.5 py-1">
+              <div>
                 {pendingInvites.map(invite => (
                   <div
                     key={invite.roomId}
-                    className="flex items-center gap-3 rounded-xl p-3 hover:bg-m3-surface-container-low dark:hover:bg-m3-surface-container-high/60"
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                   >
                     <Avatar
                       src={invite.avatarUrl}
@@ -214,7 +260,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                       size="md"
                     />
                     <div className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-m3-on-surface dark:text-m3-on-surface">
+                      <span className="block truncate text-sm font-medium text-m3-on-surface">
                         {invite.name}
                       </span>
                       <span className="text-xs text-m3-on-surface-variant">Invited</span>
@@ -229,7 +275,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                             setInviteError(`Failed to accept: ${err instanceof Error ? err.message : 'Unknown error'}`)
                           }
                         }}
-                        className="rounded-lg p-1.5 text-green-600 transition-colors hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-900/30"
+                        className="rounded-full p-2 text-green-600 transition-colors hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-900/30"
                         title="Accept invitation"
                       >
                         <Check className="h-4 w-4" />
@@ -243,7 +289,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                             setInviteError(`Failed to reject: ${err instanceof Error ? err.message : 'Unknown error'}`)
                           }
                         }}
-                        className="rounded-lg p-1.5 text-m3-error transition-colors hover:bg-red-100 dark:text-m3-error dark:hover:bg-red-900/30"
+                        className="rounded-full p-2 text-m3-error transition-colors hover:bg-red-100 dark:text-m3-error dark:hover:bg-red-900/30"
                         title="Reject invitation"
                       >
                         <X className="h-4 w-4" />
@@ -257,22 +303,22 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
         )}
 
         {activeRooms.length === 0 && !showArchived && !(searchFilter.trim() && archivedRooms.length > 0) ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <MessageSquare className="h-10 w-10 text-m3-outline-variant dark:text-m3-on-surface" />
-            <p className="mt-3 text-sm text-m3-on-surface-variant">
-              {searchFilter ? 'No rooms found' : 'No rooms yet'}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <MessageSquare className="h-12 w-12 text-m3-outline-variant" />
+            <p className="mt-4 text-sm text-m3-on-surface-variant">
+              {searchFilter ? 'No conversations found' : 'No conversations yet'}
             </p>
             {!searchFilter && (
               <button
                 onClick={() => setShowNewChat(true)}
-                className="mt-3 text-sm text-m3-primary transition-colors hover:text-m3-primary/80"
+                className="mt-3 text-sm font-medium text-m3-primary transition-colors hover:text-m3-primary/80"
               >
                 Start a new chat
               </button>
             )}
           </div>
         ) : (
-          <div className="space-y-0.5 py-1">
+          <div>
             {activeRooms.map(room => (
               <RoomListItem
                 key={room.roomId}
@@ -288,46 +334,40 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
         )}
 
         {/* Archived section */}
-        {archivedRooms.length > 0 && (
-          <div className="mt-2">
-            <button
-              onClick={() => setShowArchived(!showArchived)}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
-            >
-              <Archive className="h-3.5 w-3.5" />
+        {(showArchived || (searchFilter.trim() && archivedRooms.length > 0)) && archivedRooms.length > 0 && (
+          <div className="border-t border-m3-outline-variant">
+            <div className="flex items-center gap-3 px-5 py-2.5 text-xs font-medium text-m3-on-surface-variant">
+              <Archive className="h-4 w-4" />
               Archived ({archivedRooms.length})
-              <span className="ml-auto text-m3-outline">{showArchived ? '▲' : '▼'}</span>
-            </button>
-            {(showArchived || searchFilter.trim()) && (
-              <div className="space-y-0.5 py-1">
-                {archivedRooms.map(room => (
-                  <RoomListItem
-                    key={room.roomId}
-                    room={room}
-                    isActive={activeRoom?.roomId === room.roomId}
-                    onClick={() => handleSelectRoom(room)}
-                    onArchive={(e) => handleArchive(e, room)}
-                    avatarUrl={getOtherMemberAvatar(room)}
-                    presence={getOtherMemberPresence(room)}
-                  />
-                ))}
-              </div>
-            )}
+            </div>
+            <div>
+              {archivedRooms.map(room => (
+                <RoomListItem
+                  key={room.roomId}
+                  room={room}
+                  isActive={activeRoom?.roomId === room.roomId}
+                  onClick={() => handleSelectRoom(room)}
+                  onArchive={(e) => handleArchive(e, room)}
+                  avatarUrl={getOtherMemberAvatar(room)}
+                  presence={getOtherMemberPresence(room)}
+                />
+              ))}
+            </div>
           </div>
         )}
 
         {/* Message search results */}
         {searchFilter.trim().length >= 3 && (
-          <div className="mt-2">
-            <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-m3-on-surface-variant">
-              <MessageSquareDashed className="h-3.5 w-3.5" />
+          <div className="border-t border-m3-outline-variant">
+            <div className="flex items-center gap-3 px-5 py-2.5 text-xs font-medium text-m3-on-surface-variant">
+              <MessageSquareDashed className="h-4 w-4" />
               Message Results
               {isSearchingMessages && <Loader2 className="h-3 w-3 animate-spin" />}
             </div>
             {messageResults.length === 0 && !isSearchingMessages ? (
-              <p className="px-3 py-2 text-xs text-m3-outline">No messages found</p>
+              <p className="px-5 py-3 text-xs text-m3-outline">No messages found</p>
             ) : (
-              <div className="space-y-0.5 py-1">
+              <div>
                 {messageResults.map(result => (
                   <button
                     key={result.eventId}
@@ -336,8 +376,6 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                       if (room) {
                         handleSelectRoom(room)
                       } else {
-                        // Room might not be in local state (e.g. left room still in search index)
-                        // Create a minimal room object to allow navigation
                         handleSelectRoom({
                           roomId: result.roomId,
                           name: result.roomName,
@@ -355,19 +393,19 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                         })
                       }
                     }}
-                    className="flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-m3-surface-container-low dark:hover:bg-m3-surface-container-high/60"
+                    className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="truncate text-xs font-semibold text-m3-primary">{result.roomName}</span>
+                        <span className="truncate text-xs font-medium text-m3-primary">{result.roomName}</span>
                         {result.timestamp > 0 && (
-                          <span className="ml-2 flex-shrink-0 text-xs text-m3-outline">
+                          <span className="ml-2 flex-shrink-0 text-xs text-m3-on-surface-variant">
                             {formatDistanceToNow(new Date(result.timestamp), { addSuffix: false })}
                           </span>
                         )}
                       </div>
-                      <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">
-                        <span className="text-m3-outline dark:text-m3-on-surface-variant">{result.sender}: </span>
+                      <p className="truncate text-xs text-m3-on-surface-variant">
+                        <span className="text-m3-outline">{result.sender}: </span>
                         <span dangerouslySetInnerHTML={{ __html: (() => {
                           const escaped = searchFilter.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
                           if (escaped.length < 2) return result.body
@@ -419,7 +457,7 @@ const RoomListItem = memo(function RoomListItem({
   presence: 'online' | 'offline' | 'away' | null
 }) {
   const lastMsgPreview = room.lastMessage
-    ? room.lastMessage.substring(0, 50) + (room.lastMessage.length > 50 ? '...' : '')
+    ? room.lastMessage.substring(0, 60) + (room.lastMessage.length > 60 ? '...' : '')
     : 'No messages yet'
 
   return (
@@ -428,10 +466,10 @@ const RoomListItem = memo(function RoomListItem({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl p-3 text-left transition-all duration-150 ${
+      className={`group flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors duration-100 ${
         isActive
-          ? 'bg-m3-primary-container dark:bg-m3-surface-container-high'
-          : 'hover:bg-m3-surface-container-low dark:hover:bg-m3-surface-container-high/60'
+          ? 'bg-m3-primary-container/50 dark:bg-m3-surface-container-high'
+          : 'hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high/60'
       }`}
     >
       <Avatar
@@ -442,52 +480,47 @@ const RoomListItem = memo(function RoomListItem({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className={`truncate font-semibold ${isActive ? 'text-m3-on-primary-container dark:text-m3-on-surface' : 'text-m3-on-surface dark:text-m3-on-surface'}`}>
+          <span className="truncate text-sm font-medium text-m3-on-surface">
             {room.name}
           </span>
           {room.lastMessageTs > 0 && (
-            <span className="ml-2 flex-shrink-0 text-xs text-m3-outline">
+            <span className="ml-2 flex-shrink-0 text-xs text-m3-on-surface-variant">
               {formatDistanceToNow(new Date(room.lastMessageTs), { addSuffix: false })}
             </span>
           )}
         </div>
-        <div className="flex items-center justify-between">
-          <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">
-            {room.lastSenderName && <span className="text-m3-outline dark:text-m3-on-surface-variant">{room.lastSenderName}: </span>}
+        <div className="flex items-center justify-between mt-0.5">
+          <p className="truncate text-xs text-m3-on-surface-variant">
+            {room.lastSenderName && <span>{room.lastSenderName}: </span>}
             {lastMsgPreview}
           </p>
-          <div className="ml-2 flex items-center gap-1">
+          <div className="ml-2 flex items-center gap-1.5">
+            {room.encrypted && (
+              <Lock className="h-3 w-3 flex-shrink-0 text-m3-on-surface-variant" />
+            )}
             {room.unreadCount > 0 && (
-              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary px-1.5 text-xs font-medium text-white shadow-sm">
+              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary px-1.5 text-[11px] font-medium text-white">
                 {room.unreadCount > 99 ? '99+' : room.unreadCount}
               </span>
             )}
           </div>
         </div>
       </div>
-      <div className="relative flex flex-col items-center gap-1">
-        {!room.isDirect && (
-          <Hash className="h-3.5 w-3.5 flex-shrink-0 text-m3-outline" />
+      {/* Archive button on hover */}
+      <button
+        onClick={onArchive}
+        className="flex-shrink-0 rounded-full p-1.5 text-m3-outline opacity-0 transition-all hover:bg-m3-surface-container-high hover:text-m3-on-surface group-hover:opacity-100 dark:hover:bg-m3-surface-container-highest"
+        title={room.isArchived ? 'Unarchive' : 'Archive'}
+      >
+        {room.isArchived ? (
+          <ArchiveRestore className="h-4 w-4" />
+        ) : (
+          <Archive className="h-4 w-4" />
         )}
-        {room.encrypted && (
-          <Lock className="h-3 w-3 flex-shrink-0 text-green-500" />
-        )}
-        <button
-          onClick={onArchive}
-          className="absolute -right-1 -top-1 hidden rounded-full bg-m3-surface-container-lowest p-1 text-m3-outline shadow-sm transition-colors hover:text-m3-primary group-hover:block dark:bg-m3-surface-container-high"
-          title={room.isArchived ? 'Unarchive' : 'Archive'}
-        >
-          {room.isArchived ? (
-            <ArchiveRestore className="h-3 w-3" />
-          ) : (
-            <Archive className="h-3 w-3" />
-          )}
-        </button>
-      </div>
+      </button>
     </div>
   )
 }, (prevProps, nextProps) => {
-  // Custom comparator: skip re-render if the room data we display hasn't changed
   const prevRoom = prevProps.room
   const nextRoom = nextProps.room
   return (
