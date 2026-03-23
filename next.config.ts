@@ -13,14 +13,12 @@ function getBuildVersion(): string {
   let date = ''
   let count = ''
 
-  // Try git CLI first (works locally and in most CIs)
   try {
     sha = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
     date = execSync('git log -1 --format=%cs', { encoding: 'utf-8' }).trim()
     count = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim()
   } catch {
-    // Fallback to Vercel env vars (shallow clone / no .git directory)
-    sha = (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7)
+    // git unavailable (e.g. shallow clone or no .git directory)
     date = new Date().toISOString().slice(0, 10)
   }
 
