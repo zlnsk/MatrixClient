@@ -439,7 +439,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                 await leaveRoom(activeRoom.roomId)
                 setConfirmLeave(false)
               }}
-              className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-m3-error-container0"
+              className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-700"
             >
               Leave
             </button>
@@ -454,7 +454,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       )}
 
       {/* Messages */}
-      <div ref={scrollContainerRef} className="message-scroll-container min-h-0 flex-1 overflow-y-auto bg-gray-50 px-4 pt-4 pb-6 dark:bg-m3-surface md:px-8 md:pb-8">
+      <div ref={scrollContainerRef} className="message-scroll-container min-h-0 flex-1 overflow-y-auto bg-m3-surface-container-lowest px-4 pt-4 pb-6 dark:bg-m3-surface md:px-6 lg:px-8 md:pb-8">
         {isLoadingMessages ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-m3-primary" />
@@ -472,11 +472,11 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {groupedMessages.map(group => (
               <div key={group.date}>
                 <div className="flex items-center justify-center py-4">
-                  <span className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">
+                  <span className="rounded-full bg-m3-surface-container px-4 py-1 text-xs font-medium text-m3-on-surface-variant shadow-sm dark:bg-m3-surface-container-high dark:text-m3-outline">
                     {group.date}
                   </span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {group.messages.map((msg, idx) => {
                     const prevMsg = idx > 0 ? group.messages[idx - 1] : null
                     const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId
@@ -516,17 +516,12 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       </div>
 
       {/* Message Input */}
-      <div className="relative">
-        <MessageInput
-          onSend={handleSend}
-          replyTo={replyTo}
-          onCancelReply={() => setReplyTo(null)}
-          roomId={activeRoom.roomId}
-        />
-        <span className="absolute bottom-1 right-3 text-[9px] text-m3-outline-variant/60 pointer-events-none select-none">
-          v{process.env.NEXT_PUBLIC_BUILD_VERSION}
-        </span>
-      </div>
+      <MessageInput
+        onSend={handleSend}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
+        roomId={activeRoom.roomId}
+      />
 
       {/* Room Info Panel — Google Messages style full-page overlay */}
       {showRoomInfo && (

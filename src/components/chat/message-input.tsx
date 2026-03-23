@@ -419,7 +419,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const getFilePreview = (file: File) => filePreviewUrls.get(file) ?? null
 
   return (
-    <div className="bg-white px-3 py-2 dark:bg-m3-surface-container md:px-4 md:py-2.5" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+    <div className="bg-white px-3 py-2.5 dark:bg-m3-surface-container md:px-4 md:py-3" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>
       {/* Command status */}
       {commandStatus && (
         <div
@@ -483,7 +483,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
                 )}
                 <button
                   onClick={() => removePendingFile(idx)}
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-m3-error-container0 text-white shadow-sm transition-transform hover:scale-110"
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm transition-transform hover:scale-110"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -536,7 +536,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         {/* Unified input bar — Google Messages style: pill contains input + action buttons */}
         {isRecording ? (
           <div className="flex flex-1 items-center gap-3 rounded-full border border-red-300 bg-m3-error-container px-5 py-2.5 dark:border-red-800 dark:bg-m3-error-container/20">
-            <span className="h-3 w-3 animate-pulse rounded-full bg-m3-error-container0" />
+            <span className="h-3 w-3 animate-pulse rounded-full bg-red-600" />
             <span className="text-sm font-medium text-m3-error dark:text-m3-error">Recording {formatDuration(recordingDuration)}</span>
             <div className="flex-1" />
             <button onClick={cancelRecording} className="rounded-full p-1 text-m3-outline hover:text-m3-error" title="Cancel">
@@ -637,7 +637,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         {isRecording ? (
           <button
             onClick={stopRecording}
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-m3-error-container0 active:bg-red-700"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-red-600 active:bg-red-700"
             title="Stop recording"
             aria-label="Stop recording"
           >

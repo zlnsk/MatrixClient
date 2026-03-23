@@ -519,24 +519,42 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 </div>
               </div>
 
+              {/* Build info */}
+              <div className="px-6 py-4 space-y-3">
+                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Build</p>
+                <InfoRow label="Version" value={`v${process.env.NEXT_PUBLIC_BUILD_VERSION || '?'}`} mono />
+                <InfoRow label="App" value="szept" />
+              </div>
+
+              {/* Component versions */}
+              <div className="px-6 py-4 space-y-3">
+                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Components</p>
+                <InfoRow label="matrix-js-sdk" value="41.1.0" mono />
+                <InfoRow label="matrix-sdk-crypto-wasm" value="18.0.0" mono />
+                <InfoRow label="Next.js" value="16.2.1" mono />
+                <InfoRow label="React" value="19.2.4" mono />
+                <InfoRow label="Zustand" value="5.0.12" mono />
+                <InfoRow label="Tailwind CSS" value="4.x" mono />
+                <InfoRow label="DOMPurify" value="3.3.3" mono />
+                <InfoRow label="Lucide React" value="0.577.0" mono />
+              </div>
+
               {/* Protocol info */}
               <div className="px-6 py-4 space-y-3">
                 <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Protocol & Standards</p>
-                <InfoRow label="Protocol" value="Matrix" />
-                <InfoRow label="Encryption" value="Megolm" icon={<Lock className="h-3 w-3 text-green-500" />} />
-                <InfoRow label="Key Exchange" value="Olm" />
-                <InfoRow label="Verification" value="SAS" />
-                {clientVersions.length > 0 && <InfoRow label="API" value={clientVersions[clientVersions.length - 1]} />}
+                <InfoRow label="Protocol" value="Matrix (CS API)" />
+                <InfoRow label="Encryption" value="Megolm (m.megolm.v1.aes-sha2)" icon={<Lock className="h-3 w-3 text-green-500" />} />
+                <InfoRow label="Key Exchange" value="Olm (m.olm.v1.curve25519-aes-sha2)" />
+                <InfoRow label="Verification" value="SAS (m.sas.v1)" />
+                <InfoRow label="Key Backup" value="m.megolm_backup.v1.curve25519-aes-sha2" />
+                {clientVersions.length > 0 && <InfoRow label="Server API" value={clientVersions[clientVersions.length - 1]} />}
               </div>
 
-              {/* Client info */}
+              {/* Device info */}
               <div className="px-6 py-4 space-y-3">
-                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Client</p>
-                <InfoRow label="Version" value={`v${process.env.NEXT_PUBLIC_BUILD_VERSION || '?'}`} />
-                <InfoRow label="SDK" value="matrix-js-sdk" />
-                <InfoRow label="Crypto" value="matrix-sdk-crypto-wasm" />
-                <InfoRow label="Framework" value="Next.js" />
+                <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Device</p>
                 <InfoRow label="Device ID" value={currentDeviceId} mono />
+                <InfoRow label="User ID" value={user?.userId || 'unknown'} mono />
               </div>
 
               {/* Server info */}
@@ -544,8 +562,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Server</p>
                 <InfoRow label="Homeserver" value={homeserverDomain} />
                 <InfoRow label="URL" value={getHomeserverUrl() || 'unknown'} mono />
-                <InfoRow label="User ID" value={user?.userId || 'unknown'} mono />
-                {clientVersions.length > 0 && <InfoRow label="APIs" value={clientVersions.join(', ')} />}
+                {clientVersions.length > 0 && <InfoRow label="Supported APIs" value={clientVersions.join(', ')} />}
               </div>
             </div>
           )}

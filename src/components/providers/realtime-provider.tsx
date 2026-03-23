@@ -11,7 +11,7 @@ import { VerificationDialog } from '@/components/chat/verification-dialog'
 import { CallOverlay } from '@/components/chat/call-overlay'
 import { NewSessionBanner } from '@/components/chat/new-session-banner'
 import { setupIncomingCallListener } from '@/lib/matrix/voip'
-import { playNotificationSound } from '@/lib/notification-sound'
+import { playNotificationSound, playSeenSound } from '@/lib/notification-sound'
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
@@ -172,10 +172,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     }
 
     // Listen for read receipts - only reload if active room
+    // Play a subtle "seen" sound when someone reads our message
+    let lastSeenSoundTs = 0
     const onReceipt = (_event: sdk.MatrixEvent, room: sdk.Room) => {
       const currentActiveRoom = useChatStore.getState().activeRoom
       if (currentActiveRoom?.roomId === room.roomId) {
         debouncedLoadMessages(room.roomId)
+
+        // Play seen sound at most once per 3 seconds
+        const now = Date.now()
+        if (now - lastSeenSoundTs > 3000) {
+          lastSeenSoundTs = now
+          playSeenSound()
+        }
       }
     }
 

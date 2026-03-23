@@ -137,7 +137,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   return (
     <>
       {/* Header — Google Messages style */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 px-4 py-3.5">
         <div className="relative" ref={hamburgerRef}>
           <button
             onClick={() => setShowHamburger(!showHamburger)}
@@ -198,10 +198,10 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
       </div>
 
       {/* FAB — Start chat (Google Messages style) */}
-      <div className="px-4 pb-2">
+      <div className="px-4 pb-3">
         <button
           onClick={() => setShowNewChat(true)}
-          className="flex items-center gap-3 rounded-2xl bg-m3-primary-container px-5 py-3.5 text-sm font-medium text-m3-on-primary-container shadow-sm transition-all hover:shadow-md active:shadow-sm dark:bg-m3-primary-container dark:text-m3-on-primary-container"
+          className="flex items-center gap-3 rounded-2xl bg-m3-primary-container px-5 py-3.5 text-sm font-medium text-m3-on-primary-container shadow-sm transition-all hover:shadow-md active:shadow-sm"
         >
           <MessageCircle className="h-5 w-5" />
           Start chat
@@ -209,16 +209,16 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
       </div>
 
       {/* Search */}
-      <div className="px-4 py-2">
+      <div className="px-4 pb-3">
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant" />
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant" />
           <input
             type="search"
             placeholder="Search conversations"
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
             aria-label="Search rooms and messages"
-            className="w-full rounded-full bg-m3-surface-container py-2.5 pl-10 pr-10 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:bg-m3-surface-container-high focus:outline-none dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline dark:focus:bg-m3-surface-container-high"
+            className="w-full rounded-full bg-m3-surface-container py-2.5 pl-11 pr-10 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:bg-m3-surface-container-high focus:outline-none dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline dark:focus:bg-m3-surface-container-high"
           />
           {searchFilter && (
             <button
@@ -468,7 +468,7 @@ const RoomListItem = memo(function RoomListItem({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className={`group flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors duration-100 ${
+      className={`group flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors duration-100 ${
         isActive
           ? 'bg-m3-primary-container/50 dark:bg-m3-surface-container-high'
           : 'hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high/60'

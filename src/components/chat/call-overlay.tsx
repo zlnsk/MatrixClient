@@ -183,7 +183,7 @@ function PipOverlay() {
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); hangupCall() }}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white transition-colors hover:bg-m3-error-container0"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white transition-colors hover:bg-red-700"
           title="Hang up"
         >
           <PhoneOff className="h-3.5 w-3.5" />
@@ -342,7 +342,7 @@ export function CallOverlay() {
               <>
                 <button
                   onClick={rejectCall}
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg transition-transform hover:scale-110 hover:bg-m3-error-container0"
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg transition-transform hover:scale-110 hover:bg-red-700"
                   title="Reject"
                 >
                   <PhoneOff className="h-7 w-7" />
@@ -424,7 +424,7 @@ export function CallOverlay() {
                 {/* Hang up */}
                 <button
                   onClick={hangupCall}
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg transition-transform hover:scale-110 hover:bg-m3-error-container0"
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg transition-transform hover:scale-110 hover:bg-red-700"
                   title="Hang up"
                 >
                   <PhoneOff className="h-7 w-7" />

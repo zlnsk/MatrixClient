@@ -48,3 +48,32 @@ export function playNotificationSound(): void {
     osc.stop(start + duration)
   })
 }
+
+/**
+ * Play a subtle "seen" confirmation sound — a short soft click.
+ */
+export function playSeenSound(): void {
+  const ctx = getAudioContext()
+  if (!ctx) return
+
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {})
+  }
+
+  const now = ctx.currentTime
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+
+  osc.type = 'sine'
+  osc.frequency.value = 1568 // G6
+
+  gain.gain.setValueAtTime(0, now)
+  gain.gain.linearRampToValueAtTime(0.08, now + 0.005)
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06)
+
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+
+  osc.start(now)
+  osc.stop(now + 0.06)
+}

@@ -899,19 +899,24 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             </div>
           )}
 
-          {/* Read receipts (avatars of people who read) */}
+          {/* Read receipts — "Seen" label + avatars */}
           {isOwn && message.readBy.length > 0 && (
-            <div className={`mt-1 flex justify-end -space-x-1.5`}>
-              {message.readBy.slice(0, 5).map(r => (
-                <div key={r.userId} title={`Seen by ${r.displayName}`}>
-                  <Avatar src={r.avatarUrl} name={r.displayName} size="sm" />
-                </div>
-              ))}
-              {message.readBy.length > 5 && (
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-m3-surface-container-high text-[10px] font-medium text-m3-on-surface-variant dark:bg-m3-surface-container-highest dark:text-m3-outline">
-                  +{message.readBy.length - 5}
-                </span>
-              )}
+            <div className="mt-1.5 flex items-center justify-end gap-1.5 animate-seen-pop">
+              <span className="text-[11px] font-medium text-m3-primary dark:text-m3-primary">
+                Seen
+              </span>
+              <div className="flex -space-x-1.5">
+                {message.readBy.slice(0, 4).map(r => (
+                  <div key={r.userId} title={`Seen by ${r.displayName}`} className="ring-2 ring-white dark:ring-m3-surface rounded-full">
+                    <Avatar src={r.avatarUrl} name={r.displayName} size="sm" />
+                  </div>
+                ))}
+                {message.readBy.length > 4 && (
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-m3-surface-container-high text-[10px] font-medium text-m3-on-surface-variant ring-2 ring-white dark:ring-m3-surface dark:bg-m3-surface-container-highest dark:text-m3-outline">
+                    +{message.readBy.length - 4}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
