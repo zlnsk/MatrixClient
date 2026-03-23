@@ -103,6 +103,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const [chatSearch, setChatSearch] = useState('')
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [showRoomInfo, setShowRoomInfo] = useState(false)
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
 
   // Room settings state
   const [editingName, setEditingName] = useState(false)
@@ -249,6 +251,28 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     }
     return groups
   }, [filteredMessages])
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const currentX = dragPos?.x ?? 0
+    const currentY = dragPos?.y ?? 0
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: currentX, origY: currentY }
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return
+      setDragPos({
+        x: dragRef.current.origX + (ev.clientX - dragRef.current.startX),
+        y: dragRef.current.origY + (ev.clientY - dragRef.current.startY),
+      })
+    }
+    const onUp = () => {
+      dragRef.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [dragPos])
 
   return (
     <div className="relative flex flex-1 flex-col min-h-0 bg-m3-surface-container-low dark:bg-m3-surface">
@@ -484,10 +508,17 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
       {/* Room Info Panel */}
       {showRoomInfo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-end pr-4" onClick={() => setShowRoomInfo(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-end pr-4" onClick={() => { setShowRoomInfo(false); setDragPos(null) }}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" />
-          <div className="relative z-50 w-96 max-h-[85vh] rounded-2xl bg-m3-surface-container-lowest shadow-2xl animate-slide-in dark:bg-m3-surface-container overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <div className="border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant">
+          <div
+            className="relative z-50 w-96 max-h-[85vh] rounded-2xl bg-m3-surface-container-lowest shadow-2xl animate-slide-in dark:bg-m3-surface-container overflow-y-auto"
+            style={dragPos ? { transform: `translate(${dragPos.x}px, ${dragPos.y}px)` } : undefined}
+            onClick={e => e.stopPropagation()}
+          >
+          <div
+            className="border-b border-m3-outline-variant p-4 dark:border-m3-outline-variant cursor-grab active:cursor-grabbing select-none"
+            onMouseDown={handleDragStart}
+          >
             <h3 className="text-base font-bold text-m3-on-surface dark:text-m3-on-surface">Room Details</h3>
           </div>
 
