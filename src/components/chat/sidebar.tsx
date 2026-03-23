@@ -480,7 +480,7 @@ const RoomListItem = memo(function RoomListItem({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className="truncate text-sm font-medium text-m3-on-surface">
+          <span className="truncate text-[15px] font-medium text-m3-on-surface">
             {room.name}
           </span>
           {room.lastMessageTs > 0 && (
@@ -490,7 +490,7 @@ const RoomListItem = memo(function RoomListItem({
           )}
         </div>
         <div className="flex items-center justify-between mt-0.5">
-          <p className="truncate text-xs text-m3-on-surface-variant">
+          <p className="truncate text-[13px] text-m3-on-surface-variant">
             {room.lastSenderName && <span>{room.lastSenderName}: </span>}
             {lastMsgPreview}
           </p>

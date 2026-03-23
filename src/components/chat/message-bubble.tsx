@@ -476,7 +476,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                       <img
                         src={effectiveMediaUrl}
                         alt={message.content || 'Shared image'}
-                        className="block max-w-full rounded-xl object-contain cursor-pointer transition-opacity hover:opacity-90"
+                        className="block min-w-[200px] max-w-full rounded-xl object-contain cursor-pointer transition-opacity hover:opacity-90"
                         style={{
                           maxHeight: 480,
                           width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
