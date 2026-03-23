@@ -139,7 +139,10 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     else if (lastContent.msgtype === 'm.video') lastMessage = '🎬 Video'
     else if (lastContent.msgtype === 'm.audio') lastMessage = '🎤 Audio'
     else if (lastContent.msgtype === 'm.file') lastMessage = '📎 File'
-    else if (lastContent.body) lastMessage = lastContent.body
+    else if (lastContent.body) {
+      // Strip Matrix reply fallback (lines starting with "> " and trailing newline)
+      lastMessage = lastContent.body.replace(/^(>.*\n?)+\n?/, '').trim() || lastContent.body
+    }
     else if (lastContent.algorithm) lastMessage = '🔒 Encrypted message'
     else lastMessage = null
   }
