@@ -930,7 +930,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!client) return
 
     try {
-      await client.sendStateEvent(roomId, 'm.room.encryption', {
+      await (client as any).sendStateEvent(roomId, 'm.room.encryption', {
         algorithm: 'm.megolm.v1.aes-sha2',
       }, '')
       get().loadRooms()
