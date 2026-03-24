@@ -161,7 +161,7 @@ export default function LoginPage() {
                 <circle cx="314" cy="334" r="21" fill="white" opacity="0.25"/>
               </svg>
             </div>
-            <span className="text-2xl font-bold tracking-tight">szept</span>
+            <span className="text-2xl tracking-tight"><span className="font-light">szept</span> <span className="font-bold">matrix</span></span>
           </div>
           <p className="mt-6 text-lg font-medium leading-relaxed text-white/90">
             A modern Matrix client with end-to-end encryption, built for speed and privacy.
@@ -205,7 +205,7 @@ export default function LoginPage() {
                 <circle cx="314" cy="334" r="21" fill="white" opacity="0.25"/>
               </svg>
             </div>
-            <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-m3-on-surface">szept</h1>
+            <h1 className="mt-4 text-3xl tracking-tight text-m3-on-surface"><span className="font-light">szept</span> <span className="font-extrabold">matrix</span></h1>
           </div>
 
           {/* Desktop heading */}

@@ -162,7 +162,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-2xl border border-m3-outline-variant bg-white py-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
               {/* App title */}
               <div className="px-6 py-3 border-b border-m3-outline-variant">
-                <h2 className="text-lg font-medium text-m3-on-surface">szept</h2>
+                <h2 className="text-lg text-m3-on-surface"><span className="font-light">szept</span> <span className="font-bold">matrix</span></h2>
                 <p className="text-xs text-m3-on-surface-variant">{user?.userId}</p>
               </div>
 
@@ -186,7 +186,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
           )}
         </div>
 
-        <h1 className="flex-1 text-xl font-normal text-m3-on-surface">szept</h1>
+        <h1 className="flex-1 text-xl text-m3-on-surface"><span className="font-light">szept</span> <span className="font-bold">matrix</span></h1>
 
         <Avatar
           src={user?.avatarUrl}

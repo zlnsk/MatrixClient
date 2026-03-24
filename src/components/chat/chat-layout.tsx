@@ -114,8 +114,8 @@ function EmptyState() {
       <div className="flex h-24 w-24 items-center justify-center rounded-full bg-m3-primary-container/40 dark:bg-m3-primary-container/20">
         <MessageSquare className="h-12 w-12 text-m3-primary" />
       </div>
-      <h3 className="mt-6 text-xl font-normal text-m3-on-surface dark:text-m3-on-surface">
-        szept
+      <h3 className="mt-6 text-xl text-m3-on-surface dark:text-m3-on-surface">
+        <span className="font-light">szept</span> <span className="font-bold">matrix</span>
       </h3>
       <p className="mt-2 max-w-sm text-center text-sm text-m3-on-surface-variant">
         Select a conversation to start messaging
