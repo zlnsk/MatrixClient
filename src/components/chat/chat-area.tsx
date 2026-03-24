@@ -232,7 +232,10 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const handleSend = useCallback((content: string) => {
     sendMessage(activeRoom.roomId, content, replyTo?.eventId)
     setReplyTo(null)
-  }, [activeRoom.roomId, replyTo?.eventId, sendMessage])
+    // Always scroll to bottom when sending a message, even if user scrolled up
+    stickyRef.current = true
+    requestAnimationFrame(() => scrollToBottom(true))
+  }, [activeRoom.roomId, replyTo?.eventId, sendMessage, scrollToBottom])
 
   const handleArchiveToggle = async () => {
     if (activeRoom.isArchived) {
