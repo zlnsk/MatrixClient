@@ -144,7 +144,7 @@ function PipOverlay() {
           className="h-full w-full object-cover"
         />
       ) : (
-        <div className="flex flex-col items-center gap-2 bg-m3-surface-container-highest dark:bg-m3-surface px-4 py-5">
+        <div className="flex flex-col items-center gap-2 bg-m3-surface-container-highest dark:bg-m3-surface p-4">
           <Avatar
             src={callInfo?.opponentAvatarUrl}
             name={callInfo?.opponentName || ''}
@@ -310,7 +310,7 @@ export function CallOverlay() {
 
         {/* Status indicator */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2">
-          <div className="rounded-full bg-black/60 px-6 py-2 text-center backdrop-blur-sm">
+          <div className="rounded-full bg-black/60 px-6 py-3 text-center backdrop-blur-sm">
             {isVideo && remoteStream && (
               <p className="text-sm font-medium text-white">{callInfo.opponentName}</p>
             )}

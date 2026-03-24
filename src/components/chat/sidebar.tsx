@@ -217,7 +217,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
             aria-label="Search rooms and messages"
-            className="w-full rounded-full bg-m3-surface-container py-2.5 pl-11 pr-10 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:bg-m3-surface-container-high focus:outline-none dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline dark:focus:bg-m3-surface-container-high"
+            className="w-full rounded-full bg-m3-surface-container py-2.5 pl-11 pr-11 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:bg-m3-surface-container-high focus:outline-none dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline dark:focus:bg-m3-surface-container-high"
           />
           {searchFilter && (
             <button
@@ -251,7 +251,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                 {pendingInvites.map(invite => (
                   <div
                     key={invite.roomId}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                    className="flex items-center gap-3 px-4 py-3.5 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                   >
                     <Avatar
                       src={invite.avatarUrl}
@@ -372,7 +372,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
               {isSearchingMessages && <Loader2 className="h-3 w-3 animate-spin" />}
             </div>
             {messageResults.length === 0 && !isSearchingMessages ? (
-              <p className="px-5 py-3 text-xs text-m3-outline">No messages found</p>
+              <p className="px-4 py-3.5 text-xs text-m3-outline">No messages found</p>
             ) : (
               <div>
                 {messageResults.map(result => (
@@ -400,7 +400,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                         })
                       }
                     }}
-                    className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                    className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">

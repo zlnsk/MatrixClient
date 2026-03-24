@@ -540,7 +540,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto">
             {/* Avatar + name hero section */}
-            <div className="flex flex-col items-center px-6 pb-6 pt-8">
+            <div className="flex flex-col items-center px-6 py-8">
               <Avatar
                 src={activeRoom.isDirect ? otherMember?.avatarUrl : activeRoom.avatarUrl}
                 name={roomDisplayName}
@@ -646,7 +646,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             </div>
 
             {/* Action buttons row — Google Messages style */}
-            <div className="flex justify-center gap-6 border-b border-m3-outline-variant px-6 pb-5 dark:border-m3-outline-variant">
+            <div className="flex justify-center gap-6 border-b border-m3-outline-variant px-6 py-5 dark:border-m3-outline-variant">
               {activeRoom.encrypted ? (
                 <div className="flex flex-col items-center gap-1">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/20">
@@ -831,7 +831,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                     try { await leaveRoom(activeRoom.roomId); setShowRoomInfo(false) }
                     catch (err) { console.error('Failed to leave room:', err) }
                   }}
-                  className="flex w-full items-center gap-4 rounded-full px-3 py-2.5 text-sm text-m3-error transition-colors hover:bg-m3-error-container dark:text-m3-error dark:hover:bg-red-900/20"
+                  className="flex w-full items-center gap-4 rounded-full px-3 py-3 text-sm text-m3-error transition-colors hover:bg-m3-error-container dark:text-m3-error dark:hover:bg-red-900/20"
                 >
                   <LogOut className="h-5 w-5" />
                   {activeRoom.isDirect ? 'Leave Conversation' : 'Leave Room'}

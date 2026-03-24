@@ -265,7 +265,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           {activeSection === 'profile' && (
             <div>
               {/* Avatar hero */}
-              <div className="flex flex-col items-center px-6 pb-6 pt-8 border-b border-m3-outline-variant dark:border-m3-outline-variant">
+              <div className="flex flex-col items-center px-6 py-8 border-b border-m3-outline-variant dark:border-m3-outline-variant">
                 <div className="relative">
                   <Avatar src={user?.avatarUrl} name={user?.displayName || 'U'} size="lg" />
                   <button
@@ -459,7 +459,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                                 onKeyDown={e => { if (e.key === 'Enter') handleDeleteDevice(device.deviceId) }}
                                 placeholder="Account password"
                                 autoFocus
-                                className="w-full border-b border-m3-outline-variant bg-transparent py-1.5 text-sm text-m3-on-surface focus:border-m3-primary focus:outline-none dark:text-m3-on-surface"
+                                className="w-full border-b border-m3-outline-variant bg-transparent py-2 text-sm text-m3-on-surface focus:border-m3-primary focus:outline-none dark:text-m3-on-surface"
                               />
                               {deviceError && <p className="text-xs text-m3-error">{deviceError}</p>}
                               <div className="flex gap-2">

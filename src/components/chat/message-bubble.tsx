@@ -610,7 +610,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   </a>
                 )}
                 {message.content && message.type === 'm.image' && !/\.\w{2,5}$/i.test(message.content) && (
-                  <p className="px-3 pb-1 pt-2 text-sm">{message.content}</p>
+                  <p className="px-3 py-1.5 text-sm">{message.content}</p>
                 )}
               </div>
             ) : message.msgtype === 'm.emote' ? (
