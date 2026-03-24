@@ -137,6 +137,11 @@ const SUPPRESSED_PATTERNS = [
   // Per-session key backup download errors (expected for sessions not in backup)
   'Error while decrypting and importing key backup',
   'key backup for session',
+  // Push rules / TURN server 404 on servers that don't support them (Conduit etc.)
+  'Getting push rules failed',
+  'Failed to get TURN URIs',
+  'getPushRules',
+  'pushrules',
 ]
 
 function isSuppressed(args: any[]): boolean {
@@ -654,7 +659,7 @@ export async function startSync(): Promise<void> {
 
   // Wait for initial sync (with timeout to avoid infinite "Connecting..." spinner)
   await new Promise<void>((resolve, reject) => {
-    const SYNC_TIMEOUT_MS = 30_000
+    const SYNC_TIMEOUT_MS = 60_000
 
     const timeout = setTimeout(() => {
       matrixClient?.removeListener(sdk.ClientEvent.Sync, onSync)
