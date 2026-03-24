@@ -265,6 +265,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   const actionsRef = useRef<HTMLDivElement>(null)
   const bubbleRef = useRef<HTMLDivElement>(null)
   const touchMenuRef = useRef<HTMLDivElement>(null)
+  const emojiPickerPortalRef = useRef<HTMLDivElement>(null)
+  const contextMenuPortalRef = useRef<HTMLDivElement>(null)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchMoved = useRef(false)
 
@@ -314,8 +316,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   useEffect(() => {
     function handleClickOutside(e: MouseEvent | TouchEvent) {
       const target = e.target as Node
-      // Don't close desktop menus if click is inside actions area
-      if (actionsRef.current && !actionsRef.current.contains(target)) {
+      // Don't close desktop menus if click is inside actions area or portal menus
+      const insideActions = actionsRef.current?.contains(target)
+      const insideEmojiPortal = emojiPickerPortalRef.current?.contains(target)
+      const insideContextPortal = contextMenuPortalRef.current?.contains(target)
+      if (!insideActions && !insideEmojiPortal && !insideContextPortal) {
         setShowActions(false)
         setShowEmojiPicker(false)
         setShowContextMenu(false)
@@ -719,6 +724,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             }
             return createPortal(
               <div
+                ref={emojiPickerPortalRef}
                 className="hidden md:grid grid-cols-5 gap-1 rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest p-2.5 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high"
                 style={pickerStyle}
               >
@@ -748,7 +754,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             return createPortal(
               <>
                 <div className="fixed inset-0 z-[9998]" onClick={() => { setShowContextMenu(false); setShowActions(false) }} />
-                <div className="hidden md:block min-w-[160px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high" style={menuStyle}>
+                <div ref={contextMenuPortalRef} className="hidden md:block min-w-[160px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high" style={menuStyle}>
                   <button
                     onClick={handleCopy}
                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
