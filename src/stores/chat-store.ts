@@ -196,14 +196,14 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const tags = room.tags || {}
   const isArchived = 'm.lowpriority' in tags
 
-  // For DM rooms (or small rooms without an explicit avatar), prefer the other
-  // member's avatar over the room avatar. Bridges like mautrix-signal often don't
-  // set room avatars for DMs, and after delete-all-portals the m.direct account
-  // data may not be repopulated — so also check rooms with ≤2 members.
+  // For DM rooms (or small rooms ≤2 members), prefer the other member's profile
+  // avatar over the room avatar. Bridges like mautrix-signal set the Signal logo
+  // as the room avatar — the real face is in the user's global profile.
   let roomAvatarMxc = room.getMxcAvatarUrl()
   const joinedCount = room.getJoinedMembers().length
   const summaryCount = room.currentState?.getJoinedMemberCount?.() || joinedCount
-  if (client && (isDirect || (!roomAvatarMxc && (joinedCount <= 2 || summaryCount <= 2) && (joinedCount > 0 || summaryCount > 0)))) {
+  const isSmallRoom = (joinedCount <= 2 || summaryCount <= 2) && (joinedCount > 0 || summaryCount > 0)
+  if (client && (isDirect || isSmallRoom)) {
     const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
     // Prefer profile cache (real avatar) over room member avatar (may be bridge default like Signal logo)
     const memberAvatar = (otherMember ? profileAvatarCache.get(otherMember.userId) : undefined) || otherMember?.getMxcAvatarUrl()
@@ -568,8 +568,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // (after bridge delete-all-portals, m.direct may not be repopulated
       // so we can't rely solely on isDirect).
       const summaryMemberCount = sdkRoom.currentState?.getJoinedMemberCount?.() || sdkRoom.getJoinedMembers().length
+      // Always resolve avatars for DMs and small rooms — the existing avatar
+      // may be a bridge default (Signal logo) while the real face is in the profile.
       const needsAvatar = matrixRoom?.isDirect
-        || (!matrixRoom?.avatarUrl && (sdkRoom.getJoinedMembers().length <= 2 || summaryMemberCount <= 2))
+        || (sdkRoom.getJoinedMembers().length <= 2 || summaryMemberCount <= 2)
       if (needsAvatar) {
         const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
         // Always load members and fetch profiles for DM/small rooms — the room member
