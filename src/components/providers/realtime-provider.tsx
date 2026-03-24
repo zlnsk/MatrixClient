@@ -51,6 +51,17 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }, 150)
     }
 
+    // Debounce refreshRoom per room to avoid excessive rebuilds
+    const refreshRoomTimers = new Map<string, ReturnType<typeof setTimeout>>()
+    const debouncedRefreshRoom = (roomId: string) => {
+      const existing = refreshRoomTimers.get(roomId)
+      if (existing) clearTimeout(existing)
+      refreshRoomTimers.set(roomId, setTimeout(() => {
+        refreshRoomTimers.delete(roomId)
+        refreshRoom(roomId)
+      }, 100))
+    }
+
     // Track whether timeline events fired for the ACTIVE room during this sync cycle
     // so onSync doesn't redundantly reload messages
     let activeRoomTimelineEventFired = false
@@ -84,8 +95,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Refresh just this room in the list (avoids full rebuild flicker)
-      refreshRoom(room.roomId)
+      // Refresh just this room in the list (debounced to batch rapid events)
+      debouncedRefreshRoom(room.roomId)
 
       // If this is the active room, reload messages (debounced)
       const currentActiveRoom = useChatStore.getState().activeRoom
@@ -138,7 +149,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
       // Also refresh sidebar for last message preview
       const roomId = event.getRoomId()
-      if (roomId) refreshRoom(roomId)
+      if (roomId) debouncedRefreshRoom(roomId)
     }
 
     // After each sync completes, refresh active room messages if timeline
@@ -195,7 +206,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       if (currentActiveRoom?.roomId === room.roomId) {
         loadMessages(room.roomId) // Immediate reload on reset, not debounced
       }
-      refreshRoom(room.roomId)
+      debouncedRefreshRoom(room.roomId)
     }
 
     // Listen for incoming verification requests
@@ -279,6 +290,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       if (loadRoomsTimer) clearTimeout(loadRoomsTimer)
       if (loadMessagesTimer) clearTimeout(loadMessagesTimer)
       if (syncCycleResetTimer) clearTimeout(syncCycleResetTimer)
+      refreshRoomTimers.forEach(t => clearTimeout(t))
+      refreshRoomTimers.clear()
       clearTimeout(csTimer)
       clearInterval(autoArchiveInterval)
 

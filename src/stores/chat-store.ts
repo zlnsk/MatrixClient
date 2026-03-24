@@ -218,16 +218,6 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
       }
     }
   }
-  console.log('[roomToMatrixRoom]', room.name, {
-    roomAvatarMxc: !!roomAvatarMxc,
-    isDirect,
-    joinedCount,
-    summaryCount,
-    membersWithAvatars: room.getJoinedMembers().filter((m: RoomMember) => m.getMxcAvatarUrl()).length,
-    fallbackMember: room.getAvatarFallbackMember()?.userId || null,
-    fallbackAvatar: !!room.getAvatarFallbackMember()?.getMxcAvatarUrl(),
-    profileCacheSize: profileAvatarCache.size,
-  })
 
   return {
     roomId: room.roomId,
@@ -586,11 +576,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
     if (roomsNeedingMembers.length > 0) {
-      console.log('[loadRooms] Loading members for', roomsNeedingMembers.length, 'rooms')
       Promise.allSettled(
         roomsNeedingMembers.map(r => r.loadMembersIfNeeded())
       ).then(async () => {
-        console.log('[loadRooms] Members loaded, checking profile fetches')
         // Always rebuild — loadMembersIfNeeded() returns false if members
         // were already loaded by a previous call (e.g. opening a chat), but
         // the room list may have been built before that load completed.
@@ -643,10 +631,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           )
         }
 
-        console.log('[loadRooms] Profile fetches queued:', profileFetches.length)
         if (profileFetches.length > 0) {
           await Promise.allSettled(profileFetches)
-          console.log('[loadRooms] Profile fetches done, profileAvatarCache size:', profileAvatarCache.size)
           // Re-set rooms with the fetched profile avatars
           set((state) => ({
             rooms: [...updatedRooms].sort((a, b) => b.lastMessageTs - a.lastMessageTs),
@@ -1144,9 +1130,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     })
 
-    if (get().activeRoom?.roomId === roomId) {
-      get().loadMessages(roomId)
-    }
   },
 
   archiveRoom: async (roomId) => {
