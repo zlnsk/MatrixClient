@@ -823,8 +823,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         if (roomNeedsUpdate) {
           const updated = [...currentRooms]
-          updated[roomIdx] = { ...currentRoom, members: updatedMembers, avatarUrl: updatedRoomAvatar }
-          set({ rooms: updated })
+          const updatedRoom = { ...currentRoom, members: updatedMembers, avatarUrl: updatedRoomAvatar }
+          updated[roomIdx] = updatedRoom
+          set((state) => ({
+            rooms: updated,
+            activeRoom: state.activeRoom?.roomId === roomId ? updatedRoom : state.activeRoom,
+          }))
         }
       }
     } catch (err) {

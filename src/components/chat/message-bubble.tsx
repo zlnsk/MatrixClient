@@ -683,20 +683,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             )}
           </div>
 
-          {/* Timestamp + status — outside bubble, Google Messages style */}
-          <div className={`mt-1 px-1 flex items-center gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-            <span className="text-xs text-m3-outline dark:text-m3-on-surface-variant">
-              {format(new Date(message.timestamp), 'HH:mm')}
-            </span>
-            {message.isEdited && (
-              <span className="text-xs text-m3-outline dark:text-m3-on-surface-variant">
-                (edited)
-              </span>
-            )}
-            <StatusIcon />
-          </div>
-
-          {/* Action buttons — right side of bubble (desktop only, hidden on touch) */}
+          {/* Action buttons — aligned to bubble (desktop only, hidden on touch) */}
           <div className={`absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center gap-0.5 rounded-2xl border border-m3-outline-variant/80 bg-m3-surface-container-lowest p-1 shadow-lg dark:border-m3-outline-variant dark:bg-m3-surface-container-high transition-all duration-150 ${isOwn ? 'right-full mr-1.5' : 'left-full ml-1.5'} ${showActions && !isEditing ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none ' + (isOwn ? 'translate-x-1' : '-translate-x-1')}`}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -963,6 +950,19 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             document.body
           )}
           </div>{/* end bubble wrapper */}
+
+          {/* Timestamp + status — outside bubble, Google Messages style */}
+          <div className={`mt-1 px-1 flex items-center gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <span className="text-xs text-m3-outline dark:text-m3-on-surface-variant">
+              {format(new Date(message.timestamp), 'HH:mm')}
+            </span>
+            {message.isEdited && (
+              <span className="text-xs text-m3-outline dark:text-m3-on-surface-variant">
+                (edited)
+              </span>
+            )}
+            <StatusIcon />
+          </div>
 
           {/* Reactions */}
           {message.reactions.size > 0 && (

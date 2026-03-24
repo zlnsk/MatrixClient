@@ -560,7 +560,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               placeholder="Type a message..."
               rows={1}
               enterKeyHint="send"
-              className={`max-h-32 min-h-[42px] flex-1 resize-none bg-transparent px-5 py-2.5 text-m3-on-surface placeholder-m3-on-surface-variant focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3 ${isEmojiOnly(content) ? 'text-4xl leading-tight' : 'text-sm'}`}
+              className={`max-h-32 min-h-[42px] flex-1 resize-none bg-transparent px-5 py-2.5 text-m3-on-surface placeholder-m3-on-surface-variant focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3 ${isEmojiOnly(content) ? 'text-4xl leading-tight' : 'text-[15px]'}`}
             />
             {/* Action buttons inside the pill */}
             <div className="flex flex-shrink-0 items-center gap-0.5 pr-2">
