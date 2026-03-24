@@ -201,7 +201,8 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   // data may not be repopulated — so also check rooms with ≤2 members.
   let roomAvatarMxc = room.getMxcAvatarUrl()
   const joinedCount = room.getJoinedMembers().length
-  if (client && (isDirect || (!roomAvatarMxc && joinedCount <= 2 && joinedCount > 0))) {
+  const summaryCount = room.currentState?.getJoinedMemberCount?.() || joinedCount
+  if (client && (isDirect || (!roomAvatarMxc && (joinedCount <= 2 || summaryCount <= 2) && (joinedCount > 0 || summaryCount > 0)))) {
     const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
     const memberAvatar = otherMember?.getMxcAvatarUrl() || (otherMember ? profileAvatarCache.get(otherMember.userId) : undefined)
     if (memberAvatar) {
@@ -217,6 +218,16 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
       }
     }
   }
+  console.debug('[roomToMatrixRoom]', room.name, {
+    roomAvatarMxc: !!roomAvatarMxc,
+    isDirect,
+    joinedCount,
+    summaryCount,
+    membersWithAvatars: room.getJoinedMembers().filter((m: RoomMember) => m.getMxcAvatarUrl()).length,
+    fallbackMember: room.getAvatarFallbackMember()?.userId || null,
+    fallbackAvatar: !!room.getAvatarFallbackMember()?.getMxcAvatarUrl(),
+    profileCacheSize: profileAvatarCache.size,
+  })
 
   return {
     roomId: room.roomId,
@@ -564,8 +575,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Load members for DM rooms, or any small room without an avatar
       // (after bridge delete-all-portals, m.direct may not be repopulated
       // so we can't rely solely on isDirect).
+      const summaryMemberCount = sdkRoom.currentState?.getJoinedMemberCount?.() || sdkRoom.getJoinedMembers().length
       const needsAvatar = matrixRoom?.isDirect
-        || (!matrixRoom?.avatarUrl && sdkRoom.getJoinedMembers().length <= 2)
+        || (!matrixRoom?.avatarUrl && (sdkRoom.getJoinedMembers().length <= 2 || summaryMemberCount <= 2))
       if (needsAvatar) {
         const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
         if (!otherMember || !otherMember.getMxcAvatarUrl()) {
