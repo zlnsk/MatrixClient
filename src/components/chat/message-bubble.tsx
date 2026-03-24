@@ -24,6 +24,8 @@ import {
   Loader2,
   Play,
   Pause,
+  AlertCircle,
+  RotateCcw,
 } from 'lucide-react'
 import { LinkPreview } from './link-preview'
 import { decryptMediaAttachment, fetchAuthenticatedMedia } from '@/lib/matrix/media'
@@ -421,13 +423,15 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
     const iconClass = 'h-3.5 w-3.5'
     switch (message.status) {
       case 'sending':
-        return <Clock className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant`} />
+        return <Clock className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant animate-pulse`} />
       case 'sent':
         return <Check className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant`} />
       case 'delivered':
         return <CheckCheck className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant`} />
       case 'read':
         return <CheckCheck className={`${iconClass} text-green-500`} />
+      case 'failed':
+        return null // Handled by the failed banner below
       default:
         return <Send className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant`} />
     }
@@ -513,7 +517,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             }}
             className={`rounded-[20px] overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'w-fit border border-m3-outline-variant/30 dark:border-m3-outline-variant/20' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
               isOwn
-                ? 'bg-m3-primary text-white'
+                ? message.status === 'failed'
+                  ? 'bg-m3-primary/70 text-white ring-2 ring-red-400/50'
+                  : message.status === 'sending'
+                    ? 'bg-m3-primary/85 text-white'
+                    : 'bg-m3-primary text-white'
                 : 'border border-m3-outline-variant/50 bg-m3-surface-container-lowest text-m3-on-surface dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high dark:text-m3-on-surface'
             }`}
           >
@@ -648,6 +656,24 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               )}
               <StatusIcon />
             </div>
+
+            {/* Failed to send indicator with retry */}
+            {message.status === 'failed' && (
+              <div className="mt-1.5 flex items-center gap-2 text-xs">
+                <AlertCircle className="h-3.5 w-3.5 text-red-400" />
+                <span className="text-red-300">Failed to send</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    useChatStore.getState().retryMessage(message.localId!)
+                  }}
+                  className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-xs text-white transition-colors hover:bg-white/30"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Retry
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Action buttons — right side of bubble (desktop only, hidden on touch) */}

@@ -18,7 +18,7 @@ import {
 import { Avatar } from '@/components/ui/avatar'
 
 interface MessageInputProps {
-  onSend: (content: string) => Promise<void>
+  onSend: (content: string) => void
   replyTo: MatrixMessage | null
   onCancelReply: () => void
   roomId: string
@@ -38,7 +38,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const [content, setContent] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
   const [emojiCategory, setEmojiCategory] = useState('Smileys')
-  const [isSending, setIsSending] = useState(false)
+  // isSending state removed — messages are now sent optimistically
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [commandStatus, setCommandStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -274,9 +274,8 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
     const hasFiles = pendingFiles.length > 0
 
     if (!trimmed && !hasFiles) return
-    if (isSending || isUploading) return
+    if (isUploading) return
 
-    setIsSending(true)
     setCommandStatus(null)
     sendTyping(roomId, false)
     try {
@@ -303,14 +302,13 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
           return
         }
       }
-      // Send text message if present
+      // Send text message if present — non-blocking, message appears optimistically
       if (trimmed) {
-        await onSend(trimmed)
+        onSend(trimmed)
       }
       setContent('')
       inputRef.current?.focus()
     } finally {
-      setIsSending(false)
       setIsUploading(false)
     }
   }
@@ -655,7 +653,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={(!content.trim() && pendingFiles.length === 0) || isSending || isUploading}
+            disabled={(!content.trim() && pendingFiles.length === 0) || isUploading}
             className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary text-white transition-all hover:bg-m3-primary/90 active:bg-m3-primary/80 disabled:opacity-30"
             aria-label="Send message"
           >

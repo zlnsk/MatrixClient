@@ -229,10 +229,10 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     ? otherMember?.presence === 'online' ? 'online' : otherMember?.presence === 'unavailable' ? 'away' : 'offline'
     : `${activeRoom.members.length} members`
 
-  const handleSend = async (content: string) => {
-    await sendMessage(activeRoom.roomId, content, replyTo?.eventId)
+  const handleSend = useCallback((content: string) => {
+    sendMessage(activeRoom.roomId, content, replyTo?.eventId)
     setReplyTo(null)
-  }
+  }, [activeRoom.roomId, replyTo?.eventId, sendMessage])
 
   const handleArchiveToggle = async () => {
     if (activeRoom.isArchived) {

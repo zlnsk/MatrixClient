@@ -73,8 +73,10 @@ export interface MatrixMessage {
   encryptedFile: { url: string; key: { k: string; alg: string; key_ops: string[]; kty: string; ext: boolean }; iv: string; hashes: Record<string, string>; v: string } | null
   msgtype: string
   readBy: ReadReceipt[]
-  status: 'sending' | 'sent' | 'delivered' | 'read'
+  status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
   isStateEvent?: boolean
+  /** Temporary local ID used for optimistic messages before server confirmation */
+  localId?: string
 }
 
 interface ChatState {
@@ -93,7 +95,8 @@ interface ChatState {
   joinRoom: (roomIdOrAlias: string) => Promise<void>
   setActiveRoom: (room: MatrixRoom | null) => void
   loadMessages: (roomId: string) => Promise<void>
-  sendMessage: (roomId: string, content: string, replyToEventId?: string) => Promise<void>
+  sendMessage: (roomId: string, content: string, replyToEventId?: string) => void
+  retryMessage: (localId: string) => void
   editMessage: (roomId: string, eventId: string, newContent: string) => Promise<void>
   redactMessage: (roomId: string, eventId: string) => Promise<void>
   sendReaction: (roomId: string, eventId: string, emoji: string) => Promise<void>
@@ -722,14 +725,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
+      // Preserve optimistic messages (sending/failed) that haven't been confirmed
+      // by the server sync yet. These have a localId and won't appear in the timeline.
+      const existing = get().messages
+      const serverEventIds = new Set(newMessages.map(m => m.eventId))
+      const pendingOptimistic = existing.filter(
+        m => m.localId && (m.status === 'sending' || m.status === 'failed') && !serverEventIds.has(m.eventId)
+      )
+      // Append pending optimistic messages at the end (they are the most recent)
+      const mergedMessages = pendingOptimistic.length > 0
+        ? [...newMessages, ...pendingOptimistic]
+        : newMessages
+
       // Quick equality check: skip setState if messages haven't actually changed.
       // Compare by length, then key fields of each message to avoid unnecessary re-renders.
-      const existing = get().messages
-      let changed = existing.length !== newMessages.length
+      let changed = existing.length !== mergedMessages.length
       if (!changed) {
-        for (let i = 0; i < newMessages.length; i++) {
+        for (let i = 0; i < mergedMessages.length; i++) {
           const a = existing[i]
-          const b = newMessages[i]
+          const b = mergedMessages[i]
           if (
             a.eventId !== b.eventId ||
             a.timestamp !== b.timestamp ||
@@ -747,7 +761,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       if (changed) {
-        set({ messages: newMessages, isLoadingMessages: false })
+        set({ messages: mergedMessages, isLoadingMessages: false })
       } else {
         set({ isLoadingMessages: false })
       }
@@ -757,33 +771,112 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (roomId, content, replyToEventId) => {
+  sendMessage: (roomId, content, replyToEventId) => {
     const client = getMatrixClient()
     if (!client) return
 
+    const userId = getUserId()
+    if (!userId) return
+
+    // Build the message content for the Matrix API
     const msgContent: Record<string, unknown> = {
       msgtype: 'm.text',
       body: content,
     }
 
+    // Build reply-to event info for the optimistic message
+    let replyToEvent: MatrixMessage['replyToEvent'] = null
     if (replyToEventId) {
       const room = client.getRoom(roomId)
-      const replyEvent = room?.findEventById(replyToEventId)
-      if (replyEvent) {
-        const replyBody = replyEvent.getContent().body || ''
-        const replySender = replyEvent.getSender()
+      const replyEvt = room?.findEventById(replyToEventId)
+      if (replyEvt) {
+        const replyBody = replyEvt.getContent().body || ''
+        const replySender = replyEvt.getSender()
+        const replyMember = room?.getMember(replySender!)
         msgContent.body = `> <${replySender}> ${replyBody}\n\n${content}`
         msgContent.format = 'org.matrix.custom.html'
-        // Escape HTML in reply body and content to prevent XSS
         const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
         msgContent.formatted_body = `<mx-reply><blockquote><a href="https://matrix.to/#/${encodeURIComponent(roomId)}/${encodeURIComponent(replyToEventId)}">In reply to</a> <a href="https://matrix.to/#/${encodeURIComponent(replySender || '')}">${escHtml(replySender || '')}</a><br>${escHtml(replyBody)}</blockquote></mx-reply>${escHtml(content)}`
         msgContent['m.relates_to'] = {
           'm.in_reply_to': { event_id: replyToEventId },
         }
+        replyToEvent = {
+          eventId: replyEvt.getId()!,
+          senderId: replySender!,
+          senderName: cleanDisplayName(replyMember?.name || replySender!),
+          content: replyBody,
+        }
       }
     }
 
-    await (client as any).sendEvent(roomId, 'm.room.message', msgContent)
+    // Create optimistic local message with a temporary ID
+    const localId = `~local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    const room = client.getRoom(roomId)
+    const member = room?.getMember(userId)
+    const optimisticMessage: MatrixMessage = {
+      eventId: localId,
+      roomId,
+      senderId: userId,
+      senderName: cleanDisplayName(member?.name || userId),
+      senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
+      type: 'm.text',
+      msgtype: 'm.text',
+      content,
+      formattedContent: null,
+      timestamp: Date.now(),
+      isEdited: false,
+      isRedacted: false,
+      replyToEvent,
+      reactions: new Map(),
+      mediaUrl: null,
+      mediaInfo: null,
+      encryptedFile: null,
+      readBy: [],
+      status: 'sending',
+      localId,
+    }
+
+    // Add optimistic message to the list immediately
+    const currentMessages = get().messages
+    set({ messages: [...currentMessages, optimisticMessage] })
+
+    // Send to server in the background
+    ;(async () => {
+      try {
+        const result = await (client as any).sendEvent(roomId, 'm.room.message', msgContent)
+        // Replace the optimistic message with the confirmed event ID and 'sent' status.
+        // The sync loop will eventually deliver the real event via loadMessages,
+        // which will replace this by eventId match since we update it here.
+        const realEventId = result?.event_id
+        if (realEventId) {
+          const msgs = get().messages.map(m =>
+            m.localId === localId
+              ? { ...m, eventId: realEventId, status: 'sent' as const, localId: undefined }
+              : m
+          )
+          set({ messages: msgs })
+        }
+      } catch (err) {
+        console.error('Failed to send message:', err)
+        // Mark as failed so the user can retry
+        const msgs = get().messages.map(m =>
+          m.localId === localId ? { ...m, status: 'failed' as const } : m
+        )
+        set({ messages: msgs })
+      }
+    })()
+  },
+
+  retryMessage: (localId) => {
+    const messages = get().messages
+    const failedMsg = messages.find(m => m.localId === localId && m.status === 'failed')
+    if (!failedMsg) return
+
+    // Remove the failed message from the list
+    set({ messages: messages.filter(m => m.localId !== localId) })
+
+    // Re-send using the original content
+    get().sendMessage(failedMsg.roomId, failedMsg.content, failedMsg.replyToEvent?.eventId)
   },
 
   editMessage: async (roomId, eventId, newContent) => {
