@@ -506,7 +506,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           )}
 
           {/* Bubble wrapper — action buttons positioned relative to this */}
-          <div className="relative" ref={bubbleRef}>
+          <div className="relative z-20" ref={bubbleRef}>
           <div
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
