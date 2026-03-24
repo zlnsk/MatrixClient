@@ -66,9 +66,12 @@ function InitialsFallback({ name, size }: { name: string; size: 'sm' | 'md' | 'l
 
 /**
  * Detect simple placeholder/icon avatars like Signal's default dashed-circle.
- * Very strict: only flags images with ≤4 distinct color buckets (real photos
+ * Very strict: only flags images with ≤2 distinct color buckets (real photos
  * always have many more, even at 16x16). Also detects very small images
  * (< 5x5 pixels) which are often transparent placeholders.
+ *
+ * Previous threshold of 4 was too aggressive — real avatars with limited palettes
+ * (cartoon-style, logos, dark photos) could be incorrectly flagged as placeholders.
  */
 function isPlaceholderImage(img: HTMLImageElement): boolean {
   try {
@@ -84,20 +87,20 @@ function isPlaceholderImage(img: HTMLImageElement): boolean {
     ctx.drawImage(img, 0, 0, s, s)
     const { data } = ctx.getImageData(0, 0, s, s)
 
-    // Check if mostly transparent (alpha < 50 for > 80% of pixels)
+    // Check if mostly transparent (alpha < 50 for > 90% of pixels)
     let transparentPixels = 0
     const totalPixels = s * s
     for (let i = 3; i < data.length; i += 4) {
       if (data[i] < 50) transparentPixels++
     }
-    if (transparentPixels > totalPixels * 0.8) return true
+    if (transparentPixels > totalPixels * 0.9) return true
 
     // Bucket each pixel's RGB into a 4x4x4 grid (64 possible buckets)
     const buckets = new Set<number>()
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 50) continue // skip transparent
       buckets.add(((data[i] >> 6) << 4) | ((data[i + 1] >> 6) << 2) | (data[i + 2] >> 6))
-      if (buckets.size > 4) return false // real photo — bail early
+      if (buckets.size > 2) return false // real photo — bail early
     }
     return true
   } catch {

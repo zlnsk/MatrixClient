@@ -557,11 +557,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (roomsNeedingMembers.length > 0) {
       Promise.allSettled(
         roomsNeedingMembers.map(r => r.loadMembersIfNeeded())
-      ).then(() => {
+      ).then(async () => {
         // Always rebuild — loadMembersIfNeeded() returns false if members
         // were already loaded by a previous call (e.g. opening a chat), but
         // the room list may have been built before that load completed.
-        const updatedRooms = allRooms
+        let updatedRooms = allRooms
           .filter(r => r.getMyMembership() === 'join')
           .map(roomToMatrixRoom)
           .sort((a, b) => b.lastMessageTs - a.lastMessageTs)
@@ -571,6 +571,58 @@ export const useChatStore = create<ChatState>((set, get) => ({
             ? updatedRooms.find(r => r.roomId === state.activeRoom!.roomId) || state.activeRoom
             : null,
         }))
+
+        // With lazyLoadMembers, even after loadMembersIfNeeded() the member's
+        // avatar_url may still be null (the member state event doesn't always
+        // include it). For DM rooms where the other member still lacks an avatar,
+        // fetch their profile directly from the server to get the avatar.
+        const profileFetches: Promise<void>[] = []
+        for (const sdkRoom of roomsNeedingMembers) {
+          const matrixRoom = updatedRooms.find(r => r.roomId === sdkRoom.roomId)
+          if (!matrixRoom?.isDirect) continue
+
+          const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
+            || sdkRoom.getAvatarFallbackMember()
+          if (!otherMember || otherMember.getMxcAvatarUrl()) continue
+
+          profileFetches.push(
+            client!.getProfileInfo(otherMember.userId).then((profile) => {
+              if (profile.avatar_url) {
+                // Update the member's avatar in the SDK so subsequent rebuilds pick it up
+                otherMember.events.member?.getContent && (() => {
+                  // Directly set the MXC URL on the member object for immediate use
+                  ;(otherMember as any).cachedProfileAvatarUrl = profile.avatar_url
+                })()
+                // Update our room data directly
+                const roomIdx = updatedRooms.findIndex(r => r.roomId === sdkRoom.roomId)
+                if (roomIdx !== -1) {
+                  updatedRooms[roomIdx] = {
+                    ...updatedRooms[roomIdx],
+                    avatarUrl: getAvatarUrl(profile.avatar_url),
+                    members: updatedRooms[roomIdx].members.map(m =>
+                      m.userId === otherMember.userId
+                        ? { ...m, avatarUrl: getAvatarUrl(profile.avatar_url!) }
+                        : m
+                    ),
+                  }
+                }
+              }
+            }).catch(() => {
+              // Profile fetch failed (user may not exist or server unreachable) — ignore
+            })
+          )
+        }
+
+        if (profileFetches.length > 0) {
+          await Promise.allSettled(profileFetches)
+          // Re-set rooms with the fetched profile avatars
+          set((state) => ({
+            rooms: [...updatedRooms].sort((a, b) => b.lastMessageTs - a.lastMessageTs),
+            activeRoom: state.activeRoom
+              ? updatedRooms.find(r => r.roomId === state.activeRoom!.roomId) || state.activeRoom
+              : null,
+          }))
+        }
       })
     }
   },
