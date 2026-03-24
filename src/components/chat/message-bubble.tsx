@@ -524,7 +524,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   : message.status === 'sending'
                     ? 'bg-m3-primary/85 text-white'
                     : 'bg-m3-primary text-white'
-                : 'border border-m3-outline-variant/50 bg-m3-surface-container-lowest text-m3-on-surface dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high dark:text-m3-on-surface'
+                : 'bg-m3-surface-container text-m3-on-surface dark:bg-m3-surface-container-high dark:text-m3-on-surface'
             }`}
           >
             {/* Inline reply quote */}
@@ -646,19 +646,6 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               return url ? <LinkPreview url={url} /> : null
             })()}
 
-            {/* Timestamp + status */}
-            <div className={`mt-1 flex items-center gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-              <span className={`text-xs ${isOwn ? 'text-white/70' : 'text-m3-outline dark:text-m3-on-surface-variant'}`}>
-                {format(new Date(message.timestamp), 'HH:mm')}
-              </span>
-              {message.isEdited && (
-                <span className={`text-xs ${isOwn ? 'text-white/70' : 'text-m3-outline dark:text-m3-on-surface-variant'}`}>
-                  (edited)
-                </span>
-              )}
-              <StatusIcon />
-            </div>
-
             {/* Failed to send indicator with retry */}
             {message.status === 'failed' && (
               <div className="mt-1.5 flex items-center gap-2 text-xs">
@@ -676,6 +663,19 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Timestamp + status — outside bubble, Google Messages style */}
+          <div className={`mt-1 px-1 flex items-center gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <span className="text-xs text-m3-outline dark:text-m3-on-surface-variant">
+              {format(new Date(message.timestamp), 'HH:mm')}
+            </span>
+            {message.isEdited && (
+              <span className="text-xs text-m3-outline dark:text-m3-on-surface-variant">
+                (edited)
+              </span>
+            )}
+            <StatusIcon />
           </div>
 
           {/* Action buttons — right side of bubble (desktop only, hidden on touch) */}

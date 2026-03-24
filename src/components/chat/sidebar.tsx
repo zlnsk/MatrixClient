@@ -523,10 +523,10 @@ const RoomListItem = memo(function RoomListItem({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className={`group flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors duration-100 ${
+      className={`group flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors duration-75 ${
         isActive
           ? 'bg-m3-primary-container/50 dark:bg-m3-surface-container-high'
-          : 'hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high/60'
+          : 'hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high/60 dark:active:bg-m3-surface-container-highest'
       }`}
     >
       <Avatar
