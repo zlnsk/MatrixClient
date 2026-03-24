@@ -5,6 +5,7 @@ import { EventStatus } from 'matrix-js-sdk/lib/models/event-status'
 
 // Cache for profile avatars fetched via getProfileInfo(). Keyed by userId → MXC URL.
 // Consulted by roomToMatrixRoom so avatars survive room list rebuilds without re-fetching.
+// Empty string means "fetched but no avatar" (negative cache to avoid repeated lookups).
 const profileAvatarCache = new Map<string, string>()
 
 /**
@@ -163,7 +164,8 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     userId: m.userId,
     displayName: m.name || m.userId,
     // Prefer profile cache (has real avatar) over room member avatar (may be bridge default like Signal logo)
-    avatarUrl: getAvatarUrl(profileAvatarCache.get(m.userId) || m.getMxcAvatarUrl()),
+    // Empty string in cache means "no avatar" (negative cache) — skip it
+    avatarUrl: getAvatarUrl(profileAvatarCache.get(m.userId) || m.getMxcAvatarUrl() || null),
     membership: m.membership || 'join',
     presence: (client?.getUser(m.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
   }))
@@ -574,9 +576,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         || (sdkRoom.getJoinedMembers().length <= 2 || summaryMemberCount <= 2)
       if (needsAvatar) {
         const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
-        // Always load members and fetch profiles for DM/small rooms — the room member
-        // avatar may be a bridge default (e.g. Signal logo) while the user's global
-        // profile has their real face.
+        // Load members if the other member isn't resolved yet, or if we haven't
+        // fetched their profile yet. Skip if profile was already fetched (even with
+        // negative result — empty string sentinel).
         if (!otherMember || !profileAvatarCache.has(otherMember.userId)) {
           roomsNeedingMembers.push(sdkRoom)
         }
@@ -612,37 +614,51 @@ export const useChatStore = create<ChatState>((set, get) => ({
           profileFetches.push(
             client!.getProfileInfo(otherMember.userId).then((profile) => {
               if (profile.avatar_url) {
-                // Cache the fetched avatar so roomToMatrixRoom picks it up on subsequent rebuilds
                 profileAvatarCache.set(otherMember.userId, profile.avatar_url)
-                // Update our room data directly
-                const roomIdx = updatedRooms.findIndex(r => r.roomId === sdkRoom.roomId)
-                if (roomIdx !== -1) {
-                  updatedRooms[roomIdx] = {
-                    ...updatedRooms[roomIdx],
-                    avatarUrl: getAvatarUrl(profile.avatar_url),
-                    members: updatedRooms[roomIdx].members.map(m =>
-                      m.userId === otherMember.userId
-                        ? { ...m, avatarUrl: getAvatarUrl(profile.avatar_url!) }
-                        : m
-                    ),
-                  }
-                }
+              } else {
+                // Negative cache: remember that this user has no avatar
+                profileAvatarCache.set(otherMember.userId, '')
               }
             }).catch(() => {
-              // Profile fetch failed (user may not exist or server unreachable) — ignore
+              // Profile fetch failed — cache negative result to avoid repeated lookups
+              profileAvatarCache.set(otherMember.userId, '')
             })
           )
         }
 
         if (profileFetches.length > 0) {
           await Promise.allSettled(profileFetches)
-          // Re-set rooms with the fetched profile avatars
-          set((state) => ({
-            rooms: [...updatedRooms].sort((a, b) => b.lastMessageTs - a.lastMessageTs),
-            activeRoom: state.activeRoom
-              ? updatedRooms.find(r => r.roomId === state.activeRoom!.roomId) || state.activeRoom
-              : null,
-          }))
+          // Apply profile cache to CURRENT store state (not stale local variable)
+          // to avoid race conditions with concurrent loadRooms() calls
+          set((state) => {
+            const myUserId = getUserId()
+            const updated = state.rooms.map(room => {
+              let hasUpdate = false
+              const updatedMembers = room.members.map(m => {
+                const cached = profileAvatarCache.get(m.userId)
+                if (cached && m.avatarUrl !== getAvatarUrl(cached)) {
+                  hasUpdate = true
+                  return { ...m, avatarUrl: getAvatarUrl(cached) }
+                }
+                return m
+              })
+              let roomAvatar = room.avatarUrl
+              if ((room.isDirect || room.members.length <= 2) && !roomAvatar) {
+                const other = updatedMembers.find(m => m.userId !== myUserId)
+                if (other?.avatarUrl) {
+                  roomAvatar = other.avatarUrl
+                  hasUpdate = true
+                }
+              }
+              return hasUpdate ? { ...room, members: updatedMembers, avatarUrl: roomAvatar } : room
+            })
+            return {
+              rooms: updated,
+              activeRoom: state.activeRoom
+                ? updated.find(r => r.roomId === state.activeRoom!.roomId) || state.activeRoom
+                : null,
+            }
+          })
         }
       })
     }
