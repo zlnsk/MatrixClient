@@ -236,6 +236,24 @@ body {
   opacity: 0.8;
 }
 
+/* Links & formatting inside own-message bubbles (white text on primary bg) */
+.rich-content.own-bubble a {
+  color: white;
+  text-decoration-color: rgba(255, 255, 255, 0.6);
+}
+
+.rich-content.own-bubble code {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.rich-content.own-bubble pre {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.rich-content.own-bubble blockquote {
+  border-left-color: rgba(255, 255, 255, 0.6);
+}
+
 .rich-content blockquote {
   border-left: 3px solid var(--m3-primary);
   padding-left: 0.75em;

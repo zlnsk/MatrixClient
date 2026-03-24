@@ -640,7 +640,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 )}
               </div>
             ) : message.msgtype === 'm.emote' ? (
-              <div className="rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words italic">
+              <div className={`rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words italic ${isOwn ? 'own-bubble' : ''}`}>
                 <span className="font-medium not-italic">{message.senderName}</span>{' '}
                 <span
                   dangerouslySetInnerHTML={{
@@ -650,7 +650,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               </div>
             ) : (
               <div
-                className={`rich-content leading-relaxed whitespace-pre-wrap break-words ${isEmojiOnly(message.content) ? 'text-4xl' : 'text-[15px]'} ${message.msgtype === 'm.notice' ? 'italic opacity-70' : ''}`}
+                className={`rich-content leading-relaxed whitespace-pre-wrap break-words ${isEmojiOnly(message.content) ? 'text-4xl' : 'text-[15px]'} ${message.msgtype === 'm.notice' ? 'italic opacity-70' : ''} ${isOwn ? 'own-bubble' : ''}`}
                 dangerouslySetInnerHTML={{
                   __html: applySearchHighlight(renderRichContent(message.content, message.formattedContent), searchHighlight || ''),
                 }}
