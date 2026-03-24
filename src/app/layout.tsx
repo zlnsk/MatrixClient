@@ -41,9 +41,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className="dark h-dvh">
-      <head>
-        <link rel="manifest" href="/api/manifest" />
-      </head>
+      <head />
       <body className="h-dvh overflow-hidden antialiased" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <ErrorBoundary>
           <ThemeProvider>

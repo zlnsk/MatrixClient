@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+import type { MetadataRoute } from 'next'
 
-export function GET() {
-  const manifest = {
+export default function manifest(): MetadataRoute.Manifest {
+  return {
     name: 'szept — Secure Messaging',
     short_name: 'szept',
     description: 'End-to-end encrypted messaging powered by the Matrix protocol',
@@ -17,11 +17,4 @@ export function GET() {
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   }
-
-  return NextResponse.json(manifest, {
-    headers: {
-      'Content-Type': 'application/manifest+json',
-      'Cache-Control': 'public, max-age=86400',
-    },
-  })
 }
