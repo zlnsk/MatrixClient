@@ -652,15 +652,24 @@ export async function startSync(): Promise<void> {
     pendingEventOrdering: sdk.PendingEventOrdering.Detached,
   })
 
-  // Wait for initial sync
-  await new Promise<void>((resolve) => {
+  // Wait for initial sync (with timeout to avoid infinite "Connecting..." spinner)
+  await new Promise<void>((resolve, reject) => {
+    const SYNC_TIMEOUT_MS = 60_000
+
+    const timeout = setTimeout(() => {
+      matrixClient?.removeListener(sdk.ClientEvent.Sync, onSync)
+      reject(new Error('Initial sync timed out'))
+    }, SYNC_TIMEOUT_MS)
+
     const onSync = (state: string, _prev: string | null, data?: any) => {
       if (state === 'PREPARED') {
+        clearTimeout(timeout)
         matrixClient?.removeListener(sdk.ClientEvent.Sync, onSync)
         resolve()
       }
       // L-7: Force logout on 401 — access token rejected by server
       if (state === 'ERROR' && data?.error?.httpStatus === 401) {
+        clearTimeout(timeout)
         console.warn('Sync returned 401 — token rejected, forcing logout')
         matrixClient?.stopClient()
         matrixClient = null
@@ -671,8 +680,16 @@ export async function startSync(): Promise<void> {
     matrixClient?.on(sdk.ClientEvent.Sync, onSync)
   })
 
-  // After sync, check and enable key backup for decrypting historical messages
-  await enableKeyBackup(matrixClient)
+  // After sync, check and enable key backup for decrypting historical messages.
+  // Don't let key backup block the app from loading — run with a timeout.
+  try {
+    await Promise.race([
+      enableKeyBackup(matrixClient),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Key backup timed out')), 15_000)),
+    ])
+  } catch (err) {
+    console.warn('Key backup setup skipped:', err)
+  }
 }
 
 export async function logout(): Promise<void> {
