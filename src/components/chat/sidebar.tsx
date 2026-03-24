@@ -27,6 +27,7 @@ import {
   MessageSquareDashed,
   Menu,
   MessageCircle,
+  Plus,
   ChevronRight,
   Trash2,
 } from 'lucide-react'
@@ -203,6 +204,14 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
         <h1 className="flex-1 text-xl text-m3-on-surface"><span className="font-light">szept</span> <span className="font-bold">matrix</span></h1>
 
         <button
+          onClick={() => setShowNewChat(true)}
+          className="rounded-full p-1.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high"
+          aria-label="Start new chat"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+
+        <button
           onClick={onProfileClick}
           className="rounded-full transition-opacity hover:opacity-80"
           aria-label="Profile settings"
@@ -213,17 +222,6 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
             size="sm"
             status="online"
           />
-        </button>
-      </div>
-
-      {/* FAB — Start chat (Google Messages style) */}
-      <div className="px-4 pb-3">
-        <button
-          onClick={() => setShowNewChat(true)}
-          className="flex items-center gap-3 rounded-2xl bg-m3-primary-container px-5 py-3.5 text-base font-medium text-m3-on-primary-container shadow-sm transition-all hover:shadow-md active:shadow-sm md:text-sm"
-        >
-          <MessageCircle className="h-5 w-5" />
-          Start chat
         </button>
       </div>
 
