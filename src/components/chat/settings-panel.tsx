@@ -31,13 +31,14 @@ import {
 
 interface SettingsPanelProps {
   onClose: () => void
+  initialSection?: 'main' | 'profile' | 'security' | 'about'
 }
 
-export function SettingsPanel({ onClose }: SettingsPanelProps) {
+export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPanelProps) {
   const { user, signOut, updateProfile } = useAuthStore()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [activeSection, setActiveSection] = useState<'main' | 'profile' | 'security' | 'about'>('main')
+  const [activeSection, setActiveSection] = useState<'main' | 'profile' | 'security' | 'about'>(initialSection)
   const [recoveryKey, setRecoveryKey] = useState('')
   const [isRestoring, setIsRestoring] = useState(false)
   const [restoreResult, setRestoreResult] = useState<string | null>(null)

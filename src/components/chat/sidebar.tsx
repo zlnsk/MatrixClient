@@ -34,9 +34,10 @@ import {
 interface SidebarProps {
   onSettingsClick: () => void
   onChatSelect: () => void
+  onProfileClick: () => void
 }
 
-export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
+export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: SidebarProps) {
   const user = useAuthStore(s => s.user)
   const { rooms, pendingInvites, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom, leaveRoom, acceptInvite, rejectInvite, searchMessages } = useChatStore()
   const { theme, toggleTheme } = useTheme()
@@ -201,19 +202,25 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
 
         <h1 className="flex-1 text-xl text-m3-on-surface"><span className="font-light">szept</span> <span className="font-bold">matrix</span></h1>
 
-        <Avatar
-          src={user?.avatarUrl}
-          name={user?.displayName || 'U'}
-          size="sm"
-          status="online"
-        />
+        <button
+          onClick={onProfileClick}
+          className="rounded-full transition-opacity hover:opacity-80"
+          aria-label="Profile settings"
+        >
+          <Avatar
+            src={user?.avatarUrl}
+            name={user?.displayName || 'U'}
+            size="sm"
+            status="online"
+          />
+        </button>
       </div>
 
       {/* FAB — Start chat (Google Messages style) */}
       <div className="px-4 pb-3">
         <button
           onClick={() => setShowNewChat(true)}
-          className="flex items-center gap-3 rounded-2xl bg-m3-primary-container px-5 py-3.5 text-sm font-medium text-m3-on-primary-container shadow-sm transition-all hover:shadow-md active:shadow-sm"
+          className="flex items-center gap-3 rounded-2xl bg-m3-primary-container px-5 py-3.5 text-base font-medium text-m3-on-primary-container shadow-sm transition-all hover:shadow-md active:shadow-sm md:text-sm"
         >
           <MessageCircle className="h-5 w-5" />
           Start chat
@@ -230,7 +237,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
             aria-label="Search rooms and messages"
-            className="w-full rounded-full bg-m3-surface-container py-2.5 pl-11 pr-11 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:bg-m3-surface-container-high focus:outline-none dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline dark:focus:bg-m3-surface-container-high"
+            className="w-full rounded-full bg-m3-surface-container py-2.5 pl-11 pr-11 text-base text-m3-on-surface placeholder-m3-outline transition-colors focus:bg-m3-surface-container-high focus:outline-none dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline dark:focus:bg-m3-surface-container-high md:text-sm"
           />
           {searchFilter && (
             <button
@@ -530,17 +537,17 @@ const RoomListItem = memo(function RoomListItem({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className="truncate text-[15px] font-medium text-m3-on-surface">
+          <span className="truncate text-[17px] font-medium text-m3-on-surface md:text-[15px]">
             {room.name}
           </span>
           {room.lastMessageTs > 0 && (
-            <span className="ml-2 flex-shrink-0 text-xs text-m3-on-surface-variant">
+            <span className="ml-2 flex-shrink-0 text-sm text-m3-on-surface-variant md:text-xs">
               {formatDistanceToNow(new Date(room.lastMessageTs), { addSuffix: false })}
             </span>
           )}
         </div>
         <div className="flex items-center justify-between mt-0.5">
-          <p className="truncate text-[13px] text-m3-on-surface-variant">
+          <p className="truncate text-[15px] text-m3-on-surface-variant md:text-[13px]">
             {room.lastSenderName && <span>{room.lastSenderName}: </span>}
             {lastMsgPreview}
           </p>
@@ -549,7 +556,7 @@ const RoomListItem = memo(function RoomListItem({
               <Lock className="h-3 w-3 flex-shrink-0 text-m3-on-surface-variant" />
             )}
             {room.unreadCount > 0 && (
-              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary px-1.5 text-[11px] font-medium text-white">
+              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary px-1.5 text-[13px] font-medium text-white md:text-[11px]">
                 {room.unreadCount > 99 ? '99+' : room.unreadCount}
               </span>
             )}
