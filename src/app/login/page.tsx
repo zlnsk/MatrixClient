@@ -109,9 +109,8 @@ export default function LoginPage() {
       // Step 3: Sync
       setLoginStep('syncing')
 
-      // Step 4: Done
+      // Step 4: Done — navigate immediately
       setLoginStep('done')
-      await new Promise(resolve => setTimeout(resolve, 400))
       router.push('/')
     } catch (err) {
       failedAttempts++

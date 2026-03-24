@@ -647,14 +647,14 @@ export async function startSync(): Promise<void> {
   // other verified sessions and deleting it would permanently destroy backed-up keys.
 
   await matrixClient.startClient({
-    initialSyncLimit: 50,
+    initialSyncLimit: 20,
     lazyLoadMembers: true,
     pendingEventOrdering: sdk.PendingEventOrdering.Detached,
   })
 
   // Wait for initial sync (with timeout to avoid infinite "Connecting..." spinner)
   await new Promise<void>((resolve, reject) => {
-    const SYNC_TIMEOUT_MS = 60_000
+    const SYNC_TIMEOUT_MS = 30_000
 
     const timeout = setTimeout(() => {
       matrixClient?.removeListener(sdk.ClientEvent.Sync, onSync)
@@ -680,15 +680,13 @@ export async function startSync(): Promise<void> {
     matrixClient?.on(sdk.ClientEvent.Sync, onSync)
   })
 
-  // After sync, check and enable key backup for decrypting historical messages.
-  // Don't let key backup block the app from loading — run with a timeout.
-  try {
-    await Promise.race([
-      enableKeyBackup(matrixClient),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Key backup timed out')), 15_000)),
-    ])
-  } catch (err) {
-    console.warn('Key backup setup skipped:', err)
+  // Enable key backup in the background — don't block the app from loading.
+  // This runs after the user already sees the chat list.
+  if (matrixClient) {
+    const client = matrixClient
+    enableKeyBackup(client).catch(err => {
+      console.warn('Key backup setup skipped:', err)
+    })
   }
 }
 
