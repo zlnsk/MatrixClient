@@ -2,6 +2,7 @@
 
 import * as sdk from 'matrix-js-sdk'
 import type { Logger } from 'matrix-js-sdk/lib/logger'
+import { logger as sdkGlobalLogger } from 'matrix-js-sdk/lib/logger'
 import type { CryptoCallbacks } from 'matrix-js-sdk/lib/crypto-api'
 
 let matrixClient: sdk.MatrixClient | null = null
@@ -130,6 +131,7 @@ const SUPPRESSED_PATTERNS = [
   'matrix_sdk_crypto',
   "Can't find the room key",
   'Failed to decrypt a room event',
+  'Error decrypting event',
   'WARN matrix_sdk',
   'ERROR matrix_sdk',
   // to-device decryption errors (expected after crypto store reset / new device)
@@ -171,6 +173,22 @@ const filteredLogger: Logger = {
   error(...msg: any[]) { if (!isSuppressed(msg)) console.error(...msg) },
 }
 
+// Override the SDK's global logger (used by models like MatrixEvent for decryption errors)
+// to also apply our suppression filter. The global logger is a loglevel instance with
+// a methodFactory we can intercept.
+const origFactory = (sdkGlobalLogger as any).methodFactory
+if (origFactory) {
+  ;(sdkGlobalLogger as any).methodFactory = function (methodName: string, logLevel: number, loggerName: string) {
+    const rawMethod = origFactory.call(sdkGlobalLogger, methodName, logLevel, loggerName)
+    return function (...args: any[]) {
+      if (!isSuppressed(args)) {
+        rawMethod(...args)
+      }
+    }
+  }
+  ;(sdkGlobalLogger as any).rebuild()
+}
+
 export function getMatrixClient(): sdk.MatrixClient | null {
   return matrixClient
 }
@@ -197,6 +215,17 @@ function createProxiedFetch(homeserverUrl: string): typeof globalThis.fetch {
     // Only proxy requests going to the Matrix homeserver
     if (url.startsWith(hsOrigin + '/_matrix/')) {
       const matrixPath = url.slice(hsOrigin.length) // e.g. /_matrix/client/v3/sync?...
+
+      // Intercept TURN server polling — returns empty to avoid 404 console noise
+      // on servers that don't support VoIP. The SDK's checkTurnServers runs
+      // inside startClient before we can disable it.
+      if (matrixPath.startsWith('/_matrix/client/v3/voip/turnServer')) {
+        return Promise.resolve(new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }))
+      }
+
       const proxyUrl = `/api/matrix-proxy${matrixPath}`
 
       const newInit: RequestInit = { ...init }
