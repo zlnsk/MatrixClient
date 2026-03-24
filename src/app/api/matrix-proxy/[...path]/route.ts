@@ -77,6 +77,21 @@ async function handler(
       redirect: 'follow',
     })
 
+    // If the server doesn't support push rules (Conduit, etc.), return empty
+    // push rules instead of 404. The matrix-js-sdk retries getPushRules
+    // infinitely on failure, blocking sync from ever reaching PREPARED state.
+    if (upstreamResponse.status === 404 && matrixPath.startsWith('/_matrix/client/v3/pushrules')) {
+      return NextResponse.json({
+        global: {
+          override: [],
+          underride: [],
+          sender: [],
+          room: [],
+          content: [],
+        },
+      }, { status: 200 })
+    }
+
     // Forward response headers, stripping problematic ones
     const responseHeaders = new Headers()
     upstreamResponse.headers.forEach((value, key) => {
@@ -93,7 +108,7 @@ async function handler(
   } catch (err) {
     console.error('Matrix proxy error:', err)
     return NextResponse.json(
-      { error: 'Failed to reach homeserver', details: String(err) },
+      { error: 'Failed to reach homeserver' },
       { status: 502 }
     )
   }
