@@ -653,7 +653,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   loadMessages: async (roomId) => {
-    set({ isLoadingMessages: true })
+    // Only show loading spinner when there are no messages yet (initial load).
+    // Subsequent refreshes should NOT flash a spinner — that causes the whole
+    // message list to jump.
+    const hasMessages = get().messages.length > 0 && get().activeRoom?.roomId === roomId
+    if (!hasMessages) {
+      set({ isLoadingMessages: true })
+    }
     const client = getMatrixClient()
     if (!client) {
       set({ isLoadingMessages: false })
