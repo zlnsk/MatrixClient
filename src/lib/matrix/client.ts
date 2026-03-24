@@ -142,6 +142,8 @@ const SUPPRESSED_PATTERNS = [
   'Failed to get TURN URIs',
   'getPushRules',
   'pushrules',
+  'Missing default global',
+  'Missing default',
 ]
 
 function isSuppressed(args: any[]): boolean {
@@ -656,6 +658,14 @@ export async function startSync(): Promise<void> {
     lazyLoadMembers: true,
     pendingEventOrdering: sdk.PendingEventOrdering.Detached,
   })
+
+  // Stop the SDK's periodic TURN server polling — our VoIP module handles
+  // ICE servers independently, and the polling causes 404 errors on servers
+  // that don't support the /voip/turnServer endpoint.
+  if ((matrixClient as any).checkTurnServersIntervalID) {
+    clearInterval((matrixClient as any).checkTurnServersIntervalID)
+    ;(matrixClient as any).checkTurnServersIntervalID = undefined
+  }
 
   // Wait for initial sync (with timeout to avoid infinite "Connecting..." spinner)
   await new Promise<void>((resolve, reject) => {
