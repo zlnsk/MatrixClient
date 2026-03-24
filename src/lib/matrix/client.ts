@@ -570,6 +570,10 @@ export async function loginWithPassword(
     fallbackICEServerAllowed: false,
     iceCandidatePoolSize: 20,
     fetchFn: createProxiedFetch(homeserverUrl),
+    scheduler: new sdk.MatrixScheduler(
+      sdk.MatrixScheduler.RETRY_BACKOFF_RATELIMIT,
+      sdk.MatrixScheduler.QUEUE_MESSAGES,
+    ),
   })
 
   // Crypto is initialized in startSync() — no need to call initCrypto here
@@ -620,6 +624,10 @@ export function restoreSession(): sdk.MatrixClient | null {
       fallbackICEServerAllowed: false,
       iceCandidatePoolSize: 20,
       fetchFn: createProxiedFetch(session.homeserverUrl),
+      scheduler: new sdk.MatrixScheduler(
+        sdk.MatrixScheduler.RETRY_BACKOFF_RATELIMIT,
+        sdk.MatrixScheduler.QUEUE_MESSAGES,
+      ),
     })
     return matrixClient
   } catch {

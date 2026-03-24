@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { getMatrixClient, getAvatarUrl, getUserId } from '@/lib/matrix/client'
 import type { Room, MatrixEvent, RoomMember } from 'matrix-js-sdk'
+import { EventStatus } from 'matrix-js-sdk/lib/models/event-status'
 
 /**
  * Strip Matrix ID disambiguation from display names.
@@ -432,8 +433,13 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   // Message status for own messages
   let status: MatrixMessage['status'] = 'sent'
   if (sender === userId) {
-    if (readBy.length > 0) {
+    const evtStatus = (event as any).status as EventStatus | null
+    if (evtStatus === EventStatus.NOT_SENT) {
+      status = 'failed'
+    } else if (readBy.length > 0) {
       status = 'read'
+    } else if (evtStatus === EventStatus.QUEUED || evtStatus === EventStatus.SENDING || evtStatus === EventStatus.ENCRYPTING) {
+      status = 'sending'
     } else {
       // Check if event has been sent to server
       const isSent = event.getId() && !event.getId()!.startsWith('~')
@@ -675,7 +681,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         return
       }
 
-      const timeline = room.getLiveTimeline().getEvents()
+      const timeline = [...room.getLiveTimeline().getEvents(), ...room.getPendingEvents()]
 
       // Build reaction index once: Map<targetEventId, Map<emoji, summary>>
       // This avoids O(messages × timeline) scanning inside eventToMatrixMessage.
