@@ -24,6 +24,21 @@ function getHomeserverUrl(): string {
   return getSession()?.homeserverUrl ?? ''
 }
 
+/**
+ * Fetch that routes /_matrix/ requests through our CORS proxy.
+ */
+function proxiedFetch(url: string, init?: RequestInit): Promise<Response> {
+  const hs = getHomeserverUrl()
+  if (hs && url.startsWith(hs + '/_matrix/')) {
+    const matrixPath = url.slice(hs.length) // /_matrix/...
+    const proxyUrl = `/api/matrix-proxy${matrixPath}`
+    const headers = new Headers(init?.headers)
+    headers.set('X-Matrix-Homeserver', hs)
+    return fetch(proxyUrl, { ...init, headers })
+  }
+  return fetch(url, init)
+}
+
 function parseMxcUrl(mxcUrl: string): { serverName: string; mediaId: string } | null {
   const match = mxcUrl.match(/^mxc:\/\/([^/]+)\/(.+)$/)
   if (!match) return null
@@ -48,7 +63,7 @@ export async function fetchAuthenticatedMedia(mxcUrl: string, mimetype?: string)
   // Try authenticated v1 endpoint first
   try {
     const v1Url = `${hs}/_matrix/client/v1/media/download/${server}/${media}`
-    const res = await fetch(v1Url, {
+    const res = await proxiedFetch(v1Url, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
     })
     if (res.ok) {
@@ -60,7 +75,7 @@ export async function fetchAuthenticatedMedia(mxcUrl: string, mimetype?: string)
 
   // Fallback: legacy endpoint
   const legacyUrl = `${hs}/_matrix/media/v3/download/${server}/${media}`
-  const response = await fetch(legacyUrl, {
+  const response = await proxiedFetch(legacyUrl, {
     headers: { 'Authorization': `Bearer ${accessToken}` },
   })
   if (!response.ok) throw new Error(`Media fetch failed: ${response.status}`)
@@ -94,7 +109,7 @@ export async function fetchAuthenticatedThumbnail(
   // Try authenticated v1 thumbnail endpoint first
   try {
     const v1Url = `${hs}/_matrix/client/v1/media/thumbnail/${server}/${media}?${qs}`
-    const res = await fetch(v1Url, {
+    const res = await proxiedFetch(v1Url, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
     })
     if (res.ok) {
@@ -106,7 +121,7 @@ export async function fetchAuthenticatedThumbnail(
   // Fallback: legacy thumbnail endpoint
   try {
     const legacyUrl = `${hs}/_matrix/media/v3/thumbnail/${server}/${media}?${qs}`
-    const res = await fetch(legacyUrl, {
+    const res = await proxiedFetch(legacyUrl, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
     })
     if (res.ok) {
@@ -118,7 +133,7 @@ export async function fetchAuthenticatedThumbnail(
   // Final fallback: download the full image (some servers fail to thumbnail remote media)
   try {
     const downloadUrl = `${hs}/_matrix/client/v1/media/download/${server}/${media}`
-    const res = await fetch(downloadUrl, {
+    const res = await proxiedFetch(downloadUrl, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
     })
     if (res.ok) {
@@ -129,7 +144,7 @@ export async function fetchAuthenticatedThumbnail(
 
   try {
     const legacyDownload = `${hs}/_matrix/media/v3/download/${server}/${media}`
-    const res = await fetch(legacyDownload, {
+    const res = await proxiedFetch(legacyDownload, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
     })
     if (res.ok) {
@@ -163,7 +178,7 @@ export async function decryptMediaAttachment(
   if (!accessToken) throw new Error('Not authenticated')
 
   const url = `${getHomeserverUrl()}/_matrix/client/v1/media/download/${encodeURIComponent(parsed.serverName)}/${encodeURIComponent(parsed.mediaId)}`
-  const response = await fetch(url, {
+  const response = await proxiedFetch(url, {
     headers: { 'Authorization': `Bearer ${accessToken}` },
   })
   if (!response.ok) throw new Error(`Media fetch failed: ${response.status}`)

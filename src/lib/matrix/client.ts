@@ -168,6 +168,43 @@ export function getMatrixClient(): sdk.MatrixClient | null {
   return matrixClient
 }
 
+/**
+ * Create a fetch function that proxies all requests to the Matrix homeserver
+ * through our Next.js API route, bypassing browser CORS restrictions.
+ * Requests to /_matrix/* are rewritten to /api/matrix-proxy/_matrix/*
+ * with the real homeserver URL passed in a header.
+ */
+function createProxiedFetch(homeserverUrl: string): typeof globalThis.fetch {
+  const hsOrigin = new URL(homeserverUrl).origin
+
+  return (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    let url: string
+    if (input instanceof Request) {
+      url = input.url
+    } else if (input instanceof URL) {
+      url = input.toString()
+    } else {
+      url = input
+    }
+
+    // Only proxy requests going to the Matrix homeserver
+    if (url.startsWith(hsOrigin + '/_matrix/')) {
+      const matrixPath = url.slice(hsOrigin.length) // e.g. /_matrix/client/v3/sync?...
+      const proxyUrl = `/api/matrix-proxy${matrixPath}`
+
+      const newInit: RequestInit = { ...init }
+      const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined))
+      headers.set('X-Matrix-Homeserver', homeserverUrl)
+      newInit.headers = headers
+
+      return globalThis.fetch(proxyUrl, newInit)
+    }
+
+    // Non-Matrix requests pass through normally
+    return globalThis.fetch(input, init)
+  }
+}
+
 async function initCrypto(client: sdk.MatrixClient): Promise<void> {
   try {
     // Use Rust crypto with IndexedDB for persistent key storage
@@ -471,7 +508,10 @@ export async function loginWithPassword(
   password: string,
   homeserverUrl: string
 ): Promise<sdk.MatrixClient> {
-  const tmpClient = sdk.createClient({ baseUrl: homeserverUrl })
+  const tmpClient = sdk.createClient({
+    baseUrl: homeserverUrl,
+    fetchFn: createProxiedFetch(homeserverUrl),
+  })
 
   const response = await tmpClient.login('m.login.password', {
     user: username,
@@ -489,6 +529,7 @@ export async function loginWithPassword(
     timelineSupport: true,
     fallbackICEServerAllowed: false,
     iceCandidatePoolSize: 20,
+    fetchFn: createProxiedFetch(homeserverUrl),
   })
 
   // Crypto is initialized in startSync() — no need to call initCrypto here
@@ -538,6 +579,7 @@ export function restoreSession(): sdk.MatrixClient | null {
       timelineSupport: true,
       fallbackICEServerAllowed: false,
       iceCandidatePoolSize: 20,
+      fetchFn: createProxiedFetch(session.homeserverUrl),
     })
     return matrixClient
   } catch {
