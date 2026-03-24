@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { getMatrixClient, getAvatarUrl, getUserId } from '@/lib/matrix/client'
 import type { Room, MatrixEvent, RoomMember } from 'matrix-js-sdk'
+import { EventStatus } from 'matrix-js-sdk/lib/models/event-status'
 
 /**
  * Strip Matrix ID disambiguation from display names.
@@ -140,7 +141,8 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const lastContent = lastClear || lastEvent?.getContent()
   let lastMessage: string | null = null
   if (lastContent) {
-    if (lastContent.msgtype === 'm.image') lastMessage = '📷 Image'
+    if (lastContent.msgtype === 'm.bad.encrypted') lastMessage = '🔒 Encrypted message'
+    else if (lastContent.msgtype === 'm.image') lastMessage = '📷 Image'
     else if (lastContent.msgtype === 'm.video') lastMessage = '🎬 Video'
     else if (lastContent.msgtype === 'm.audio') lastMessage = '🎤 Audio'
     else if (lastContent.msgtype === 'm.file') lastMessage = '📎 File'
@@ -189,12 +191,13 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const tags = room.tags || {}
   const isArchived = 'm.lowpriority' in tags
 
-  // For DM rooms, prefer the other member's avatar over the room avatar.
-  // Bridges like mautrix-signal often set the room avatar to a generic placeholder
-  // (e.g. Signal's default dashed-circle silhouette), while the bridge puppet's
-  // member state has the actual contact photo. Always prefer member avatar.
+  // For DM rooms (or small rooms without an explicit avatar), prefer the other
+  // member's avatar over the room avatar. Bridges like mautrix-signal often don't
+  // set room avatars for DMs, and after delete-all-portals the m.direct account
+  // data may not be repopulated — so also check rooms with ≤2 members.
   let roomAvatarMxc = room.getMxcAvatarUrl()
-  if (isDirect && client) {
+  const joinedCount = room.getJoinedMembers().length
+  if (client && (isDirect || (!roomAvatarMxc && joinedCount <= 2 && joinedCount > 0))) {
     const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
     const memberAvatar = otherMember?.getMxcAvatarUrl()
     if (memberAvatar) {
@@ -317,8 +320,10 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   const content = (clearContent?.msgtype ? clearContent : null) || (rawContent?.msgtype ? rawContent : null) || clearContent || rawContent
 
   // If this is an encrypted event that hasn't been decrypted,
-  // content will have {algorithm, ciphertext, ...} instead of {body, msgtype, ...}
-  const isUndecrypted = isEncrypted && !content.msgtype
+  // content will have {algorithm, ciphertext, ...} instead of {body, msgtype, ...}.
+  // The SDK also uses msgtype "m.bad.encrypted" for events it failed to decrypt
+  // (e.g. "missing field algorithm" from the Rust crypto module).
+  const isUndecrypted = isEncrypted && (!content.msgtype || content.msgtype === 'm.bad.encrypted')
 
   // Check for reply
   let replyToEvent = null
@@ -428,8 +433,13 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   // Message status for own messages
   let status: MatrixMessage['status'] = 'sent'
   if (sender === userId) {
-    if (readBy.length > 0) {
+    const evtStatus = (event as any).status as EventStatus | null
+    if (evtStatus === EventStatus.NOT_SENT) {
+      status = 'failed'
+    } else if (readBy.length > 0) {
       status = 'read'
+    } else if (evtStatus === EventStatus.QUEUED || evtStatus === EventStatus.SENDING || evtStatus === EventStatus.ENCRYPTING) {
+      status = 'sending'
     } else {
       // Check if event has been sent to server
       const isSent = event.getId() && !event.getId()!.startsWith('~')
@@ -547,10 +557,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const roomsNeedingMembers: Room[] = []
     for (const sdkRoom of joinedRooms) {
       const matrixRoom = rooms.find(r => r.roomId === sdkRoom.roomId)
-      if (matrixRoom?.isDirect) {
-        // Load members if the other member isn't available yet, or if they
-        // exist but don't have an avatar (member state may be incomplete
-        // from the room summary — full state includes the avatar_url).
+      // Load members for DM rooms, or any small room without an avatar
+      // (after bridge delete-all-portals, m.direct may not be repopulated
+      // so we can't rely solely on isDirect).
+      const needsAvatar = matrixRoom?.isDirect
+        || (!matrixRoom?.avatarUrl && sdkRoom.getJoinedMembers().length <= 2)
+      if (needsAvatar) {
         const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
         if (!otherMember || !otherMember.getMxcAvatarUrl()) {
           roomsNeedingMembers.push(sdkRoom)
@@ -577,12 +589,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         // With lazyLoadMembers, even after loadMembersIfNeeded() the member's
         // avatar_url may still be null (the member state event doesn't always
-        // include it). For DM rooms where the other member still lacks an avatar,
+        // include it). For rooms where the other member still lacks an avatar,
         // fetch their profile directly from the server to get the avatar.
         const profileFetches: Promise<void>[] = []
         for (const sdkRoom of roomsNeedingMembers) {
           const matrixRoom = updatedRooms.find(r => r.roomId === sdkRoom.roomId)
-          if (!matrixRoom?.isDirect) continue
+          if (!matrixRoom?.isDirect && matrixRoom?.avatarUrl) continue
 
           const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
             || sdkRoom.getAvatarFallbackMember()
@@ -669,7 +681,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         return
       }
 
-      const timeline = room.getLiveTimeline().getEvents()
+      const timeline = [...room.getLiveTimeline().getEvents(), ...room.getPendingEvents()]
 
       // Build reaction index once: Map<targetEventId, Map<emoji, summary>>
       // This avoids O(messages × timeline) scanning inside eventToMatrixMessage.

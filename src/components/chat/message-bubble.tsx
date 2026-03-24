@@ -424,6 +424,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
     switch (message.status) {
       case 'sending':
         return <Clock className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant animate-pulse`} />
+      case 'failed':
+        return <AlertCircle className={`${iconClass} text-m3-error`} />
       case 'sent':
         return <Check className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant`} />
       case 'delivered':

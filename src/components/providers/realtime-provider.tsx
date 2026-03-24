@@ -209,11 +209,21 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       debouncedLoadRooms()
     }
 
+    // Listen for event status changes (queued → sending → sent/failed)
+    // so the UI updates when the scheduler retries or gives up
+    const onEventStatus = (event: sdk.MatrixEvent) => {
+      const currentActiveRoom = useChatStore.getState().activeRoom
+      if (currentActiveRoom && event.getRoomId() === currentActiveRoom.roomId) {
+        debouncedLoadMessages(currentActiveRoom.roomId)
+      }
+    }
+
     client.on(sdk.RoomEvent.Timeline, onTimelineEvent)
     client.on(sdk.RoomEvent.TimelineReset, onTimelineReset)
     client.on(sdk.RoomEvent.MyMembership, onRoomMembership)
     client.on(sdk.RoomEvent.Receipt, onReceipt)
     client.on(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
+    client.on(sdk.MatrixEventEvent.Status as any, onEventStatus)
     client.on(sdk.ClientEvent.Sync, onSync)
     client.on('RoomMember.typing' as any, onRoomTyping)
     client.on(sdk.RoomMemberEvent.Membership as any, onRoomMemberChange)
@@ -280,6 +290,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       client.removeListener(sdk.RoomEvent.MyMembership, onRoomMembership)
       client.removeListener(sdk.RoomEvent.Receipt, onReceipt)
       client.removeListener(sdk.MatrixEventEvent.Decrypted, onEventDecrypted)
+      client.removeListener(sdk.MatrixEventEvent.Status as any, onEventStatus)
       client.removeListener(sdk.ClientEvent.Sync, onSync)
       client.removeListener('RoomMember.typing' as any, onRoomTyping)
       client.removeListener(sdk.RoomMemberEvent.Membership as any, onRoomMemberChange)

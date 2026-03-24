@@ -107,7 +107,12 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   ), [rooms, searchFilter])
 
   const getOtherMemberAvatar = (room: MatrixRoom) => {
-    if (room.isDirect && room.members.length > 0) {
+    // For DMs or small rooms without an explicit room avatar, use the other
+    // member's avatar. After bridge room recreation, m.direct may not be set
+    // so we also check member count as a heuristic.
+    const usesMemberAvatar = room.isDirect
+      || (!room.avatarUrl && room.members.length > 0 && room.members.length <= 2)
+    if (usesMemberAvatar && room.members.length > 0) {
       const other = room.members.find(m => m.userId !== user?.userId)
       return other?.avatarUrl || room.avatarUrl
     }
