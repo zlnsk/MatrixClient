@@ -173,21 +173,13 @@ const filteredLogger: Logger = {
   error(...msg: any[]) { if (!isSuppressed(msg)) console.error(...msg) },
 }
 
-// Override the SDK's global logger (used by models like MatrixEvent for decryption errors)
-// to also apply our suppression filter. The global logger is a loglevel instance with
-// a methodFactory we can intercept.
-const origFactory = (sdkGlobalLogger as any).methodFactory
-if (origFactory) {
-  ;(sdkGlobalLogger as any).methodFactory = function (methodName: string, logLevel: number, loggerName: string) {
-    const rawMethod = origFactory.call(sdkGlobalLogger, methodName, logLevel, loggerName)
-    return function (...args: any[]) {
-      if (!isSuppressed(args)) {
-        rawMethod(...args)
-      }
-    }
-  }
-  ;(sdkGlobalLogger as any).rebuild()
-}
+// Wrap the SDK's global logger warn/error methods (used by MatrixEvent for
+// decryption errors) to apply suppression. We wrap the methods directly instead
+// of using methodFactory + rebuild() which breaks loglevel's prefix chain.
+const _origWarn = (sdkGlobalLogger as any).warn
+const _origError = (sdkGlobalLogger as any).error
+;(sdkGlobalLogger as any).warn = (...args: any[]) => { if (!isSuppressed(args)) _origWarn.apply(sdkGlobalLogger, args) }
+;(sdkGlobalLogger as any).error = (...args: any[]) => { if (!isSuppressed(args)) _origError.apply(sdkGlobalLogger, args) }
 
 export function getMatrixClient(): sdk.MatrixClient | null {
   return matrixClient
