@@ -778,6 +778,47 @@ export const useChatStore = create<ChatState>((set, get) => ({
       } else {
         set({ isLoadingMessages: false })
       }
+
+      // Propagate avatar URLs from SDK members back to the room list.
+      // With lazy-loaded members, the room list is often built before member
+      // avatars are available. Now that we've loaded the room's timeline,
+      // the SDK has fresh member data — sync it to the sidebar.
+      const currentRooms = get().rooms
+      const roomIdx = currentRooms.findIndex(r => r.roomId === roomId)
+      if (roomIdx !== -1) {
+        const currentRoom = currentRooms[roomIdx]
+        const myUserId = getUserId()
+        let roomNeedsUpdate = false
+
+        // Check if any member avatars are missing in our store but available in the SDK
+        const updatedMembers = currentRoom.members.map(m => {
+          if (m.avatarUrl) return m
+          const sdkMember = room.getMember(m.userId)
+          const sdkAvatar = sdkMember?.getMxcAvatarUrl()
+          if (sdkAvatar) {
+            roomNeedsUpdate = true
+            profileAvatarCache.set(m.userId, sdkAvatar)
+            return { ...m, avatarUrl: getAvatarUrl(sdkAvatar) }
+          }
+          return m
+        })
+
+        // Check if the room avatar itself needs updating (DMs / small rooms)
+        let updatedRoomAvatar = currentRoom.avatarUrl
+        if (!updatedRoomAvatar && (currentRoom.isDirect || currentRoom.members.length <= 2)) {
+          const other = updatedMembers.find(m => m.userId !== myUserId)
+          if (other?.avatarUrl) {
+            updatedRoomAvatar = other.avatarUrl
+            roomNeedsUpdate = true
+          }
+        }
+
+        if (roomNeedsUpdate) {
+          const updated = [...currentRooms]
+          updated[roomIdx] = { ...currentRoom, members: updatedMembers, avatarUrl: updatedRoomAvatar }
+          set({ rooms: updated })
+        }
+      }
     } catch (err) {
       console.error('Failed to load messages for room', roomId, err)
       set({ isLoadingMessages: false })
