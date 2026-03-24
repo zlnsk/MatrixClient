@@ -299,3 +299,10 @@ body {
 .message-bubble-container {
   contain: layout style;
 }
+
+/* Resizable sidebar — only apply custom width on desktop */
+@media (min-width: 768px) {
+  .sidebar-resizable {
+    width: var(--sidebar-w, 380px) !important;
+  }
+}

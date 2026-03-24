@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Sidebar } from './sidebar'
 import { ChatArea } from './chat-area'
 import { useChatStore } from '@/stores/chat-store'
@@ -15,11 +15,60 @@ const SettingsPanel = lazy(() =>
   })
 )
 
+const SIDEBAR_MIN = 280
+const SIDEBAR_MAX = 600
+const SIDEBAR_DEFAULT = 380
+
 export function ChatLayout() {
   const [showSettings, setShowSettings] = useState(false)
   const [settingsSection, setSettingsSection] = useState<'main' | 'profile' | 'security' | 'about'>('main')
   const [showMobileSidebar, setShowMobileSidebar] = useState(true)
   const activeRoom = useChatStore(s => s.activeRoom)
+
+  // Resizable sidebar (desktop only)
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebar_width')
+      if (saved) {
+        const w = parseInt(saved, 10)
+        if (w >= SIDEBAR_MIN && w <= SIDEBAR_MAX) return w
+      }
+    }
+    return SIDEBAR_DEFAULT
+  })
+  const isDragging = useRef(false)
+  const widthRef = useRef(sidebarWidth)
+  widthRef.current = sidebarWidth
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return
+      e.preventDefault()
+      const w = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, e.clientX))
+      setSidebarWidth(w)
+    }
+    const handleMouseUp = () => {
+      if (isDragging.current) {
+        isDragging.current = false
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+        localStorage.setItem('sidebar_width', String(widthRef.current))
+      }
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
+
+  const startResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isDragging.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [])
 
   // Navigate into chat: push a history entry so Android back button works
   const handleChatSelect = useCallback(() => {
@@ -73,16 +122,25 @@ export function ChatLayout() {
 
   return (
     <div className="flex h-dvh overflow-hidden bg-white dark:bg-m3-surface">
-      {/* Sidebar — full width on mobile, fixed width on desktop */}
-      <div className={`${
-        activeRoom ? 'hidden md:flex' : 'flex'
-      } w-full flex-col border-r border-m3-outline-variant bg-white dark:border-m3-outline-variant dark:bg-m3-surface md:w-[380px] md:flex-shrink-0 lg:w-[420px]`}>
+      {/* Sidebar — full width on mobile, resizable on desktop */}
+      <div
+        className={`sidebar-resizable ${
+          activeRoom ? 'hidden md:flex' : 'flex'
+        } w-full flex-col border-r border-m3-outline-variant bg-white dark:border-m3-outline-variant dark:bg-m3-surface md:flex-shrink-0 overflow-hidden`}
+        style={{ '--sidebar-w': `${sidebarWidth}px` } as React.CSSProperties}
+      >
         <Sidebar
           onSettingsClick={() => { setSettingsSection('main'); setShowSettings(true) }}
           onChatSelect={handleChatSelect}
           onProfileClick={() => { setSettingsSection('profile'); setShowSettings(true) }}
         />
       </div>
+
+      {/* Resize handle (desktop only) */}
+      <div
+        onMouseDown={startResize}
+        className="hidden md:flex w-1 flex-shrink-0 cursor-col-resize items-center justify-center hover:bg-m3-primary/20 active:bg-m3-primary/30 transition-colors"
+      />
 
       {/* Chat area — full width on mobile, flexible on desktop */}
       {activeRoom ? (
