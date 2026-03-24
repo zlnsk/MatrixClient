@@ -649,6 +649,7 @@ export async function startSync(): Promise<void> {
   await matrixClient.startClient({
     initialSyncLimit: 50,
     lazyLoadMembers: true,
+    pendingEventOrdering: sdk.PendingEventOrdering.Detached,
   })
 
   // Wait for initial sync

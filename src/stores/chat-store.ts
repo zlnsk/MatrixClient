@@ -3,6 +3,10 @@ import { getMatrixClient, getAvatarUrl, getUserId } from '@/lib/matrix/client'
 import type { Room, MatrixEvent, RoomMember } from 'matrix-js-sdk'
 import { EventStatus } from 'matrix-js-sdk/lib/models/event-status'
 
+// Cache for profile avatars fetched via getProfileInfo(). Keyed by userId → MXC URL.
+// Consulted by roomToMatrixRoom so avatars survive room list rebuilds without re-fetching.
+const profileAvatarCache = new Map<string, string>()
+
 /**
  * Strip Matrix ID disambiguation from display names.
  * The SDK appends " (@user:server)" when multiple members share a display name.
@@ -158,7 +162,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const members = joinedMembers.map((m: RoomMember) => ({
     userId: m.userId,
     displayName: m.name || m.userId,
-    avatarUrl: getAvatarUrl(m.getMxcAvatarUrl()),
+    avatarUrl: getAvatarUrl(m.getMxcAvatarUrl() || profileAvatarCache.get(m.userId)),
     membership: m.membership || 'join',
     presence: (client?.getUser(m.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
   }))
@@ -171,7 +175,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     members.push({
       userId: fallbackMember.userId,
       displayName: fallbackMember.name || fallbackMember.userId,
-      avatarUrl: getAvatarUrl(fallbackMember.getMxcAvatarUrl()),
+      avatarUrl: getAvatarUrl(fallbackMember.getMxcAvatarUrl() || profileAvatarCache.get(fallbackMember.userId)),
       membership: fallbackMember.membership || 'join',
       presence: (client?.getUser(fallbackMember.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
     })
@@ -199,7 +203,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const joinedCount = room.getJoinedMembers().length
   if (client && (isDirect || (!roomAvatarMxc && joinedCount <= 2 && joinedCount > 0))) {
     const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
-    const memberAvatar = otherMember?.getMxcAvatarUrl()
+    const memberAvatar = otherMember?.getMxcAvatarUrl() || (otherMember ? profileAvatarCache.get(otherMember.userId) : undefined)
     if (memberAvatar) {
       roomAvatarMxc = memberAvatar
     } else {
@@ -207,7 +211,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
       // bridged user yet. getAvatarFallbackMember() uses room summary heroes
       // which are available even before full member loading completes.
       const fallbackMember = room.getAvatarFallbackMember()
-      const fallbackAvatar = fallbackMember?.getMxcAvatarUrl()
+      const fallbackAvatar = fallbackMember?.getMxcAvatarUrl() || (fallbackMember ? profileAvatarCache.get(fallbackMember.userId) : undefined)
       if (fallbackAvatar) {
         roomAvatarMxc = fallbackAvatar
       }
@@ -603,11 +607,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           profileFetches.push(
             client!.getProfileInfo(otherMember.userId).then((profile) => {
               if (profile.avatar_url) {
-                // Update the member's avatar in the SDK so subsequent rebuilds pick it up
-                otherMember.events.member?.getContent && (() => {
-                  // Directly set the MXC URL on the member object for immediate use
-                  ;(otherMember as any).cachedProfileAvatarUrl = profile.avatar_url
-                })()
+                // Cache the fetched avatar so roomToMatrixRoom picks it up on subsequent rebuilds
+                profileAvatarCache.set(otherMember.userId, profile.avatar_url)
                 // Update our room data directly
                 const roomIdx = updatedRooms.findIndex(r => r.roomId === sdkRoom.roomId)
                 if (roomIdx !== -1) {
@@ -1383,6 +1384,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   resetState: () => {
+    profileAvatarCache.clear()
     set({
       rooms: [],
       pendingInvites: [],
