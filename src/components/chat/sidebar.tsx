@@ -136,12 +136,20 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
     }
   }
 
-  const handleLeave = async (e: React.MouseEvent, room: MatrixRoom) => {
+  const [confirmDeleteRoom, setConfirmDeleteRoom] = useState<MatrixRoom | null>(null)
+
+  const handleLeave = (e: React.MouseEvent, room: MatrixRoom) => {
     e.stopPropagation()
-    if (activeRoom?.roomId === room.roomId) {
+    setConfirmDeleteRoom(room)
+  }
+
+  const confirmLeave = async () => {
+    if (!confirmDeleteRoom) return
+    if (activeRoom?.roomId === confirmDeleteRoom.roomId) {
       setActiveRoom(null)
     }
-    await leaveRoom(room.roomId)
+    await leaveRoom(confirmDeleteRoom.roomId)
+    setConfirmDeleteRoom(null)
   }
 
   return (
@@ -444,6 +452,32 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
             }}
           />
         </Suspense>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {confirmDeleteRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setConfirmDeleteRoom(null)}>
+          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-medium text-m3-on-surface dark:text-m3-on-surface">Delete conversation?</h3>
+            <p className="mt-2 text-sm text-m3-on-surface-variant dark:text-m3-outline">
+              Leave and remove <strong>{confirmDeleteRoom.name}</strong>? This cannot be undone.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmDeleteRoom(null)}
+                className="rounded-full px-4 py-2 text-sm font-medium text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLeave}
+                className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </>

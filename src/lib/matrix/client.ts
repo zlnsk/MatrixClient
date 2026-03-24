@@ -345,8 +345,48 @@ export async function generateSecurityKey(password: string): Promise<string> {
     console.log('No existing key backup to restore:', err)
   }
 
+  // Re-enable key backup now that we have fresh trusted keys
+  await enableKeyBackup(matrixClient)
+
   pendingSecretStorageKey = null
   return encodedKey
+}
+
+/**
+ * Get encryption health status for the settings panel.
+ */
+export async function getEncryptionStatus(): Promise<{
+  crossSigningReady: boolean
+  thisDeviceVerified: boolean
+  keyBackupEnabled: boolean
+  keyBackupTrusted: boolean
+}> {
+  if (!matrixClient) return { crossSigningReady: false, thisDeviceVerified: false, keyBackupEnabled: false, keyBackupTrusted: false }
+  const crypto = matrixClient.getCrypto()
+  if (!crypto) return { crossSigningReady: false, thisDeviceVerified: false, keyBackupEnabled: false, keyBackupTrusted: false }
+
+  try {
+    const csStatus = await crypto.getCrossSigningStatus()
+    const crossSigningReady = csStatus.publicKeysOnDevice && csStatus.privateKeysInSecretStorage
+
+    const userId = matrixClient.getUserId()!
+    const deviceId = matrixClient.getDeviceId()!
+    const deviceVerification = await crypto.getDeviceVerificationStatus(userId, deviceId)
+    const thisDeviceVerified = deviceVerification?.crossSigningVerified ?? false
+
+    const backupInfo = await crypto.getKeyBackupInfo()
+    let keyBackupEnabled = false
+    let keyBackupTrusted = false
+    if (backupInfo) {
+      keyBackupEnabled = true
+      const trustInfo = await crypto.isKeyBackupTrusted(backupInfo)
+      keyBackupTrusted = trustInfo.trusted
+    }
+
+    return { crossSigningReady, thisDeviceVerified, keyBackupEnabled, keyBackupTrusted }
+  } catch {
+    return { crossSigningReady: false, thisDeviceVerified: false, keyBackupEnabled: false, keyBackupTrusted: false }
+  }
 }
 
 /**

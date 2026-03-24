@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
-import { getHomeserverUrl, getHomeserverDomain, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient, generateSecurityKey } from '@/lib/matrix/client'
+import { getHomeserverUrl, getHomeserverDomain, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient, generateSecurityKey, getEncryptionStatus } from '@/lib/matrix/client'
 import {
   LogOut,
   User,
@@ -62,6 +62,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [serverLatency, setServerLatency] = useState<number | null>(null)
   const [serverStatus, setServerStatus] = useState<'connected' | 'error' | 'checking'>('checking')
   const [clientVersions, setClientVersions] = useState<string[]>([])
+  const [encryptionStatus, setEncryptionStatus] = useState<{ crossSigningReady: boolean; thisDeviceVerified: boolean; keyBackupEnabled: boolean; keyBackupTrusted: boolean } | null>(null)
+  const [loadingEncryption, setLoadingEncryption] = useState(false)
 
   const handleDeleteDevice = async (deviceId: string) => {
     if (!deletePassword.trim()) {
@@ -123,8 +125,17 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     }
   }
 
+  const loadEncryptionStatus = async () => {
+    setLoadingEncryption(true)
+    try {
+      const status = await getEncryptionStatus()
+      setEncryptionStatus(status)
+    } catch { /* ignore */ }
+    finally { setLoadingEncryption(false) }
+  }
+
   useEffect(() => {
-    if (activeSection === 'security') loadDevices()
+    if (activeSection === 'security') { loadDevices(); loadEncryptionStatus() }
     if (activeSection === 'about') checkServerStatus()
   }, [activeSection])
 
@@ -321,6 +332,33 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           {/* ===== SECURITY ===== */}
           {activeSection === 'security' && (
             <div className="divide-y divide-m3-outline-variant dark:divide-m3-outline-variant">
+              {/* Encryption Health */}
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <Lock className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">Encryption Status</p>
+                  {loadingEncryption && <Loader2 className="h-3.5 w-3.5 animate-spin text-m3-outline" />}
+                </div>
+                {encryptionStatus && (
+                  <div className="ml-8 space-y-2">
+                    <StatusRow label="Cross-signing" ok={encryptionStatus.crossSigningReady} />
+                    <StatusRow label="Device verified" ok={encryptionStatus.thisDeviceVerified} />
+                    <StatusRow label="Key backup" ok={encryptionStatus.keyBackupEnabled} />
+                    <StatusRow label="Backup trusted" ok={encryptionStatus.keyBackupTrusted} />
+                    {(!encryptionStatus.crossSigningReady || !encryptionStatus.thisDeviceVerified || !encryptionStatus.keyBackupTrusted) && (
+                      <p className="text-xs text-m3-error mt-3">
+                        Encryption is not fully set up. Generate a security key below to fix this.
+                      </p>
+                    )}
+                    {encryptionStatus.crossSigningReady && encryptionStatus.thisDeviceVerified && encryptionStatus.keyBackupTrusted && (
+                      <p className="text-xs text-green-600 dark:text-green-400 mt-3">
+                        Encryption is healthy. New messages will be decryptable.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Security Key */}
               <div className="px-6 py-5">
                 <div className="flex items-center gap-3 mb-4">
@@ -360,7 +398,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                       onClick={async () => {
                         if (!generateKeyPassword.trim()) { setGenerateKeyError('Password is required'); return }
                         setIsGeneratingKey(true); setGenerateKeyError(null)
-                        try { const key = await generateSecurityKey(generateKeyPassword); setGeneratedKey(key); setGenerateKeyPassword('') }
+                        try { const key = await generateSecurityKey(generateKeyPassword); setGeneratedKey(key); setGenerateKeyPassword(''); loadEncryptionStatus() }
                         catch (err) { setGenerateKeyError(err instanceof Error ? err.message : 'Failed to generate security key') }
                         finally { setIsGeneratingKey(false) }
                       }}
@@ -568,6 +606,16 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function StatusRow({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`h-2 w-2 rounded-full flex-shrink-0 ${ok ? 'bg-green-500' : 'bg-red-500'}`} />
+      <span className="text-xs text-m3-on-surface dark:text-m3-on-surface-variant">{label}</span>
+      <span className={`text-xs ml-auto ${ok ? 'text-green-600 dark:text-green-400' : 'text-m3-error'}`}>{ok ? 'OK' : 'Not set up'}</span>
     </div>
   )
 }
