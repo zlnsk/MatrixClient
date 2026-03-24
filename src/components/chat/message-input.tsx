@@ -17,6 +17,14 @@ import {
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 
+// Matches strings that contain only emoji (same regex as message-bubble)
+const EMOJI_ONLY_RE = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Regional_Indicator}{2}|[\u200d\uFE0F]|\d\uFE0F?\u20E3)+$/u
+
+function isEmojiOnly(text: string): boolean {
+  const trimmed = text.trim()
+  return trimmed.length > 0 && trimmed.length <= 30 && EMOJI_ONLY_RE.test(trimmed)
+}
+
 interface MessageInputProps {
   onSend: (content: string) => void
   replyTo: MatrixMessage | null
@@ -552,7 +560,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               placeholder="Type a message..."
               rows={1}
               enterKeyHint="send"
-              className="max-h-32 min-h-[42px] flex-1 resize-none bg-transparent px-5 py-2.5 text-sm text-m3-on-surface placeholder-m3-on-surface-variant focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3"
+              className={`max-h-32 min-h-[42px] flex-1 resize-none bg-transparent px-5 py-2.5 text-m3-on-surface placeholder-m3-on-surface-variant focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3 ${isEmojiOnly(content) ? 'text-4xl leading-tight' : 'text-sm'}`}
             />
             {/* Action buttons inside the pill */}
             <div className="flex flex-shrink-0 items-center gap-0.5 pr-2">
