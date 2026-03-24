@@ -337,19 +337,19 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
               <MoreVertical className="h-5 w-5" />
             </button>
             {showKebabMenu && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-2xl border border-m3-outline-variant bg-white py-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+              <div className="absolute right-0 top-full z-50 mt-1 w-60 rounded-2xl border border-m3-outline-variant bg-white py-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
                 <button
                   onClick={() => { setShowRoomInfo(!showRoomInfo); setShowKebabMenu(false) }}
-                  className="flex w-full items-center gap-4 px-5 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                  className="flex w-full items-center gap-4 px-5 py-3 text-sm whitespace-nowrap text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                 >
-                  <Info className="h-5 w-5 text-m3-on-surface-variant" />
+                  <Info className="h-5 w-5 flex-shrink-0 text-m3-on-surface-variant" />
                   Room details
                 </button>
                 <button
                   onClick={() => { setShowSearch(!showSearch); setShowKebabMenu(false) }}
-                  className="flex w-full items-center gap-4 px-5 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                  className="flex w-full items-center gap-4 px-5 py-3 text-sm whitespace-nowrap text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                 >
-                  <Search className="h-5 w-5 text-m3-on-surface-variant" />
+                  <Search className="h-5 w-5 flex-shrink-0 text-m3-on-surface-variant" />
                   Search in conversation
                 </button>
                 {!activeRoom.isBridged && (

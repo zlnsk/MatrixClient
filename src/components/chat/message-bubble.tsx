@@ -261,9 +261,16 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   const [mediaBlobUrl, setMediaBlobUrl] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const actionsRef = useRef<HTMLDivElement>(null)
+  const bubbleRef = useRef<HTMLDivElement>(null)
   const touchMenuRef = useRef<HTMLDivElement>(null)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchMoved = useRef(false)
+
+  // Compute portal positions for emoji picker and context menu
+  const getMenuPosition = useCallback(() => {
+    if (!bubbleRef.current) return { top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 }
+    return bubbleRef.current.getBoundingClientRect()
+  }, [])
 
   // Fetch all media via authenticated endpoint (handles both encrypted and unencrypted)
   useEffect(() => {
@@ -448,7 +455,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
   return (
     <div
-      className={`message-bubble-container group flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-0.5'}`}
+      className={`message-bubble-container group flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-0.5'} relative ${showActions || showEmojiPicker || showContextMenu ? 'z-30' : 'z-0'}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
         if (!showEmojiPicker && !showContextMenu) setShowActions(false)
@@ -493,7 +500,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           )}
 
           {/* Bubble wrapper — action buttons positioned relative to this */}
-          <div className="relative">
+          <div className="relative" ref={bubbleRef}>
           <div
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -539,11 +546,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   autoFocus
                   className="min-w-[200px] rounded bg-transparent text-sm focus:outline-none"
                 />
-                <button onClick={handleEdit} className="text-green-400 hover:text-green-300">
-                  <Check className="h-4 w-4" />
+                <button onClick={handleEdit} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-green-300 transition-colors hover:bg-white/30 hover:text-green-200" title="Save">
+                  <Check className="h-5 w-5" />
                 </button>
-                <button onClick={() => setIsEditing(false)} className="text-red-400 hover:text-red-300">
-                  <X className="h-4 w-4" />
+                <button onClick={() => setIsEditing(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-red-300 transition-colors hover:bg-white/30 hover:text-red-200" title="Cancel">
+                  <X className="h-5 w-5" />
                 </button>
               </div>
             ) : (message.mediaUrl || effectiveMediaUrl) ? (
@@ -672,95 +679,135 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               </button>
             </div>
 
-          {/* Emoji picker (desktop only) */}
-          {showEmojiPicker && (
-            <div className={`absolute bottom-full mb-2 z-30 hidden md:grid grid-cols-5 gap-1 rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest p-2.5 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high ${isOwn ? 'right-0' : 'left-0'}`}>
-              {QUICK_EMOJIS.map(emoji => (
-                <button
-                  key={emoji}
-                  onClick={() => handleReaction(emoji)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-xl transition-transform hover:scale-125 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Emoji picker (desktop only) — rendered via portal to escape scroll overflow */}
+          {showEmojiPicker && (() => {
+            const rect = getMenuPosition()
+            const pickerStyle: React.CSSProperties = {
+              position: 'fixed',
+              top: Math.max(8, rect.top - 8),
+              transform: 'translateY(-100%)',
+              zIndex: 9999,
+              ...(isOwn ? { right: window.innerWidth - rect.right } : { left: rect.left }),
+            }
+            return createPortal(
+              <div
+                className="hidden md:grid grid-cols-5 gap-1 rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest p-2.5 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high"
+                style={pickerStyle}
+              >
+                {QUICK_EMOJIS.map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleReaction(emoji)}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-xl transition-transform hover:scale-125 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>,
+              document.body
+            )
+          })()}
 
-          {/* Context menu (desktop only) */}
-          {showContextMenu && (
-            <div className={`absolute top-0 z-30 hidden md:block min-w-[160px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high ${isOwn ? 'right-full mr-1' : 'left-full ml-1'}`}>
-              <button
-                onClick={handleCopy}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
-              >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                {copied ? 'Copied!' : 'Copy text'}
-              </button>
-              <button
-                onClick={handlePin}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
-              >
-                <Pin className="h-4 w-4" />
-                {isPinned ? 'Unpin message' : 'Pin message'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowForwardPicker(!showForwardPicker)
-                  setShowContextMenu(false)
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
-              >
-                <Forward className="h-4 w-4" />
-                Forward
-              </button>
-              {isOwn && (
-                <>
+          {/* Context menu (desktop only) — rendered via portal to escape scroll overflow */}
+          {showContextMenu && (() => {
+            const rect = getMenuPosition()
+            const menuStyle: React.CSSProperties = {
+              position: 'fixed',
+              top: rect.top,
+              zIndex: 9999,
+              ...(isOwn ? { right: window.innerWidth - rect.left + 4 } : { left: rect.right + 4 }),
+            }
+            return createPortal(
+              <>
+                <div className="fixed inset-0 z-[9998]" onClick={() => { setShowContextMenu(false); setShowActions(false) }} />
+                <div className="hidden md:block min-w-[160px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high" style={menuStyle}>
+                  <button
+                    onClick={handleCopy}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
+                  >
+                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    {copied ? 'Copied!' : 'Copy text'}
+                  </button>
+                  <button
+                    onClick={handlePin}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
+                  >
+                    <Pin className="h-4 w-4" />
+                    {isPinned ? 'Unpin message' : 'Pin message'}
+                  </button>
                   <button
                     onClick={() => {
-                      setIsEditing(true)
-                      setEditContent(message.content)
+                      setShowForwardPicker(!showForwardPicker)
                       setShowContextMenu(false)
-                      setShowActions(false)
                     }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
                   >
-                    <Pencil className="h-4 w-4" />
-                    Edit message
+                    <Forward className="h-4 w-4" />
+                    Forward
                   </button>
-                  <div className="my-1 border-t border-m3-outline-variant dark:border-m3-outline-variant" />
-                  <button
-                    onClick={handleDelete}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-error transition-colors hover:bg-m3-surface-container dark:text-m3-error dark:hover:bg-m3-surface-container-highest"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete message
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+                  {isOwn && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setIsEditing(true)
+                          setEditContent(message.content)
+                          setShowContextMenu(false)
+                          setShowActions(false)
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit message
+                      </button>
+                      <div className="my-1 border-t border-m3-outline-variant dark:border-m3-outline-variant" />
+                      <button
+                        onClick={handleDelete}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-error transition-colors hover:bg-m3-surface-container dark:text-m3-error dark:hover:bg-m3-surface-container-highest"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete message
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>,
+              document.body
+            )
+          })()}
 
-          {/* Forward room picker (desktop only) */}
-          {showForwardPicker && !showTouchMenu && (
-            <div className={`absolute top-0 z-20 hidden md:block min-w-[200px] max-h-[240px] overflow-y-auto rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high ${isOwn ? 'right-full mr-1' : 'left-full ml-1'}`}>
-              <p className="px-3 py-1.5 text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Forward to...</p>
-              {rooms
-                .filter(r => r.roomId !== roomId)
-                .map(r => (
-                  <button
-                    key={r.roomId}
-                    onClick={() => handleForward(r.roomId)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
-                  >
-                    <span className="truncate">{r.name}</span>
-                  </button>
-                ))}
-              {rooms.filter(r => r.roomId !== roomId).length === 0 && (
-                <p className="px-3 py-2 text-xs text-m3-outline dark:text-m3-on-surface-variant">No other rooms available</p>
-              )}
-            </div>
-          )}
+          {/* Forward room picker (desktop only) — rendered via portal */}
+          {showForwardPicker && !showTouchMenu && (() => {
+            const rect = getMenuPosition()
+            const fwdStyle: React.CSSProperties = {
+              position: 'fixed',
+              top: rect.top,
+              zIndex: 9999,
+              ...(isOwn ? { right: window.innerWidth - rect.left + 4 } : { left: rect.right + 4 }),
+            }
+            return createPortal(
+              <>
+                <div className="fixed inset-0 z-[9998]" onClick={() => { setShowForwardPicker(false); setShowActions(false) }} />
+                <div className="hidden md:block min-w-[200px] max-h-[240px] overflow-y-auto rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high" style={fwdStyle}>
+                  <p className="px-3 py-1.5 text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Forward to...</p>
+                  {rooms
+                    .filter(r => r.roomId !== roomId)
+                    .map(r => (
+                      <button
+                        key={r.roomId}
+                        onClick={() => handleForward(r.roomId)}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
+                      >
+                        <span className="truncate">{r.name}</span>
+                      </button>
+                    ))}
+                  {rooms.filter(r => r.roomId !== roomId).length === 0 && (
+                    <p className="px-3 py-2 text-xs text-m3-outline dark:text-m3-on-surface-variant">No other rooms available</p>
+                  )}
+                </div>
+              </>,
+              document.body
+            )
+          })()}
           {/* Touch-friendly action menu (long-press on mobile) */}
           {showTouchMenu && createPortal(
             <div
