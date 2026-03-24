@@ -140,7 +140,8 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const lastContent = lastClear || lastEvent?.getContent()
   let lastMessage: string | null = null
   if (lastContent) {
-    if (lastContent.msgtype === 'm.image') lastMessage = '📷 Image'
+    if (lastContent.msgtype === 'm.bad.encrypted') lastMessage = '🔒 Encrypted message'
+    else if (lastContent.msgtype === 'm.image') lastMessage = '📷 Image'
     else if (lastContent.msgtype === 'm.video') lastMessage = '🎬 Video'
     else if (lastContent.msgtype === 'm.audio') lastMessage = '🎤 Audio'
     else if (lastContent.msgtype === 'm.file') lastMessage = '📎 File'
@@ -318,8 +319,10 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   const content = (clearContent?.msgtype ? clearContent : null) || (rawContent?.msgtype ? rawContent : null) || clearContent || rawContent
 
   // If this is an encrypted event that hasn't been decrypted,
-  // content will have {algorithm, ciphertext, ...} instead of {body, msgtype, ...}
-  const isUndecrypted = isEncrypted && !content.msgtype
+  // content will have {algorithm, ciphertext, ...} instead of {body, msgtype, ...}.
+  // The SDK also uses msgtype "m.bad.encrypted" for events it failed to decrypt
+  // (e.g. "missing field algorithm" from the Rust crypto module).
+  const isUndecrypted = isEncrypted && (!content.msgtype || content.msgtype === 'm.bad.encrypted')
 
   // Check for reply
   let replyToEvent = null
