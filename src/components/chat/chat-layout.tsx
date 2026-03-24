@@ -17,6 +17,7 @@ const SettingsPanel = lazy(() =>
 
 export function ChatLayout() {
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsSection, setSettingsSection] = useState<'main' | 'profile' | 'security' | 'about'>('main')
   const [showMobileSidebar, setShowMobileSidebar] = useState(true)
   const activeRoom = useChatStore(s => s.activeRoom)
 
@@ -77,8 +78,9 @@ export function ChatLayout() {
         activeRoom ? 'hidden md:flex' : 'flex'
       } w-full flex-col border-r border-m3-outline-variant bg-white dark:border-m3-outline-variant dark:bg-m3-surface md:w-[380px] md:flex-shrink-0 lg:w-[420px]`}>
         <Sidebar
-          onSettingsClick={() => setShowSettings(true)}
+          onSettingsClick={() => { setSettingsSection('main'); setShowSettings(true) }}
           onChatSelect={handleChatSelect}
+          onProfileClick={() => { setSettingsSection('profile'); setShowSettings(true) }}
         />
       </div>
 
@@ -101,7 +103,7 @@ export function ChatLayout() {
       {/* Settings overlay — lazy loaded */}
       {showSettings && (
         <Suspense fallback={null}>
-          <SettingsPanel onClose={() => setShowSettings(false)} />
+          <SettingsPanel onClose={() => setShowSettings(false)} initialSection={settingsSection} />
         </Suspense>
       )}
     </div>
