@@ -751,9 +751,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // by the server sync yet. These have a localId and won't appear in the timeline.
       const existing = get().messages
       const serverEventIds = new Set(newMessages.map(m => m.eventId))
-      const pendingOptimistic = existing.filter(
-        m => m.localId && (m.status === 'sending' || m.status === 'failed') && !serverEventIds.has(m.eventId)
-      )
+      // Detect when the sync has delivered the same message that our optimistic
+      // entry represents (race between sendEvent response and sync echo).
+      const myId = getUserId()
+      const recentServerMsgs = newMessages.filter(m => m.senderId === myId && Date.now() - m.timestamp < 30000)
+      const pendingOptimistic = existing.filter(m => {
+        if (!m.localId || (m.status !== 'sending' && m.status !== 'failed')) return false
+        if (serverEventIds.has(m.eventId)) return false
+        // Check if server already has this message (same sender, content, within 30s)
+        if (m.status === 'sending' && recentServerMsgs.some(s => s.content === m.content && Math.abs(s.timestamp - m.timestamp) < 30000)) return false
+        return true
+      })
       // Append pending optimistic messages at the end (they are the most recent)
       const mergedMessages = pendingOptimistic.length > 0
         ? [...newMessages, ...pendingOptimistic]
