@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { AuthProvider } from '@/components/providers/auth-provider'
 import { RealtimeProvider } from '@/components/providers/realtime-provider'
@@ -54,6 +55,7 @@ export default async function RootLayout({
           </ThemeProvider>
         </ErrorBoundary>
         <SpeedInsights />
+        <Analytics />
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
