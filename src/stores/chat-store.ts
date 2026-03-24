@@ -162,7 +162,8 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const members = joinedMembers.map((m: RoomMember) => ({
     userId: m.userId,
     displayName: m.name || m.userId,
-    avatarUrl: getAvatarUrl(m.getMxcAvatarUrl() || profileAvatarCache.get(m.userId)),
+    // Prefer profile cache (has real avatar) over room member avatar (may be bridge default like Signal logo)
+    avatarUrl: getAvatarUrl(profileAvatarCache.get(m.userId) || m.getMxcAvatarUrl()),
     membership: m.membership || 'join',
     presence: (client?.getUser(m.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
   }))
@@ -175,7 +176,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     members.push({
       userId: fallbackMember.userId,
       displayName: fallbackMember.name || fallbackMember.userId,
-      avatarUrl: getAvatarUrl(fallbackMember.getMxcAvatarUrl() || profileAvatarCache.get(fallbackMember.userId)),
+      avatarUrl: getAvatarUrl(profileAvatarCache.get(fallbackMember.userId) || fallbackMember.getMxcAvatarUrl()),
       membership: fallbackMember.membership || 'join',
       presence: (client?.getUser(fallbackMember.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
     })
@@ -204,7 +205,8 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const summaryCount = room.currentState?.getJoinedMemberCount?.() || joinedCount
   if (client && (isDirect || (!roomAvatarMxc && (joinedCount <= 2 || summaryCount <= 2) && (joinedCount > 0 || summaryCount > 0)))) {
     const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
-    const memberAvatar = otherMember?.getMxcAvatarUrl() || (otherMember ? profileAvatarCache.get(otherMember.userId) : undefined)
+    // Prefer profile cache (real avatar) over room member avatar (may be bridge default like Signal logo)
+    const memberAvatar = (otherMember ? profileAvatarCache.get(otherMember.userId) : undefined) || otherMember?.getMxcAvatarUrl()
     if (memberAvatar) {
       roomAvatarMxc = memberAvatar
     } else {
@@ -212,7 +214,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
       // bridged user yet. getAvatarFallbackMember() uses room summary heroes
       // which are available even before full member loading completes.
       const fallbackMember = room.getAvatarFallbackMember()
-      const fallbackAvatar = fallbackMember?.getMxcAvatarUrl() || (fallbackMember ? profileAvatarCache.get(fallbackMember.userId) : undefined)
+      const fallbackAvatar = (fallbackMember ? profileAvatarCache.get(fallbackMember.userId) : undefined) || fallbackMember?.getMxcAvatarUrl()
       if (fallbackAvatar) {
         roomAvatarMxc = fallbackAvatar
       }
@@ -292,7 +294,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
       roomId: room.roomId,
       senderId: sender,
       senderName,
-      senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
+      senderAvatar: getAvatarUrl((member ? profileAvatarCache.get(member.userId) : undefined) || member?.getMxcAvatarUrl()),
       type: 'm.text',
       msgtype: 'm.text',
       content: stateContent,
@@ -429,7 +431,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
       readBy.push({
         userId: receipt.userId,
         displayName: receiptMember?.name || receipt.userId,
-        avatarUrl: getAvatarUrl(receiptMember?.getMxcAvatarUrl()),
+        avatarUrl: getAvatarUrl((receiptMember ? profileAvatarCache.get(receiptMember.userId) : undefined) || receiptMember?.getMxcAvatarUrl()),
         ts: receipt.data?.ts || 0,
       })
     }
@@ -457,7 +459,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     roomId: room.roomId,
     senderId: sender,
     senderName: cleanDisplayName(member?.name || sender),
-    senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
+    senderAvatar: getAvatarUrl((member ? profileAvatarCache.get(member.userId) : undefined) || member?.getMxcAvatarUrl()),
     type: displayContent.msgtype || 'm.text',
     msgtype: displayContent.msgtype || 'm.text',
     content: body,
@@ -570,7 +572,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
         || (!matrixRoom?.avatarUrl && (sdkRoom.getJoinedMembers().length <= 2 || summaryMemberCount <= 2))
       if (needsAvatar) {
         const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
-        if (!otherMember || !otherMember.getMxcAvatarUrl()) {
+        // Always load members and fetch profiles for DM/small rooms — the room member
+        // avatar may be a bridge default (e.g. Signal logo) while the user's global
+        // profile has their real face.
+        if (!otherMember || !profileAvatarCache.has(otherMember.userId)) {
           roomsNeedingMembers.push(sdkRoom)
         }
       }
@@ -593,18 +598,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
             : null,
         }))
 
-        // With lazyLoadMembers, even after loadMembersIfNeeded() the member's
-        // avatar_url may still be null (the member state event doesn't always
-        // include it). For rooms where the other member still lacks an avatar,
-        // fetch their profile directly from the server to get the avatar.
+        // Fetch the global profile for each DM partner. The room member avatar
+        // may be a bridge default (e.g. Signal logo) while the user's actual
+        // profile has their real face. Always fetch to get the best avatar.
         const profileFetches: Promise<void>[] = []
         for (const sdkRoom of roomsNeedingMembers) {
-          const matrixRoom = updatedRooms.find(r => r.roomId === sdkRoom.roomId)
-          if (!matrixRoom?.isDirect && matrixRoom?.avatarUrl) continue
-
           const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
             || sdkRoom.getAvatarFallbackMember()
-          if (!otherMember || otherMember.getMxcAvatarUrl()) continue
+          if (!otherMember) continue
 
           profileFetches.push(
             client!.getProfileInfo(otherMember.userId).then((profile) => {
@@ -798,14 +799,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const myUserId = getUserId()
         let roomNeedsUpdate = false
 
-        // Check if any member avatars are missing in our store but available in the SDK
+        // Check if any member avatars can be improved from SDK or profile cache
         const updatedMembers = currentRoom.members.map(m => {
+          // Prefer profile cache (real avatar) over room member avatar (may be bridge default)
+          const cachedAvatar = profileAvatarCache.get(m.userId)
+          if (cachedAvatar && m.avatarUrl !== getAvatarUrl(cachedAvatar)) {
+            roomNeedsUpdate = true
+            return { ...m, avatarUrl: getAvatarUrl(cachedAvatar) }
+          }
           if (m.avatarUrl) return m
           const sdkMember = room.getMember(m.userId)
           const sdkAvatar = sdkMember?.getMxcAvatarUrl()
           if (sdkAvatar) {
             roomNeedsUpdate = true
-            profileAvatarCache.set(m.userId, sdkAvatar)
             return { ...m, avatarUrl: getAvatarUrl(sdkAvatar) }
           }
           return m
@@ -884,7 +890,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       roomId,
       senderId: userId,
       senderName: cleanDisplayName(member?.name || userId),
-      senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
+      senderAvatar: getAvatarUrl((member ? profileAvatarCache.get(member.userId) : undefined) || member?.getMxcAvatarUrl()),
       type: 'm.text',
       msgtype: 'm.text',
       content,
