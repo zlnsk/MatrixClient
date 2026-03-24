@@ -589,10 +589,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                       <img
                         src={effectiveMediaUrl}
                         alt={message.content || 'Shared image'}
-                        className="block min-w-[200px] max-w-full object-contain cursor-pointer transition-opacity hover:opacity-90"
+                        className="block max-w-full cursor-pointer transition-opacity hover:opacity-90"
                         style={{
                           maxHeight: 480,
-                          width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
+                          width: message.mediaInfo?.w && message.mediaInfo?.h
+                            ? Math.min(message.mediaInfo.w, 400, Math.round((message.mediaInfo.w / message.mediaInfo.h) * 480))
+                            : message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
                         }}
                         onClick={() => setLightboxOpen(true)}
                       />
