@@ -521,7 +521,7 @@ const RoomListItem = memo(function RoomListItem({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className={`group flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors duration-75 ${
+      className={`group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors duration-75 ${
         isActive
           ? 'bg-m3-primary-container/50 dark:bg-m3-surface-container-high'
           : 'hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high/60 dark:active:bg-m3-surface-container-highest'
@@ -562,7 +562,7 @@ const RoomListItem = memo(function RoomListItem({
         </div>
       </div>
       {/* Archive & Delete buttons on hover (desktop only) */}
-      <div className="hidden md:flex flex-shrink-0 items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
+      <div className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 items-center gap-0.5 rounded-lg bg-white/90 dark:bg-m3-surface-container/90 px-1 opacity-0 transition-all group-hover:opacity-100">
         <button
           onClick={onArchive}
           className="rounded-full p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
