@@ -472,10 +472,39 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const allRooms = client.getRooms()
 
-    const rooms = allRooms
+    const allJoinedRooms = allRooms
       .filter(r => r.getMyMembership() === 'join')
       .map(roomToMatrixRoom)
       .sort((a, b) => b.lastMessageTs - a.lastMessageTs)
+
+    // Deduplicate bridged DM rooms: when a bridge (e.g. Signal) creates two rooms
+    // for the same contact (one portal with phone number, one DM with messages),
+    // hide the empty duplicate. Detect by finding rooms that share a bridge puppet
+    // user and have no real messages.
+    const bridgeUserToRooms = new Map<string, typeof allJoinedRooms>()
+    for (const room of allJoinedRooms) {
+      if (!room.isDirect || !room.isBridged) continue
+      for (const m of room.members) {
+        if (/^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId)) {
+          const existing = bridgeUserToRooms.get(m.userId) || []
+          existing.push(room)
+          bridgeUserToRooms.set(m.userId, existing)
+        }
+      }
+    }
+
+    const duplicateRoomIds = new Set<string>()
+    for (const [, roomGroup] of bridgeUserToRooms) {
+      if (roomGroup.length <= 1) continue
+      // Keep the room with the most recent real message, hide the others that have no messages
+      const withMessages = roomGroup.filter(r => r.lastMessage !== null && r.lastMessage !== '🔒 Encrypted message')
+      const empty = roomGroup.filter(r => r.lastMessage === null || r.lastMessage === '🔒 Encrypted message')
+      if (withMessages.length > 0) {
+        for (const r of empty) duplicateRoomIds.add(r.roomId)
+      }
+    }
+
+    const rooms = allJoinedRooms.filter(r => !duplicateRoomIds.has(r.roomId))
 
     const pendingInvites = allRooms
       .filter(r => r.getMyMembership() === 'invite')
