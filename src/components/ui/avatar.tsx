@@ -72,6 +72,7 @@ function InitialsFallback({ name, size }: { name: string; size: 'sm' | 'md' | 'l
  *
  * Previous threshold of 4 was too aggressive — real avatars with limited palettes
  * (cartoon-style, logos, dark photos) could be incorrectly flagged as placeholders.
+ * Threshold of 2 was too strict — antialiased placeholder icons have 3+ buckets.
  */
 function isPlaceholderImage(img: HTMLImageElement): boolean {
   try {
@@ -100,7 +101,7 @@ function isPlaceholderImage(img: HTMLImageElement): boolean {
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 50) continue // skip transparent
       buckets.add(((data[i] >> 6) << 4) | ((data[i + 1] >> 6) << 2) | (data[i + 2] >> 6))
-      if (buckets.size > 2) return false // real photo — bail early
+      if (buckets.size > 3) return false // real photo — bail early
     }
     return true
   } catch {
