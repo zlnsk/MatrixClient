@@ -28,6 +28,7 @@ import {
   Menu,
   MessageCircle,
   ChevronRight,
+  Trash2,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -37,7 +38,7 @@ interface SidebarProps {
 
 export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
   const user = useAuthStore(s => s.user)
-  const { rooms, pendingInvites, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom, acceptInvite, rejectInvite, searchMessages } = useChatStore()
+  const { rooms, pendingInvites, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom, leaveRoom, acceptInvite, rejectInvite, searchMessages } = useChatStore()
   const { theme, toggleTheme } = useTheme()
   const [searchFilter, setSearchFilter] = useState('')
   const [showNewChat, setShowNewChat] = useState(false)
@@ -133,6 +134,14 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
         setActiveRoom(null)
       }
     }
+  }
+
+  const handleLeave = async (e: React.MouseEvent, room: MatrixRoom) => {
+    e.stopPropagation()
+    if (activeRoom?.roomId === room.roomId) {
+      setActiveRoom(null)
+    }
+    await leaveRoom(room.roomId)
   }
 
   return (
@@ -316,6 +325,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                 isActive={activeRoom?.roomId === room.roomId}
                 onClick={() => handleSelectRoom(room)}
                 onArchive={(e) => handleArchive(e, room)}
+                onDelete={(e) => handleLeave(e, room)}
                 avatarUrl={getOtherMemberAvatar(room)}
                 presence={getOtherMemberPresence(room)}
               />
@@ -343,6 +353,7 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
                     isActive={activeRoom?.roomId === room.roomId}
                     onClick={() => handleSelectRoom(room)}
                     onArchive={(e) => handleArchive(e, room)}
+                    onDelete={(e) => handleLeave(e, room)}
                     avatarUrl={getOtherMemberAvatar(room)}
                     presence={getOtherMemberPresence(room)}
                   />
@@ -444,6 +455,7 @@ const RoomListItem = memo(function RoomListItem({
   isActive,
   onClick,
   onArchive,
+  onDelete,
   avatarUrl,
   presence,
 }: {
@@ -451,6 +463,7 @@ const RoomListItem = memo(function RoomListItem({
   isActive: boolean
   onClick: () => void
   onArchive: (e: React.MouseEvent) => void
+  onDelete: (e: React.MouseEvent) => void
   avatarUrl: string | null
   presence: 'online' | 'offline' | 'away' | null
 }) {
@@ -504,18 +517,27 @@ const RoomListItem = memo(function RoomListItem({
           </div>
         </div>
       </div>
-      {/* Archive button on hover */}
-      <button
-        onClick={onArchive}
-        className="flex-shrink-0 rounded-full p-1.5 text-m3-outline opacity-0 transition-all hover:bg-m3-surface-container-high hover:text-m3-on-surface group-hover:opacity-100 dark:hover:bg-m3-surface-container-highest"
-        title={room.isArchived ? 'Unarchive' : 'Archive'}
-      >
-        {room.isArchived ? (
-          <ArchiveRestore className="h-4 w-4" />
-        ) : (
-          <Archive className="h-4 w-4" />
-        )}
-      </button>
+      {/* Archive & Delete buttons on hover */}
+      <div className="flex flex-shrink-0 items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
+        <button
+          onClick={onArchive}
+          className="rounded-full p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
+          title={room.isArchived ? 'Unarchive' : 'Archive'}
+        >
+          {room.isArchived ? (
+            <ArchiveRestore className="h-4 w-4" />
+          ) : (
+            <Archive className="h-4 w-4" />
+          )}
+        </button>
+        <button
+          onClick={onDelete}
+          className="rounded-full p-1.5 text-m3-outline transition-colors hover:bg-m3-error-container hover:text-m3-error dark:hover:bg-m3-error-container"
+          title="Leave chat"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   )
 }, (prevProps, nextProps) => {
