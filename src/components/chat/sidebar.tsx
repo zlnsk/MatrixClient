@@ -27,6 +27,7 @@ import {
   MessageSquareDashed,
   Menu,
   MessageCircle,
+  ChevronRight,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -157,17 +158,6 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
               </div>
 
               <div className="py-1">
-                <button
-                  onClick={() => { setShowArchived(!showArchived); setShowHamburger(false) }}
-                  className="flex w-full items-center gap-4 px-6 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
-                >
-                  <Archive className="h-5 w-5 text-m3-on-surface-variant" />
-                  Archived
-                  {archivedRooms.length > 0 && <span className="ml-auto text-xs text-m3-on-surface-variant">({archivedRooms.length})</span>}
-                </button>
-              </div>
-
-              <div className="border-t border-m3-outline-variant py-1">
                 <button
                   onClick={() => { onSettingsClick(); setShowHamburger(false) }}
                   className="flex w-full items-center gap-4 px-6 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
@@ -333,26 +323,32 @@ export function Sidebar({ onSettingsClick, onChatSelect }: SidebarProps) {
           </div>
         )}
 
-        {/* Archived section */}
-        {(showArchived || (searchFilter.trim() && archivedRooms.length > 0)) && archivedRooms.length > 0 && (
+        {/* Archived section — collapsible in chat list */}
+        {archivedRooms.length > 0 && (
           <div className="border-t border-m3-outline-variant">
-            <div className="flex items-center gap-3 px-5 py-2.5 text-xs font-medium text-m3-on-surface-variant">
-              <Archive className="h-4 w-4" />
+            <button
+              onClick={() => setShowArchived(!showArchived)}
+              className="flex w-full items-center gap-2 px-5 py-2.5 text-xs font-medium text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+            >
+              <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${showArchived ? 'rotate-90' : ''}`} />
+              <Archive className="h-3.5 w-3.5" />
               Archived ({archivedRooms.length})
-            </div>
-            <div>
-              {archivedRooms.map(room => (
-                <RoomListItem
-                  key={room.roomId}
-                  room={room}
-                  isActive={activeRoom?.roomId === room.roomId}
-                  onClick={() => handleSelectRoom(room)}
-                  onArchive={(e) => handleArchive(e, room)}
-                  avatarUrl={getOtherMemberAvatar(room)}
-                  presence={getOtherMemberPresence(room)}
-                />
-              ))}
-            </div>
+            </button>
+            {(showArchived || (searchFilter.trim() && archivedRooms.length > 0)) && (
+              <div>
+                {archivedRooms.map(room => (
+                  <RoomListItem
+                    key={room.roomId}
+                    room={room}
+                    isActive={activeRoom?.roomId === room.roomId}
+                    onClick={() => handleSelectRoom(room)}
+                    onArchive={(e) => handleArchive(e, room)}
+                    avatarUrl={getOtherMemberAvatar(room)}
+                    presence={getOtherMemberPresence(room)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 

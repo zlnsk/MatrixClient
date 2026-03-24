@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { resolveHomeserver } from '@/lib/matrix/client'
-import { Shield, Eye, EyeOff, Loader2, Server, CheckCircle, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Server, CheckCircle, AlertCircle } from 'lucide-react'
 
 // Rate limiting state (module-level so it persists across re-renders)
 let failedAttempts = 0
@@ -131,7 +131,7 @@ export default function LoginPage() {
   const progressPercent = loginStep === 'resolving' ? 25 : loginStep === 'authenticating' ? 55 : loginStep === 'syncing' ? 85 : loginStep === 'done' ? 100 : 0
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-m3-surface px-4">
+    <div className="fixed inset-0 flex bg-m3-surface">
       {/* Top progress bar */}
       {isLoading && (
         <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-m3-surface-container-high">
@@ -142,10 +142,54 @@ export default function LoginPage() {
         </div>
       )}
 
-      <div className="relative w-full max-w-md">
-        <div className="rounded-3xl border border-m3-outline-variant bg-m3-surface-container-lowest p-8 shadow-xl dark:bg-m3-surface-container">
-          {/* Logo */}
-          <div className="mb-8 flex flex-col items-center">
+      {/* Left branding panel */}
+      <div className="hidden lg:flex lg:w-[480px] xl:w-[560px] flex-col justify-between bg-[#6359dc] p-12 text-white">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
+              <svg width="28" height="28" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M138 62 L83 62 L83 450 L138 450" stroke="white" strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M374 62 L429 62 L429 450 L374 450" stroke="white" strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="198" cy="178" r="21" fill="white"/>
+                <circle cx="256" cy="178" r="21" fill="white"/>
+                <circle cx="314" cy="178" r="21" fill="white"/>
+                <circle cx="198" cy="256" r="21" fill="white" opacity="0.55"/>
+                <circle cx="256" cy="256" r="32" fill="white"/>
+                <circle cx="314" cy="256" r="21" fill="white" opacity="0.55"/>
+                <circle cx="198" cy="334" r="21" fill="white" opacity="0.25"/>
+                <circle cx="256" cy="334" r="21" fill="white" opacity="0.42"/>
+                <circle cx="314" cy="334" r="21" fill="white" opacity="0.25"/>
+              </svg>
+            </div>
+            <span className="text-2xl font-bold tracking-tight">szept</span>
+          </div>
+          <p className="mt-6 text-lg font-medium leading-relaxed text-white/90">
+            A modern Matrix client with end-to-end encryption, built for speed and privacy.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-white/60">
+            Connect to any Matrix homeserver. Your messages, your data, your rules.
+          </p>
+        </div>
+
+        {/* Decorative dots grid */}
+        <div className="mt-auto pt-16">
+          <div className="grid grid-cols-8 gap-3 opacity-20">
+            {Array.from({ length: 32 }).map((_, i) => (
+              <div key={i} className="h-2 w-2 rounded-full bg-white" />
+            ))}
+          </div>
+        </div>
+
+        <p className="mt-8 text-[11px] text-white/40 select-all">
+          v{process.env.NEXT_PUBLIC_BUILD_VERSION}
+        </p>
+      </div>
+
+      {/* Right form panel */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 sm:px-12">
+        <div className="w-full max-w-[400px]">
+          {/* Mobile logo */}
+          <div className="mb-10 flex flex-col items-center lg:hidden">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#6359dc] shadow-lg shadow-[#6359dc]/25">
               <svg width="36" height="36" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M138 62 L83 62 L83 450 L138 450" stroke="white" strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" />
@@ -162,7 +206,19 @@ export default function LoginPage() {
               </svg>
             </div>
             <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-m3-on-surface">szept</h1>
-            <p className="mt-1 text-sm text-m3-on-surface-variant">
+          </div>
+
+          {/* Desktop heading */}
+          <div className="mb-8 hidden lg:block">
+            <h1 className="text-3xl font-extrabold tracking-tight text-m3-on-surface">Sign in</h1>
+            <p className="mt-2 text-sm text-m3-on-surface-variant">
+              Connect to your Matrix homeserver
+            </p>
+          </div>
+
+          {/* Mobile heading */}
+          <div className="mb-6 lg:hidden text-center">
+            <p className="text-sm text-m3-on-surface-variant">
               Sign in to any Matrix homeserver
             </p>
           </div>
@@ -283,18 +339,14 @@ export default function LoginPage() {
               </div>
             )}
           </form>
-        </div>
 
-        {/* Security badge */}
-        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-m3-on-surface-variant">
-          <Shield className="h-3 w-3" />
-          <span>End-to-end encrypted via Matrix protocol</span>
+          {/* Security badge & version (mobile) */}
+          <div className="mt-8 flex flex-col items-center gap-2 lg:hidden">
+            <p className="text-[10px] text-m3-outline select-all">
+              v{process.env.NEXT_PUBLIC_BUILD_VERSION}
+            </p>
+          </div>
         </div>
-
-        {/* Version */}
-        <p className="mt-2 text-center text-[10px] text-m3-outline select-all">
-          v{process.env.NEXT_PUBLIC_BUILD_VERSION}
-        </p>
       </div>
     </div>
   )
