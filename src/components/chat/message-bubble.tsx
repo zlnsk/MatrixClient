@@ -506,7 +506,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           )}
 
           {/* Bubble wrapper — action buttons positioned relative to this */}
-          <div className="relative z-20" ref={bubbleRef}>
+          <div className="relative" ref={bubbleRef}>
           <div
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -944,9 +944,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           )}
           </div>{/* end bubble wrapper */}
 
-          {/* Reactions — overlapping bottom edge of bubble like Google Messages */}
+          {/* Reactions */}
           {message.reactions.size > 0 && (
-            <div className={`relative z-10 -mt-2.5 mb-0.5 flex flex-wrap gap-1 px-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <div className={`relative z-10 mt-0.5 mb-0.5 flex flex-wrap gap-1 px-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
               {Array.from(message.reactions.entries()).map(([emoji, data]) => (
                 <div key={emoji} className="group/reaction relative">
                   <button

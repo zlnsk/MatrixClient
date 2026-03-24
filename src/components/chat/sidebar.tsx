@@ -561,8 +561,8 @@ const RoomListItem = memo(function RoomListItem({
           </div>
         </div>
       </div>
-      {/* Archive & Delete buttons on hover */}
-      <div className="flex flex-shrink-0 items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
+      {/* Archive & Delete buttons on hover (desktop only) */}
+      <div className="hidden md:flex flex-shrink-0 items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
         <button
           onClick={onArchive}
           className="rounded-full p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
