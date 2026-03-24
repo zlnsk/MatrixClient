@@ -189,12 +189,13 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const tags = room.tags || {}
   const isArchived = 'm.lowpriority' in tags
 
-  // For DM rooms, prefer the other member's avatar over the room avatar.
-  // Bridges like mautrix-signal often set the room avatar to a generic placeholder
-  // (e.g. Signal's default dashed-circle silhouette), while the bridge puppet's
-  // member state has the actual contact photo. Always prefer member avatar.
+  // For DM rooms (or small rooms without an explicit avatar), prefer the other
+  // member's avatar over the room avatar. Bridges like mautrix-signal often don't
+  // set room avatars for DMs, and after delete-all-portals the m.direct account
+  // data may not be repopulated — so also check rooms with ≤2 members.
   let roomAvatarMxc = room.getMxcAvatarUrl()
-  if (isDirect && client) {
+  const joinedCount = room.getJoinedMembers().length
+  if (client && (isDirect || (!roomAvatarMxc && joinedCount <= 2 && joinedCount > 0))) {
     const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
     const memberAvatar = otherMember?.getMxcAvatarUrl()
     if (memberAvatar) {
@@ -547,10 +548,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const roomsNeedingMembers: Room[] = []
     for (const sdkRoom of joinedRooms) {
       const matrixRoom = rooms.find(r => r.roomId === sdkRoom.roomId)
-      if (matrixRoom?.isDirect) {
-        // Load members if the other member isn't available yet, or if they
-        // exist but don't have an avatar (member state may be incomplete
-        // from the room summary — full state includes the avatar_url).
+      // Load members for DM rooms, or any small room without an avatar
+      // (after bridge delete-all-portals, m.direct may not be repopulated
+      // so we can't rely solely on isDirect).
+      const needsAvatar = matrixRoom?.isDirect
+        || (!matrixRoom?.avatarUrl && sdkRoom.getJoinedMembers().length <= 2)
+      if (needsAvatar) {
         const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
         if (!otherMember || !otherMember.getMxcAvatarUrl()) {
           roomsNeedingMembers.push(sdkRoom)
@@ -577,12 +580,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         // With lazyLoadMembers, even after loadMembersIfNeeded() the member's
         // avatar_url may still be null (the member state event doesn't always
-        // include it). For DM rooms where the other member still lacks an avatar,
+        // include it). For rooms where the other member still lacks an avatar,
         // fetch their profile directly from the server to get the avatar.
         const profileFetches: Promise<void>[] = []
         for (const sdkRoom of roomsNeedingMembers) {
           const matrixRoom = updatedRooms.find(r => r.roomId === sdkRoom.roomId)
-          if (!matrixRoom?.isDirect) continue
+          if (!matrixRoom?.isDirect && matrixRoom?.avatarUrl) continue
 
           const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
             || sdkRoom.getAvatarFallbackMember()
