@@ -140,7 +140,8 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
             setImgError(false)
           }
         })
-        .catch(() => {
+        .catch((err) => {
+          console.debug('[Avatar] fetch failed:', src, err?.message || err)
           if (!cancelled) setImgError(true)
         })
       return () => { cancelled = true }
@@ -153,9 +154,10 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
 
   const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     if (isPlaceholderImage(e.currentTarget)) {
+      console.debug('[Avatar] placeholder detected, falling back to initials:', src)
       setImgError(true)
     }
-  }, [])
+  }, [src])
 
   const displayUrl = blobUrl
 
