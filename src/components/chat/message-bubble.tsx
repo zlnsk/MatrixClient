@@ -280,9 +280,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   const touchMoved = useRef(false)
 
   // Compute portal positions for emoji picker and context menu
+  // Use the vertical midpoint of the bubble (where action buttons sit) to keep menus near the buttons
   const getMenuPosition = useCallback(() => {
-    if (!bubbleRef.current) return { top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 }
-    return bubbleRef.current.getBoundingClientRect()
+    if (!bubbleRef.current) return { top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0, midY: 0 }
+    const rect = bubbleRef.current.getBoundingClientRect()
+    return { ...rect.toJSON(), midY: rect.top + rect.height / 2 }
   }, [])
 
   // Fetch all media via authenticated endpoint (handles both encrypted and unencrypted)
@@ -728,7 +730,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             const rect = getMenuPosition()
             const pickerStyle: React.CSSProperties = {
               position: 'fixed',
-              top: Math.max(8, rect.top - 8),
+              top: Math.max(8, (rect as any).midY - 8),
               transform: 'translateY(-100%)',
               zIndex: 9999,
               ...(isOwn ? { right: window.innerWidth - rect.right } : { left: rect.left }),
@@ -758,7 +760,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             const rect = getMenuPosition()
             const menuStyle: React.CSSProperties = {
               position: 'fixed',
-              top: rect.top,
+              top: (rect as any).midY,
+              transform: 'translateY(-50%)',
               zIndex: 9999,
               ...(isOwn ? { right: window.innerWidth - rect.left + 4 } : { left: rect.right + 4 }),
             }
