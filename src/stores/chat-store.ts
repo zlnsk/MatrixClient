@@ -1113,12 +1113,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const updatedRoom = roomToMatrixRoom(room)
 
-    set((state) => ({
-      rooms: state.rooms.map((r) =>
+    set((state) => {
+      const oldRoom = state.rooms.find(r => r.roomId === roomId)
+      let updatedRooms = state.rooms.map((r) =>
         r.roomId === roomId ? updatedRoom : r
-      ).sort((a, b) => b.lastMessageTs - a.lastMessageTs),
-      activeRoom: state.activeRoom?.roomId === roomId ? updatedRoom : state.activeRoom,
-    }))
+      )
+      // Only re-sort if the timestamp actually changed (new message arrived)
+      if (oldRoom && updatedRoom.lastMessageTs !== oldRoom.lastMessageTs) {
+        updatedRooms = updatedRooms.sort((a, b) => b.lastMessageTs - a.lastMessageTs)
+      }
+      return {
+        rooms: updatedRooms,
+        activeRoom: state.activeRoom?.roomId === roomId ? updatedRoom : state.activeRoom,
+      }
+    })
 
     if (get().activeRoom?.roomId === roomId) {
       get().loadMessages(roomId)

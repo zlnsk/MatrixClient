@@ -25,7 +25,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const client = getMatrixClient()
     if (!client) return
 
-    const { loadRooms, loadMessages, unarchiveRoom, markAsRead } = useChatStore.getState()
+    const { loadRooms, loadMessages, unarchiveRoom, markAsRead, refreshRoom } = useChatStore.getState()
 
     // --- Debounce helpers ---
     // Debounce loadRooms so rapid-fire events batch together
@@ -84,8 +84,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Refresh the room list (debounced)
-      debouncedLoadRooms()
+      // Refresh just this room in the list (avoids full rebuild flicker)
+      refreshRoom(room.roomId)
 
       // If this is the active room, reload messages (debounced)
       const currentActiveRoom = useChatStore.getState().activeRoom
@@ -136,15 +136,15 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       if (currentActiveRoom && event.getRoomId() === currentActiveRoom.roomId) {
         loadMessages(currentActiveRoom.roomId)
       }
-      // Also refresh sidebar for last message preview (debounced)
-      debouncedLoadRooms()
+      // Also refresh sidebar for last message preview
+      const roomId = event.getRoomId()
+      if (roomId) refreshRoom(roomId)
     }
 
-    // After each sync completes, refresh room list and active room messages
-    // Skip message reload if timeline events already handled it this cycle
+    // After each sync completes, refresh active room messages if timeline
+    // events didn't already handle it (e.g. decryption, account data changes)
     const onSync = (state: string) => {
       if (state === 'SYNCING') {
-        debouncedLoadRooms()
         if (!activeRoomTimelineEventFired) {
           const currentActiveRoom = useChatStore.getState().activeRoom
           if (currentActiveRoom) {
@@ -195,7 +195,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       if (currentActiveRoom?.roomId === room.roomId) {
         loadMessages(room.roomId) // Immediate reload on reset, not debounced
       }
-      debouncedLoadRooms()
+      refreshRoom(room.roomId)
     }
 
     // Listen for incoming verification requests
