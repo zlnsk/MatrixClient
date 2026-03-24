@@ -109,11 +109,11 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   ), [rooms, searchFilter])
 
   const getOtherMemberAvatar = (room: MatrixRoom) => {
-    // For DMs or small rooms (≤2 members), prefer the other member's avatar.
+    // For DMs or small rooms (≤3 to cover bridge bot), prefer the other member's avatar.
     // The room avatar may be a bridge default (Signal logo) while the member's
     // profile has their real face.
-    const isSmallRoom = room.members.length > 0 && room.members.length <= 2
-    if ((room.isDirect || isSmallRoom) && room.members.length > 0) {
+    const isSmallRoom = room.members.length > 0 && room.members.length <= 3
+    if ((room.isDirect || isSmallRoom || room.isBridged) && room.members.length > 0) {
       const other = room.members.find(m => m.userId !== user?.userId)
       return other?.avatarUrl || room.avatarUrl
     }

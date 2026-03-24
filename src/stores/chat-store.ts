@@ -198,14 +198,16 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const tags = room.tags || {}
   const isArchived = 'm.lowpriority' in tags
 
-  // For DM rooms (or small rooms ≤2 members), prefer the other member's profile
-  // avatar over the room avatar. Bridges like mautrix-signal set the Signal logo
-  // as the room avatar — the real face is in the user's global profile.
+  // For DM rooms (or small rooms), prefer the other member's profile avatar
+  // over the room avatar. Bridges like mautrix-signal set the Signal logo as
+  // the room avatar — the real face is in the user's global profile.
+  // Threshold is ≤3 to cover bridge DMs that include an appservice bot.
   let roomAvatarMxc = room.getMxcAvatarUrl()
   const joinedCount = room.getJoinedMembers().length
   const summaryCount = room.currentState?.getJoinedMemberCount?.() || joinedCount
-  const isSmallRoom = (joinedCount <= 2 || summaryCount <= 2) && (joinedCount > 0 || summaryCount > 0)
-  if (client && (isDirect || isSmallRoom)) {
+  const isBridgedRoom = members.some(m => /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId))
+  const isSmallRoom = (joinedCount <= 3 || summaryCount <= 3) && (joinedCount > 0 || summaryCount > 0)
+  if (client && (isDirect || isSmallRoom || isBridgedRoom)) {
     const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
     // Prefer profile cache (real avatar) over room member avatar (may be bridge default like Signal logo)
     const memberAvatar = (otherMember ? profileAvatarCache.get(otherMember.userId) : undefined) || otherMember?.getMxcAvatarUrl()
@@ -570,10 +572,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // (after bridge delete-all-portals, m.direct may not be repopulated
       // so we can't rely solely on isDirect).
       const summaryMemberCount = sdkRoom.currentState?.getJoinedMemberCount?.() || sdkRoom.getJoinedMembers().length
-      // Always resolve avatars for DMs and small rooms — the existing avatar
-      // may be a bridge default (Signal logo) while the real face is in the profile.
+      // Always resolve avatars for DMs, small rooms, and bridged rooms — the
+      // existing avatar may be a bridge default while the real face is in the profile.
+      // Threshold is ≤3 to cover bridge DMs that include an appservice bot.
       const needsAvatar = matrixRoom?.isDirect
-        || (sdkRoom.getJoinedMembers().length <= 2 || summaryMemberCount <= 2)
+        || matrixRoom?.isBridged
+        || (sdkRoom.getJoinedMembers().length <= 3 || summaryMemberCount <= 3)
       if (needsAvatar) {
         const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
         // Load members if the other member isn't resolved yet, or if we haven't
@@ -814,52 +818,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set({ isLoadingMessages: false })
       }
 
-      // Propagate avatar URLs from SDK members back to the room list.
-      // With lazy-loaded members, the room list is often built before member
-      // avatars are available. Now that we've loaded the room's timeline,
-      // the SDK has fresh member data — sync it to the sidebar.
+      // Rebuild room data from SDK now that timeline loading has resolved
+      // member state. With lazy-loaded members, the room list is often built
+      // before member data (including avatars) is available.
+      const updatedRoom = roomToMatrixRoom(room)
       const currentRooms = get().rooms
       const roomIdx = currentRooms.findIndex(r => r.roomId === roomId)
       if (roomIdx !== -1) {
         const currentRoom = currentRooms[roomIdx]
-        const myUserId = getUserId()
-        let roomNeedsUpdate = false
-
-        // Check if any member avatars can be improved from SDK or profile cache
-        const updatedMembers = currentRoom.members.map(m => {
-          // Prefer profile cache (real avatar) over room member avatar (may be bridge default)
-          const cachedAvatar = profileAvatarCache.get(m.userId)
-          if (cachedAvatar && m.avatarUrl !== getAvatarUrl(cachedAvatar)) {
-            roomNeedsUpdate = true
-            return { ...m, avatarUrl: getAvatarUrl(cachedAvatar) }
-          }
-          if (m.avatarUrl) return m
-          const sdkMember = room.getMember(m.userId)
-          const sdkAvatar = sdkMember?.getMxcAvatarUrl()
-          if (sdkAvatar) {
-            roomNeedsUpdate = true
-            return { ...m, avatarUrl: getAvatarUrl(sdkAvatar) }
-          }
-          return m
-        })
-
-        // Check if the room avatar itself needs updating (DMs / small rooms)
-        let updatedRoomAvatar = currentRoom.avatarUrl
-        if (!updatedRoomAvatar && (currentRoom.isDirect || currentRoom.members.length <= 2)) {
-          const other = updatedMembers.find(m => m.userId !== myUserId)
-          if (other?.avatarUrl) {
-            updatedRoomAvatar = other.avatarUrl
-            roomNeedsUpdate = true
-          }
+        // Preserve fields that roomToMatrixRoom doesn't track
+        const mergedRoom = {
+          ...updatedRoom,
+          isArchived: currentRoom.isArchived,
         }
-
-        if (roomNeedsUpdate) {
+        if (
+          mergedRoom.avatarUrl !== currentRoom.avatarUrl ||
+          mergedRoom.members.length !== currentRoom.members.length ||
+          mergedRoom.members.some((m, i) => m.avatarUrl !== currentRoom.members[i]?.avatarUrl)
+        ) {
           const updated = [...currentRooms]
-          const updatedRoom = { ...currentRoom, members: updatedMembers, avatarUrl: updatedRoomAvatar }
-          updated[roomIdx] = updatedRoom
+          updated[roomIdx] = mergedRoom
           set((state) => ({
             rooms: updated,
-            activeRoom: state.activeRoom?.roomId === roomId ? updatedRoom : state.activeRoom,
+            activeRoom: state.activeRoom?.roomId === roomId ? mergedRoom : state.activeRoom,
           }))
         }
       }

@@ -220,12 +220,13 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
   if (!activeRoom || !user) return null
 
-  const otherMember = activeRoom.isDirect
+  const isSmallOrBridged = activeRoom.isDirect || activeRoom.isBridged || activeRoom.members.length <= 3
+  const otherMember = isSmallOrBridged
     ? activeRoom.members.find(m => m.userId !== user.userId)
     : null
 
   const roomDisplayName = activeRoom.name
-  const roomStatus = activeRoom.isDirect
+  const roomStatus = isSmallOrBridged
     ? otherMember?.presence === 'online' ? 'online' : otherMember?.presence === 'unavailable' ? 'away' : 'offline'
     : `${activeRoom.members.length} members`
 
@@ -289,10 +290,10 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         </button>
         <div className="flex min-w-0 flex-1 items-center gap-3 px-2">
           <Avatar
-            src={activeRoom.isDirect ? otherMember?.avatarUrl : activeRoom.avatarUrl}
+            src={isSmallOrBridged ? (otherMember?.avatarUrl || activeRoom.avatarUrl) : activeRoom.avatarUrl}
             name={roomDisplayName}
             size="md"
-            status={activeRoom.isDirect ? (otherMember?.presence === 'online' ? 'online' : otherMember?.presence === 'unavailable' ? 'away' : 'offline') : null}
+            status={isSmallOrBridged ? (otherMember?.presence === 'online' ? 'online' : otherMember?.presence === 'unavailable' ? 'away' : 'offline') : null}
           />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-base font-medium text-m3-on-surface">{roomDisplayName}</h2>
@@ -545,7 +546,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {/* Avatar + name hero section */}
             <div className="flex flex-col items-center px-6 py-8">
               <Avatar
-                src={activeRoom.isDirect ? otherMember?.avatarUrl : activeRoom.avatarUrl}
+                src={isSmallOrBridged ? (otherMember?.avatarUrl || activeRoom.avatarUrl) : activeRoom.avatarUrl}
                 name={roomDisplayName}
                 size="lg"
               />
