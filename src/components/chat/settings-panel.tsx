@@ -5,6 +5,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { getHomeserverUrl, getHomeserverDomain, restoreFromRecoveryKey, deleteOtherDevice, getMatrixClient, generateSecurityKey, getEncryptionStatus } from '@/lib/matrix/client'
+import { QUALITY_PRESETS, getDefaultQuality, setDefaultQuality } from '@/lib/matrix/voip'
 import {
   LogOut,
   User,
@@ -27,18 +28,19 @@ import {
   Lock,
   ArrowLeft,
   ChevronRight,
+  Phone,
 } from 'lucide-react'
 
 interface SettingsPanelProps {
   onClose: () => void
-  initialSection?: 'main' | 'profile' | 'security' | 'about'
+  initialSection?: 'main' | 'profile' | 'security' | 'calls' | 'about'
 }
 
 export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPanelProps) {
   const { user, signOut, updateProfile } = useAuthStore()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [activeSection, setActiveSection] = useState<'main' | 'profile' | 'security' | 'about'>(initialSection)
+  const [activeSection, setActiveSection] = useState<'main' | 'profile' | 'security' | 'calls' | 'about'>(initialSection)
   const [recoveryKey, setRecoveryKey] = useState('')
   const [isRestoring, setIsRestoring] = useState(false)
   const [restoreResult, setRestoreResult] = useState<string | null>(null)
@@ -197,7 +199,8 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
     else setActiveSection('main')
   }
 
-  const sectionTitle = activeSection === 'main' ? 'Settings' : activeSection === 'profile' ? 'Profile' : activeSection === 'security' ? 'Security' : 'About'
+  const sectionTitle = activeSection === 'main' ? 'Settings' : activeSection === 'profile' ? 'Profile' : activeSection === 'security' ? 'Security' : activeSection === 'calls' ? 'Calls' : 'About'
+  const [callQuality, setCallQuality] = useState(getDefaultQuality)
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-m3-surface animate-fade-in safe-area-pad">
@@ -236,6 +239,15 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
                   <div className="flex-1">
                     <p className="text-sm text-m3-on-surface dark:text-m3-on-surface">Security</p>
                     <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">Keys, sessions, encryption</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-m3-outline" />
+                </button>
+
+                <button onClick={() => setActiveSection('calls')} className="flex w-full items-center gap-4 px-6 py-4 text-left transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
+                  <Phone className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <div className="flex-1">
+                    <p className="text-sm text-m3-on-surface dark:text-m3-on-surface">Calls</p>
+                    <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">Video quality, STUN/TURN</p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-m3-outline" />
                 </button>
@@ -516,6 +528,55 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ===== CALLS ===== */}
+          {activeSection === 'calls' && (
+            <div className="divide-y divide-m3-outline-variant dark:divide-m3-outline-variant">
+              {/* Default video quality */}
+              <div className="px-6 py-5">
+                <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">Default Video Quality</p>
+                <p className="mt-1 text-xs text-m3-on-surface-variant dark:text-m3-outline">
+                  Used when starting a call. You can toggle HD during calls.
+                </p>
+                <div className="mt-4 space-y-2">
+                  {Object.entries(QUALITY_PRESETS).map(([key, preset]) => (
+                    <button
+                      key={key}
+                      onClick={() => { setCallQuality(key); setDefaultQuality(key) }}
+                      className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors ${
+                        callQuality === key
+                          ? 'bg-m3-primary-container text-m3-on-primary-container dark:bg-m3-primary-container/30'
+                          : 'bg-m3-surface-container text-m3-on-surface hover:bg-m3-surface-container-high dark:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest'
+                      }`}
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{preset.label}</p>
+                        <p className="text-xs opacity-70">
+                          {preset.frameRate}fps &middot; {(preset.videoBitrate / 1_000_000).toFixed(1)} Mbps video &middot; {preset.audioBitrate / 1000} kbps audio
+                        </p>
+                      </div>
+                      {callQuality === key && (
+                        <Check className="h-5 w-5 flex-shrink-0 text-m3-primary" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ICE/STUN info */}
+              <div className="px-6 py-5">
+                <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">Network</p>
+                <p className="mt-1 text-xs text-m3-on-surface-variant dark:text-m3-outline">
+                  Calls use STUN servers (Google, Cloudflare) to establish peer-to-peer connections.
+                  If your server provides TURN credentials, relay-only mode is used for privacy.
+                </p>
+                <div className="mt-3 rounded-lg bg-m3-surface-container px-3 py-2 dark:bg-m3-surface-container-high">
+                  <p className="font-mono text-xs text-m3-on-surface-variant">stun:stun.l.google.com:19302</p>
+                  <p className="font-mono text-xs text-m3-on-surface-variant">stun:stun.cloudflare.com:3478</p>
+                </div>
               </div>
             </div>
           )}

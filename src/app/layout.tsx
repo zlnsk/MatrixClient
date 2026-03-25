@@ -7,7 +7,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'szept — Secure Messaging',
+  title: 'szept',
   description: 'End-to-end encrypted messaging powered by the Matrix protocol',
   appleWebApp: {
     capable: true,

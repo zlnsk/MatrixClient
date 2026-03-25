@@ -157,31 +157,56 @@ function attachCallListeners(call: MatrixCall): void {
   })
 }
 
+// Quality presets — configurable via localStorage
+export interface CallQualityPreset {
+  label: string
+  width: number
+  height: number
+  frameRate: number
+  videoBitrate: number  // bps
+  audioBitrate: number  // bps
+}
+
+export const QUALITY_PRESETS: Record<string, CallQualityPreset> = {
+  low: { label: 'Low (360p)', width: 640, height: 360, frameRate: 20, videoBitrate: 400_000, audioBitrate: 48_000 },
+  standard: { label: 'Standard (480p)', width: 640, height: 480, frameRate: 24, videoBitrate: 800_000, audioBitrate: 64_000 },
+  hd: { label: 'HD (720p)', width: 1280, height: 720, frameRate: 30, videoBitrate: 2_500_000, audioBitrate: 128_000 },
+  fullhd: { label: 'Full HD (1080p)', width: 1920, height: 1080, frameRate: 30, videoBitrate: 5_000_000, audioBitrate: 128_000 },
+}
+
+export function getDefaultQuality(): string {
+  if (typeof window === 'undefined') return 'standard'
+  return localStorage.getItem('szept_call_quality') || 'standard'
+}
+
+export function setDefaultQuality(preset: string): void {
+  localStorage.setItem('szept_call_quality', preset)
+}
+
 /**
  * Apply HD quality constraints to the call's local video/audio tracks
  * and boost bitrate via RTCRtpSender parameters.
  */
-async function applyHdConstraints(call: MatrixCall, isVideo: boolean): Promise<void> {
+async function applyQualityPreset(call: MatrixCall, isVideo: boolean, presetKey: string): Promise<void> {
+  const preset = QUALITY_PRESETS[presetKey] || QUALITY_PRESETS.standard
   const localFeed = call.localUsermediaFeed
   if (!localFeed?.stream) return
 
-  // Upgrade video track constraints to HD
   if (isVideo) {
     const videoTrack = localFeed.stream.getVideoTracks()[0]
     if (videoTrack) {
       try {
         await videoTrack.applyConstraints({
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 },
+          width: { ideal: preset.width },
+          height: { ideal: preset.height },
+          frameRate: { ideal: preset.frameRate },
         })
       } catch (e) {
-        console.warn('Could not apply HD video constraints:', e)
+        console.warn('Could not apply video constraints:', e)
       }
     }
   }
 
-  // Boost audio quality
   const audioTrack = localFeed.stream.getAudioTracks()[0]
   if (audioTrack) {
     try {
@@ -193,11 +218,10 @@ async function applyHdConstraints(call: MatrixCall, isVideo: boolean): Promise<v
         channelCount: { ideal: 1 },
       })
     } catch (e) {
-      console.warn('Could not apply HD audio constraints:', e)
+      console.warn('Could not apply audio constraints:', e)
     }
   }
 
-  // Boost max bitrate via RTCRtpSender
   const pc = assertPeerConnAccessible(call)
   if (!pc) return
   for (const sender of pc.getSenders()) {
@@ -206,9 +230,9 @@ async function applyHdConstraints(call: MatrixCall, isVideo: boolean): Promise<v
       params.encodings = [{}]
     }
     if (sender.track?.kind === 'video') {
-      params.encodings[0].maxBitrate = 2_500_000 // 2.5 Mbps
+      params.encodings[0].maxBitrate = preset.videoBitrate
     } else if (sender.track?.kind === 'audio') {
-      params.encodings[0].maxBitrate = 128_000 // 128 kbps
+      params.encodings[0].maxBitrate = preset.audioBitrate
     }
     try {
       await sender.setParameters(params)
@@ -218,44 +242,16 @@ async function applyHdConstraints(call: MatrixCall, isVideo: boolean): Promise<v
   }
 }
 
+// Legacy wrappers
+async function applyHdConstraints(call: MatrixCall, isVideo: boolean): Promise<void> {
+  await applyQualityPreset(call, isVideo, 'hd')
+}
+
 /**
  * Remove HD constraints — revert to standard quality.
  */
 async function applyStandardConstraints(call: MatrixCall, isVideo: boolean): Promise<void> {
-  const localFeed = call.localUsermediaFeed
-  if (!localFeed?.stream) return
-
-  if (isVideo) {
-    const videoTrack = localFeed.stream.getVideoTracks()[0]
-    if (videoTrack) {
-      try {
-        await videoTrack.applyConstraints({
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 24 },
-        })
-      } catch (e) {
-        console.warn('Could not revert video constraints:', e)
-      }
-    }
-  }
-
-  const pc = assertPeerConnAccessible(call)
-  if (!pc) return
-  for (const sender of pc.getSenders()) {
-    const params = sender.getParameters()
-    if (!params.encodings || params.encodings.length === 0) continue
-    if (sender.track?.kind === 'video') {
-      params.encodings[0].maxBitrate = 800_000 // 800 kbps
-    } else if (sender.track?.kind === 'audio') {
-      params.encodings[0].maxBitrate = 64_000 // 64 kbps
-    }
-    try {
-      await sender.setParameters(params)
-    } catch (e) {
-      console.warn('Could not revert sender bitrate:', e)
-    }
-  }
+  await applyQualityPreset(call, isVideo, getDefaultQuality())
 }
 
 /**
