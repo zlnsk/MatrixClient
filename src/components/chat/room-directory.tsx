@@ -102,7 +102,7 @@ export function RoomDirectory({ onClose, onRoomJoined }: RoomDirectoryProps) {
               onChange={e => setSearchTerm(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && searchRooms()}
               autoFocus
-              className="w-full rounded-full bg-m3-surface-container py-2.5 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline focus:outline-none focus:ring-2 focus:ring-m3-primary dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
+              className="w-full rounded-2xl border border-m3-outline-variant/40 bg-white py-2.5 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline shadow-sm transition-all focus:border-m3-primary/40 focus:shadow-md focus:outline-none dark:border-m3-outline-variant/20 dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline"
             />
           </div>
           <button

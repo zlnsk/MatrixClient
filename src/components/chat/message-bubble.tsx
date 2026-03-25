@@ -517,7 +517,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 setEditContent(message.content)
               }
             }}
-            className={`rounded-[20px] overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'w-fit border border-m3-outline-variant/30 dark:border-m3-outline-variant/20' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
+            className={`rounded-[20px] overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'w-fit border border-m3-outline-variant/30 p-2 dark:border-m3-outline-variant/20' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
               isOwn
                 ? message.status === 'failed'
                   ? 'bg-m3-primary/70 text-white ring-2 ring-red-400/50'
@@ -571,7 +571,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                       <img
                         src={effectiveMediaUrl}
                         alt={message.content || 'Shared image'}
-                        className="block min-w-[200px] max-w-full object-contain cursor-pointer transition-opacity hover:opacity-90"
+                        className="block min-w-[200px] max-w-full rounded-xl object-contain cursor-pointer transition-opacity hover:opacity-90"
                         style={{
                           maxHeight: 480,
                           width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
@@ -593,7 +593,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   )
                 ) : message.type === 'm.video' ? (
                   effectiveMediaUrl ? (
-                    <video controls className="block max-w-full rounded-xl" style={{ maxHeight: 480 }}>
+                    <video controls className="block min-w-[200px] max-w-full rounded-xl" style={{ maxHeight: 480 }}>
                       <source src={effectiveMediaUrl} type={message.mediaInfo?.mimetype} />
                     </video>
                   ) : (

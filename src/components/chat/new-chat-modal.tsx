@@ -113,8 +113,8 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-lg">
             {/* "To:" input field — Google Messages style */}
-            <div className="border-b border-m3-outline-variant px-6 py-4 dark:border-m3-outline-variant">
-              <div className="flex items-center gap-3">
+            <div className="px-6 py-4">
+              <div className="flex items-center gap-3 rounded-2xl border border-m3-outline-variant/40 bg-white px-4 py-2.5 shadow-sm dark:border-m3-outline-variant/20 dark:bg-m3-surface-container">
                 <span className="text-sm text-m3-on-surface-variant dark:text-m3-outline">To:</span>
                 <input
                   type="text"
@@ -138,7 +138,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
             </div>
 
             {error && (
-              <div className="mx-6 mt-4 rounded-lg bg-m3-error-container px-4 py-3 text-sm text-m3-error dark:bg-m3-error-container/20 dark:text-m3-error">
+              <div className="mx-6 mt-4 rounded-2xl border border-m3-error/20 bg-m3-error-container px-4 py-3 text-sm text-m3-error shadow-sm dark:border-m3-error/30 dark:bg-m3-error-container/20 dark:text-m3-error">
                 {error}
               </div>
             )}
@@ -166,7 +166,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                     placeholder="My Group"
                     value={groupName}
                     onChange={e => setGroupName(e.target.value)}
-                    className="w-full border-b border-m3-outline-variant bg-transparent py-2 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none dark:border-m3-outline-variant dark:text-m3-on-surface dark:placeholder-m3-outline"
+                    className="w-full rounded-xl border border-m3-outline-variant/40 bg-white px-3 py-2.5 text-sm text-m3-on-surface placeholder-m3-outline shadow-sm transition-all focus:border-m3-primary/40 focus:shadow-md focus:outline-none dark:border-m3-outline-variant/20 dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline"
                   />
                 </div>
 
@@ -179,7 +179,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                     value={groupMembers}
                     onChange={e => setGroupMembers(e.target.value)}
                     rows={2}
-                    className="w-full border-b border-m3-outline-variant bg-transparent py-2 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none dark:border-m3-outline-variant dark:text-m3-on-surface dark:placeholder-m3-outline resize-none"
+                    className="w-full rounded-xl border border-m3-outline-variant/40 bg-white px-3 py-2.5 text-sm text-m3-on-surface placeholder-m3-outline shadow-sm transition-all focus:border-m3-primary/40 focus:shadow-md focus:outline-none dark:border-m3-outline-variant/20 dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline resize-none"
                   />
                 </div>
 
@@ -192,7 +192,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
                     placeholder="What is this room about?"
                     value={groupTopic}
                     onChange={e => setGroupTopic(e.target.value)}
-                    className="w-full border-b border-m3-outline-variant bg-transparent py-2 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none dark:border-m3-outline-variant dark:text-m3-on-surface dark:placeholder-m3-outline"
+                    className="w-full rounded-xl border border-m3-outline-variant/40 bg-white px-3 py-2.5 text-sm text-m3-on-surface placeholder-m3-outline shadow-sm transition-all focus:border-m3-primary/40 focus:shadow-md focus:outline-none dark:border-m3-outline-variant/20 dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline"
                   />
                 </div>
 

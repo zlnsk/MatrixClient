@@ -384,7 +384,7 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
                       value={generateKeyPassword}
                       onChange={e => { setGenerateKeyPassword(e.target.value); setGenerateKeyError(null) }}
                       placeholder="Account password"
-                      className="w-full border-b border-m3-outline-variant bg-transparent py-2 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline"
+                      className="w-full rounded-xl border border-m3-outline-variant/40 bg-white px-3 py-2.5 text-sm text-m3-on-surface shadow-sm transition-all focus:shadow-md dark:bg-m3-surface-container placeholder-m3-outline focus:border-m3-primary focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline"
                     />
                     {generateKeyError && <p className="text-xs text-m3-error">{generateKeyError}</p>}
                     <button
@@ -490,7 +490,7 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
                                 onKeyDown={e => { if (e.key === 'Enter') handleDeleteDevice(device.deviceId) }}
                                 placeholder="Account password"
                                 autoFocus
-                                className="w-full border-b border-m3-outline-variant bg-transparent py-2 text-sm text-m3-on-surface focus:border-m3-primary focus:outline-none dark:text-m3-on-surface"
+                                className="w-full rounded-xl border border-m3-outline-variant/40 bg-white px-3 py-2.5 text-sm text-m3-on-surface shadow-sm transition-all focus:shadow-md dark:bg-m3-surface-container focus:border-m3-primary focus:outline-none dark:text-m3-on-surface"
                               />
                               {deviceError && <p className="text-xs text-m3-error">{deviceError}</p>}
                               <div className="flex gap-2">

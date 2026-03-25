@@ -393,16 +393,16 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
       {/* Search bar */}
       {showSearch && (
-        <div className="animate-slide-in border-b border-m3-outline-variant bg-white px-4 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container">
+        <div className="animate-slide-in bg-m3-surface-container-lowest px-4 py-2 dark:bg-m3-surface">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant" />
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant" />
             <input
               type="text"
               placeholder="Search in conversation..."
               value={chatSearch}
               onChange={e => setChatSearch(e.target.value)}
               autoFocus
-              className="w-full rounded-lg border border-m3-outline-variant bg-m3-surface-container-lowest py-2 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline focus:border-m3-primary focus:outline-none focus:ring-1 focus:ring-m3-primary dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
+              className="w-full rounded-2xl border border-m3-outline-variant/40 bg-white py-2.5 pl-10 pr-4 text-sm text-m3-on-surface placeholder-m3-outline shadow-sm transition-all focus:border-m3-primary/40 focus:shadow-md focus:outline-none dark:border-m3-outline-variant/20 dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline"
             />
           </div>
         </div>

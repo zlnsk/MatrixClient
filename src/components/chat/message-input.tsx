@@ -563,6 +563,49 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
           </div>
         ) : (
           <div className="flex flex-1 items-center rounded-full bg-m3-surface-container/60 dark:bg-m3-surface-container-high/60">
+            {/* Emoji button — left side for easy thumb access */}
+            <div className="relative flex-shrink-0 pl-1.5" ref={emojiRef}>
+              <button
+                onClick={() => setShowEmoji(!showEmoji)}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
+                aria-label="Emoji picker"
+              >
+                <Smile className="h-5 w-5" />
+              </button>
+              {showEmoji && (
+                <div className="absolute bottom-12 left-0 z-20 w-80 rounded-2xl border border-m3-outline-variant/50 bg-white p-3 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high">
+                  {/* Category tabs */}
+                  <div className="mb-2 flex gap-1 overflow-x-auto border-b border-m3-outline-variant/50 pb-2 dark:border-m3-outline-variant">
+                    {Object.keys(EMOJI_CATEGORIES).map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setEmojiCategory(cat)}
+                        className={`whitespace-nowrap rounded-md px-2 py-1 text-xs transition-colors ${
+                          emojiCategory === cat
+                            ? 'bg-m3-primary-container text-m3-primary dark:bg-m3-primary-container/30 dark:text-m3-primary'
+                            : 'text-m3-on-surface-variant hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Emoji grid */}
+                  <div className="grid max-h-48 grid-cols-8 gap-0.5 overflow-y-auto">
+                    {EMOJI_CATEGORIES[emojiCategory].map(emoji => (
+                      <button
+                        key={emoji}
+                        onClick={() => handleEmojiClick(emoji)}
+                        className="rounded-lg p-1.5 text-xl transition-transform hover:scale-110 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <textarea
               ref={inputRef}
               value={content}
@@ -572,53 +615,10 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               placeholder="Type a message..."
               rows={1}
               enterKeyHint="send"
-              className="max-h-32 min-h-[42px] flex-1 resize-none bg-transparent px-5 py-2.5 text-base text-m3-on-surface placeholder-m3-on-surface-variant focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3 md:text-sm"
+              className="max-h-32 min-h-[42px] flex-1 resize-none bg-transparent px-3 py-2.5 text-base text-m3-on-surface placeholder-m3-on-surface-variant focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3 md:text-sm"
             />
-            {/* Action buttons inside the pill */}
+            {/* Action buttons — right side */}
             <div className="flex flex-shrink-0 items-center gap-0.5 pr-2">
-              {/* Emoji button */}
-              <div className="relative" ref={emojiRef}>
-                <button
-                  onClick={() => setShowEmoji(!showEmoji)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
-                  aria-label="Emoji picker"
-                >
-                  <Smile className="h-5 w-5" />
-                </button>
-                {showEmoji && (
-                  <div className="absolute bottom-12 right-0 z-20 w-80 rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest p-3 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high">
-                    {/* Category tabs */}
-                    <div className="mb-2 flex gap-1 overflow-x-auto border-b border-m3-outline-variant pb-2 dark:border-m3-outline-variant">
-                      {Object.keys(EMOJI_CATEGORIES).map(cat => (
-                        <button
-                          key={cat}
-                          onClick={() => setEmojiCategory(cat)}
-                          className={`whitespace-nowrap rounded-md px-2 py-1 text-xs transition-colors ${
-                            emojiCategory === cat
-                              ? 'bg-m3-primary-container text-m3-primary dark:bg-m3-primary-container/30 dark:text-m3-primary'
-                              : 'text-m3-on-surface-variant hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest'
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-                    {/* Emoji grid */}
-                    <div className="grid max-h-48 grid-cols-8 gap-0.5 overflow-y-auto">
-                      {EMOJI_CATEGORIES[emojiCategory].map(emoji => (
-                        <button
-                          key={emoji}
-                          onClick={() => handleEmojiClick(emoji)}
-                          className="rounded-lg p-1.5 text-xl transition-transform hover:scale-110 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* Attachment button */}
               <button
                 onClick={() => fileInputRef.current?.click()}

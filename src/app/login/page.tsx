@@ -262,7 +262,7 @@ export default function LoginPage() {
                   placeholder="matrix.org"
                   maxLength={MAX_INPUT_LENGTH}
                   required
-                  className="w-full rounded-2xl border border-m3-outline-variant bg-m3-surface-container-low py-3.5 pl-11 pr-4 text-sm text-m3-on-surface placeholder-m3-outline transition-all focus:border-m3-primary focus:outline-none focus:ring-2 focus:ring-m3-primary/20 dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
+                  className="w-full rounded-2xl border border-m3-outline-variant/40 bg-white shadow-sm dark:shadow-black/10 py-3.5 pl-11 pr-4 text-sm text-m3-on-surface placeholder-m3-outline transition-all focus:border-m3-primary focus:outline-none focus:ring-2 focus:ring-m3-primary/20 dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                 />
                 {isResolving && (
                   <Loader2 className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-m3-outline" />
@@ -291,7 +291,7 @@ export default function LoginPage() {
                   maxLength={MAX_INPUT_LENGTH}
                   required
                   autoComplete="username"
-                  className="w-full rounded-2xl border border-m3-outline-variant bg-m3-surface-container-low py-3.5 pl-9 pr-4 text-sm text-m3-on-surface placeholder-m3-outline transition-all focus:border-m3-primary focus:outline-none focus:ring-2 focus:ring-m3-primary/20 dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
+                  className="w-full rounded-2xl border border-m3-outline-variant/40 bg-white shadow-sm dark:shadow-black/10 py-3.5 pl-9 pr-4 text-sm text-m3-on-surface placeholder-m3-outline transition-all focus:border-m3-primary focus:outline-none focus:ring-2 focus:ring-m3-primary/20 dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                 />
               </div>
               {serverDomain && (
@@ -315,7 +315,7 @@ export default function LoginPage() {
                   maxLength={MAX_INPUT_LENGTH}
                   required
                   autoComplete="current-password"
-                  className="w-full rounded-2xl border border-m3-outline-variant bg-m3-surface-container-low px-4 py-3.5 pr-12 text-sm text-m3-on-surface placeholder-m3-outline transition-all focus:border-m3-primary focus:outline-none focus:ring-2 focus:ring-m3-primary/20 dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
+                  className="w-full rounded-2xl border border-m3-outline-variant/40 bg-white shadow-sm dark:shadow-black/10 px-4 py-3.5 pr-12 text-sm text-m3-on-surface placeholder-m3-outline transition-all focus:border-m3-primary focus:outline-none focus:ring-2 focus:ring-m3-primary/20 dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
                 />
                 <button
                   type="button"

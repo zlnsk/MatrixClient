@@ -237,7 +237,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
             aria-label="Search rooms and messages"
-            className="w-full rounded-full bg-m3-surface-container py-2.5 pl-11 pr-11 text-base text-m3-on-surface placeholder-m3-outline transition-colors focus:bg-m3-surface-container-high focus:outline-none dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline dark:focus:bg-m3-surface-container-high md:text-sm"
+            className="w-full rounded-2xl border border-m3-outline-variant/30 bg-white py-2.5 pl-11 pr-11 text-base text-m3-on-surface placeholder-m3-outline shadow-sm transition-all focus:border-m3-primary/40 focus:shadow-md focus:outline-none dark:border-m3-outline-variant/20 dark:bg-m3-surface-container dark:text-m3-on-surface dark:placeholder-m3-outline md:text-sm"
           />
           {searchFilter && (
             <button
