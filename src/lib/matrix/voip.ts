@@ -176,7 +176,7 @@ export const QUALITY_PRESETS: Record<string, CallQualityPreset> = {
 
 export function getDefaultQuality(): string {
   if (typeof window === 'undefined') return 'standard'
-  return localStorage.getItem('szept_call_quality') || 'standard'
+  return localStorage.getItem('szept_call_quality') || 'fullhd'
 }
 
 export function setDefaultQuality(preset: string): void {
