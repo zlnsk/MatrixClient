@@ -355,6 +355,15 @@ export default function LoginPage() {
             )}
           </form>
 
+          {/* Matrix account info */}
+          <p className="mt-6 text-center text-xs text-m3-on-surface-variant dark:text-m3-outline leading-relaxed">
+            You need a Matrix account to sign in. Create one for free at{' '}
+            <a href="https://app.element.io/#/register" target="_blank" rel="noopener noreferrer" className="font-medium text-m3-primary hover:underline">
+              element.io
+            </a>{' '}
+            or any Matrix homeserver.
+          </p>
+
           {/* Security badge & version (mobile) */}
           <div className="mt-8 flex flex-col items-center gap-2 lg:hidden">
             <p className="text-[10px] text-m3-outline select-all">
