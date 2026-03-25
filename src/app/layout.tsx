@@ -42,7 +42,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className="dark h-dvh">
       <head />
-      <body className="h-dvh overflow-hidden antialiased bg-m3-surface" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
+      <body className="h-dvh overflow-hidden antialiased bg-m3-surface" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <ErrorBoundary>
           <ThemeProvider>
             <AuthProvider>

@@ -146,7 +146,7 @@ export default function LoginPage() {
   const progressPercent = loginStep === 'resolving' ? 25 : loginStep === 'authenticating' ? 55 : loginStep === 'syncing' ? 85 : loginStep === 'done' ? 100 : 0
 
   return (
-    <div className="fixed inset-0 flex bg-m3-surface" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
+    <div className="fixed inset-0 flex bg-m3-surface" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Top progress bar */}
       {isLoading && (
         <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-m3-surface-container-high">
