@@ -86,7 +86,7 @@ const nextConfig: NextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(self), microphone=(self), geolocation=()',
           },
-          // CSP is set per-request by src/middleware.ts (nonce-based script-src)
+          // CSP is set per-request by src/proxy.ts (nonce-based script-src)
         ],
       },
     ];

@@ -2,12 +2,14 @@
 
 import { useEffect, type ReactNode } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
+import { installGlobalErrorHandlers } from '@/lib/error-reporter'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const initialize = useAuthStore(s => s.initialize)
   const isLoading = useAuthStore(s => s.isLoading)
 
   useEffect(() => {
+    installGlobalErrorHandlers()
     initialize()
   }, [initialize])
 

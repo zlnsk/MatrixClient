@@ -33,7 +33,7 @@ szept implements the following security measures:
 - DOMPurify sanitization for all rendered message HTML
 - Content Security Policy with per-request nonce-based script-src
 - HSTS with preload, X-Frame-Options DENY, and other hardening headers
-- Session tokens stored in sessionStorage (not localStorage)
+- Session tokens stored in localStorage (cleared on logout and idle timeout)
 - Relay-only ICE transport policy to prevent IP leakage in calls
 - Login rate limiting with exponential backoff
 - Idle session timeout with automatic logout
