@@ -30,15 +30,18 @@ export function useTimelineSync(userId: string | undefined) {
     }
 
     let loadMessagesTimer: ReturnType<typeof setTimeout> | null = null
-    const debouncedLoadMessages = (roomId: string) => {
+    const debouncedLoadMessages = (roomId: string, immediate = false) => {
       if (loadMessagesTimer) clearTimeout(loadMessagesTimer)
+      // Use shorter debounce (50ms) for batching rapid events.
+      // Immediate mode (0ms) is used for own-message events.
+      const delay = immediate ? 0 : 50
       loadMessagesTimer = setTimeout(() => {
         const currentActiveRoom = useChatStore.getState().activeRoom
         if (currentActiveRoom?.roomId === roomId) {
           loadMessages(roomId)
         }
         loadMessagesTimer = null
-      }, 150)
+      }, delay)
     }
 
     // Track whether timeline events fired for the ACTIVE room during this sync cycle
@@ -75,7 +78,10 @@ export function useTimelineSync(userId: string | undefined) {
       const currentActiveRoom = useChatStore.getState().activeRoom
       if (currentActiveRoom?.roomId === room.roomId) {
         activeRoomTimelineEventFired = true
-        debouncedLoadMessages(room.roomId)
+        // Own messages get immediate reload for snappy feedback;
+        // other messages use debounce to batch rapid events.
+        const isOwnEvent = event.getSender() === userId
+        debouncedLoadMessages(room.roomId, isOwnEvent)
       }
 
       if (

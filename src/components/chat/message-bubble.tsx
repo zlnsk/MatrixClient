@@ -667,7 +667,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    useChatStore.getState().retryMessage(message.localId!)
+                    useChatStore.getState().retryMessage(message.eventId)
                   }}
                   className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-xs text-white transition-colors hover:bg-white/30"
                 >

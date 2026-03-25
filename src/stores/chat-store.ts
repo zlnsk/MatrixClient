@@ -80,8 +80,6 @@ export interface MatrixMessage {
   readBy: ReadReceipt[]
   status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
   isStateEvent?: boolean
-  /** Temporary local ID used for optimistic messages before server confirmation */
-  localId?: string
 }
 
 interface ChatState {
@@ -101,7 +99,7 @@ interface ChatState {
   setActiveRoom: (room: MatrixRoom | null) => void
   loadMessages: (roomId: string) => Promise<void>
   sendMessage: (roomId: string, content: string, replyToEventId?: string) => void
-  retryMessage: (localId: string) => void
+  retryMessage: (eventId: string) => void
   editMessage: (roomId: string, eventId: string, newContent: string) => Promise<void>
   redactMessage: (roomId: string, eventId: string) => Promise<void>
   sendReaction: (roomId: string, eventId: string, emoji: string) => Promise<void>
@@ -651,7 +649,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   loadMessages: async (roomId) => {
-    set({ isLoadingMessages: true })
+    // Only show loading spinner on initial load (empty messages), not on refreshes.
+    // This prevents a brief spinner flash every time the message list is updated.
+    const isInitialLoad = get().messages.length === 0
+    if (isInitialLoad) {
+      set({ isLoadingMessages: true })
+    }
     const client = getMatrixClient()
     if (!client) {
       set({ isLoadingMessages: false })
@@ -665,10 +668,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     try {
-      // Paginate backwards to load more history if the timeline is small
+      // Paginate backwards to load more history if the timeline is small.
+      // Only do this on initial load — not on every refresh triggered by sync/send.
       const timelineSet = room.getLiveTimeline()
       const events = timelineSet.getEvents()
-      if (events.length < 50) {
+      if (isInitialLoad && events.length < 50) {
         try {
           await client.scrollback(room, 50)
         } catch {
@@ -715,6 +719,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const id = e.getId()
           if (id && seen.has(id)) continue // deduplicate
           if (id) seen.add(id)
+
+          // Filter out edit/replacement events — the original message already
+          // picks up the edited content via replacingEvent(). Showing the
+          // replacement event as a separate message causes duplicates.
+          const relatesTo = e.getContent()?.['m.relates_to']
+          if (relatesTo?.rel_type === 'm.replace') continue
+
           const msg = eventToMatrixMessage(e, room)
           if (msg) newMessages.push(msg)
         } catch {
@@ -738,25 +749,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // Preserve optimistic messages (sending/failed) that haven't been confirmed
-      // by the server sync yet. These have a localId and won't appear in the timeline.
-      const existing = get().messages
-      const serverEventIds = new Set(newMessages.map(m => m.eventId))
-      const pendingOptimistic = existing.filter(
-        m => m.localId && (m.status === 'sending' || m.status === 'failed') && !serverEventIds.has(m.eventId)
-      )
-      // Append pending optimistic messages at the end (they are the most recent)
-      const mergedMessages = pendingOptimistic.length > 0
-        ? [...newMessages, ...pendingOptimistic]
-        : newMessages
-
       // Quick equality check: skip setState if messages haven't actually changed.
       // Compare by length, then key fields of each message to avoid unnecessary re-renders.
-      let changed = existing.length !== mergedMessages.length
+      const existing = get().messages
+      let changed = existing.length !== newMessages.length
       if (!changed) {
-        for (let i = 0; i < mergedMessages.length; i++) {
+        for (let i = 0; i < newMessages.length; i++) {
           const a = existing[i]
-          const b = mergedMessages[i]
+          const b = newMessages[i]
           if (
             a.eventId !== b.eventId ||
             a.timestamp !== b.timestamp ||
@@ -774,7 +774,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       if (changed) {
-        set({ messages: mergedMessages, isLoadingMessages: false })
+        set({ messages: newMessages, isLoadingMessages: false })
       } else {
         set({ isLoadingMessages: false })
       }
@@ -797,15 +797,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       body: content,
     }
 
-    // Build reply-to event info for the optimistic message
-    let replyToEvent: MatrixMessage['replyToEvent'] = null
     if (replyToEventId) {
       const room = client.getRoom(roomId)
       const replyEvt = room?.findEventById(replyToEventId)
       if (replyEvt) {
         const replyBody = replyEvt.getContent().body || ''
         const replySender = replyEvt.getSender()
-        const replyMember = room?.getMember(replySender!)
         msgContent.body = `> <${replySender}> ${replyBody}\n\n${content}`
         msgContent.format = 'org.matrix.custom.html'
         const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -813,83 +810,57 @@ export const useChatStore = create<ChatState>((set, get) => ({
         msgContent['m.relates_to'] = {
           'm.in_reply_to': { event_id: replyToEventId },
         }
-        replyToEvent = {
-          eventId: replyEvt.getId()!,
-          senderId: replySender!,
-          senderName: cleanDisplayName(replyMember?.name || replySender!),
-          content: replyBody,
-        }
       }
     }
 
-    // Create optimistic local message with a temporary ID
-    const localId = `~local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-    const room = client.getRoom(roomId)
-    const member = room?.getMember(userId)
-    const optimisticMessage: MatrixMessage = {
-      eventId: localId,
-      roomId,
-      senderId: userId,
-      senderName: cleanDisplayName(member?.name || userId),
-      senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
-      type: 'm.text',
-      msgtype: 'm.text',
-      content,
-      formattedContent: null,
-      timestamp: Date.now(),
-      isEdited: false,
-      isRedacted: false,
-      replyToEvent,
-      reactions: new Map(),
-      mediaUrl: null,
-      mediaInfo: null,
-      encryptedFile: null,
-      readBy: [],
-      status: 'sending',
-      localId,
-    }
-
-    // Add optimistic message to the list immediately
-    const currentMessages = get().messages
-    set({ messages: [...currentMessages, optimisticMessage] })
-
-    // Send to server in the background
+    // Send via SDK — the SDK creates a pending event synchronously (before the
+    // network request), adds it to room.getPendingEvents(), and fires a Timeline
+    // event. We rely on this SDK pending event as the local echo instead of
+    // creating our own optimistic message, which caused double-message flashes.
     ;(async () => {
       try {
-        const result = await (client as any).sendEvent(roomId, 'm.room.message', msgContent)
-        // Replace the optimistic message with the confirmed event ID and 'sent' status.
-        // The sync loop will eventually deliver the real event via loadMessages,
-        // which will replace this by eventId match since we update it here.
-        const realEventId = result?.event_id
-        if (realEventId) {
-          const msgs = get().messages.map(m =>
-            m.localId === localId
-              ? { ...m, eventId: realEventId, status: 'sent' as const, localId: undefined }
-              : m
-          )
-          set({ messages: msgs })
-        }
+        await (client as any).sendEvent(roomId, 'm.room.message', msgContent)
       } catch (err) {
         console.error('Failed to send message:', err)
-        // Mark as failed so the user can retry
-        const msgs = get().messages.map(m =>
-          m.localId === localId ? { ...m, status: 'failed' as const } : m
-        )
-        set({ messages: msgs })
+      }
+      // Refresh after send completes to update status (sent/failed)
+      if (get().activeRoom?.roomId === roomId) {
+        get().loadMessages(roomId)
       }
     })()
+
+    // Immediately reload messages to pick up the SDK's pending event.
+    // The SDK has already created it synchronously before sendEvent's first await.
+    get().loadMessages(roomId)
   },
 
-  retryMessage: (localId) => {
+  retryMessage: (eventId) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    const room = client.getRoom(get().activeRoom?.roomId || '')
+    if (!room) return
+
+    // Find the failed event in the SDK's pending events and resend it
+    const pendingEvent = room.getPendingEvents().find(e => e.getId() === eventId)
+    if (pendingEvent) {
+      client.resendEvent(pendingEvent, room).catch(err => {
+        console.error('Failed to resend message:', err)
+      })
+      // Refresh to show updated status
+      const roomId = room.roomId
+      if (get().activeRoom?.roomId === roomId) {
+        get().loadMessages(roomId)
+      }
+      return
+    }
+
+    // Fallback: if SDK event not found, find in our messages and re-send
     const messages = get().messages
-    const failedMsg = messages.find(m => m.localId === localId && m.status === 'failed')
-    if (!failedMsg) return
-
-    // Remove the failed message from the list
-    set({ messages: messages.filter(m => m.localId !== localId) })
-
-    // Re-send using the original content
-    get().sendMessage(failedMsg.roomId, failedMsg.content, failedMsg.replyToEvent?.eventId)
+    const failedMsg = messages.find(m => m.eventId === eventId && m.status === 'failed')
+    if (failedMsg) {
+      get().sendMessage(failedMsg.roomId, failedMsg.content, failedMsg.replyToEvent?.eventId)
+    }
   },
 
   editMessage: async (roomId, eventId, newContent) => {
