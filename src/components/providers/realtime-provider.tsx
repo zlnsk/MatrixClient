@@ -13,6 +13,7 @@ import { useTypingIndicators } from '@/hooks/use-typing-indicators'
 import { useReadReceipts } from '@/hooks/use-read-receipts'
 import { useRoomMembership } from '@/hooks/use-room-membership'
 import { useCallSetup } from '@/hooks/use-call-setup'
+import { useUnreadTitle } from '@/hooks/use-unread-title'
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
@@ -26,6 +27,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   useReadReceipts(user?.userId)
   useRoomMembership(user?.userId)
   useCallSetup(user?.userId)
+  useUnreadTitle()
 
   // Verification request listener + cross-signing check
   useEffect(() => {

@@ -102,15 +102,33 @@ export function useTimelineSync(userId: string | undefined) {
           playNotificationSound()
         }
 
-        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-          const senderName = room.getMember(event.getSender()!)?.name || event.getSender()
-          const clearContent = (event as any).getClearContent?.()
-          const content = clearContent || event.getContent()
-          const body = content?.body || 'New message'
-          new Notification(`${senderName} in ${room.name}`, {
-            body: body.substring(0, 100),
-            icon: '/favicon.ico',
-          })
+        if ('Notification' in window && Notification.permission === 'granted') {
+          // Show notification when tab is hidden OR when the message is in a different room
+          const shouldNotify = document.hidden || !currentActiveRoom || currentActiveRoom.roomId !== room.roomId
+          if (shouldNotify) {
+            const senderName = room.getMember(event.getSender()!)?.name || event.getSender()
+            const clearContent = (event as any).getClearContent?.()
+            const content = clearContent || event.getContent()
+            const body = content?.body || 'New message'
+
+            // Route through service worker for reliable mobile notifications
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'SHOW_NOTIFICATION',
+                title: `${senderName} in ${room.name}`,
+                body: body.substring(0, 100),
+                tag: `msg-${room.roomId}`,
+                data: { roomId: room.roomId },
+              })
+            } else {
+              // Fallback to Notification API
+              new Notification(`${senderName} in ${room.name}`, {
+                body: body.substring(0, 100),
+                icon: '/icon-192.png',
+                tag: `msg-${room.roomId}`,
+              })
+            }
+          }
         }
       }
     }
@@ -162,7 +180,21 @@ export function useTimelineSync(userId: string | undefined) {
       Notification.requestPermission()
     }
 
+    // Handle notification click from service worker — navigate to the room
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'NOTIFICATION_CLICK' && event.data.roomId) {
+        const { rooms, setActiveRoom, markAsRead } = useChatStore.getState()
+        const room = rooms.find(r => r.roomId === event.data.roomId)
+        if (room) {
+          setActiveRoom(room)
+          markAsRead(room.roomId)
+        }
+      }
+    }
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage)
+
     return () => {
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage)
       if (loadRoomsTimer) clearTimeout(loadRoomsTimer)
       if (loadMessagesTimer) clearTimeout(loadMessagesTimer)
       if (syncCycleResetTimer) clearTimeout(syncCycleResetTimer)

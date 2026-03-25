@@ -485,11 +485,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             const { displayName, matrixId } = parseDisplayName(message.senderName, message.senderId)
             return (
               <div className="mb-1 ml-1 flex items-baseline gap-2">
-                <span className="text-sm font-bold text-m3-on-surface dark:text-m3-on-surface-variant">
+                <span className="text-[15px] font-bold text-m3-on-surface md:text-sm dark:text-m3-on-surface-variant">
                   {displayName}
                 </span>
                 {matrixId && (
-                  <span className="text-[10px] font-normal text-m3-on-surface-variant dark:text-m3-outline truncate max-w-[180px] select-text" title={matrixId}>
+                  <span className="text-xs font-normal text-m3-on-surface-variant md:text-[10px] dark:text-m3-outline truncate max-w-[180px] select-text" title={matrixId}>
                     {matrixId}
                   </span>
                 )}
@@ -624,7 +624,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 )}
               </div>
             ) : message.msgtype === 'm.emote' ? (
-              <div className="rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words italic">
+              <div className="rich-content text-base leading-relaxed md:text-[15px] whitespace-pre-wrap break-words italic">
                 <span className="font-medium not-italic">{message.senderName}</span>{' '}
                 <span
                   dangerouslySetInnerHTML={{
@@ -634,7 +634,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               </div>
             ) : (
               <div
-                className={`rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words ${message.msgtype === 'm.notice' ? 'italic opacity-70' : ''}`}
+                className={`rich-content text-base leading-relaxed md:text-[15px] whitespace-pre-wrap break-words ${message.msgtype === 'm.notice' ? 'italic opacity-70' : ''}`}
                 dangerouslySetInnerHTML={{
                   __html: applySearchHighlight(renderRichContent(message.content, message.formattedContent), searchHighlight || ''),
                 }}

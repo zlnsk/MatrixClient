@@ -82,6 +82,15 @@ export interface MatrixMessage {
   isStateEvent?: boolean
 }
 
+export interface FileUploadProgress {
+  id: string
+  fileName: string
+  roomId: string
+  progress: number // 0-100
+  status: 'uploading' | 'sending' | 'done' | 'error'
+  error?: string
+}
+
 interface ChatState {
   rooms: MatrixRoom[]
   pendingInvites: MatrixRoom[]
@@ -90,6 +99,7 @@ interface ChatState {
   isLoadingMessages: boolean
   typingUsers: string[]
   searchQuery: string
+  activeUploads: FileUploadProgress[]
 
   loadRooms: () => void
   acceptInvite: (roomId: string) => Promise<void>
@@ -480,6 +490,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoadingMessages: false,
   typingUsers: [],
   searchQuery: '',
+  activeUploads: [],
 
   loadRooms: () => {
     const client = getMatrixClient()
@@ -1079,49 +1090,96 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (BLOCKED_EXTENSIONS.includes(ext)) {
       throw new Error(`File extension "${ext}" is not allowed for security reasons.`)
     }
-    // Strip SVG files that may contain embedded scripts
     if (file.type === 'image/svg+xml' || ext === '.svg') {
       throw new Error('SVG files are not allowed — they can contain executable code.')
     }
 
-    // Upload file to Matrix content repository
-    const uploadResponse = await client.uploadContent(file, {
-      name: file.name,
-      type: file.type,
-    })
-    const mxcUrl = uploadResponse.content_uri
+    // Create upload tracking entry
+    const uploadId = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const uploadEntry: FileUploadProgress = {
+      id: uploadId,
+      fileName: file.name,
+      roomId,
+      progress: 0,
+      status: 'uploading',
+    }
+    set(state => ({ activeUploads: [...state.activeUploads, uploadEntry] }))
 
-    // Determine message type based on file MIME type
-    let msgtype = 'm.file'
-    if (file.type.startsWith('image/')) msgtype = 'm.image'
-    else if (file.type.startsWith('video/')) msgtype = 'm.video'
-    else if (file.type.startsWith('audio/')) msgtype = 'm.audio'
-
-    const content: Record<string, unknown> = {
-      msgtype,
-      body: file.name,
-      url: mxcUrl,
-      info: {
-        mimetype: file.type,
-        size: file.size,
-      },
+    const updateUpload = (updates: Partial<FileUploadProgress>) => {
+      set(state => ({
+        activeUploads: state.activeUploads.map(u =>
+          u.id === uploadId ? { ...u, ...updates } : u
+        ),
+      }))
     }
 
-    // Mark voice messages with MSC3245 voice flag for bridge compatibility
-    if (msgtype === 'm.audio' && file.name.startsWith('voice-message-')) {
-      content['org.matrix.msc3245.voice'] = {}
+    const removeUpload = () => {
+      setTimeout(() => {
+        set(state => ({
+          activeUploads: state.activeUploads.filter(u => u.id !== uploadId),
+        }))
+      }, 2000) // Keep "done" state visible briefly
     }
 
-    // For images, try to get dimensions
-    if (msgtype === 'm.image') {
+    // Run upload in background — don't await
+    ;(async () => {
       try {
-        const dimensions = await getImageDimensions(file)
-        ;(content.info as Record<string, unknown>).w = dimensions.width
-        ;(content.info as Record<string, unknown>).h = dimensions.height
-      } catch { /* ignore */ }
-    }
+        // Upload file to Matrix content repository
+        updateUpload({ progress: 10 })
+        const uploadResponse = await client.uploadContent(file, {
+          name: file.name,
+          type: file.type,
+        })
+        const mxcUrl = uploadResponse.content_uri
+        updateUpload({ progress: 70, status: 'sending' })
 
-    await (client as any).sendEvent(roomId, 'm.room.message', content)
+        // Determine message type based on file MIME type
+        let msgtype = 'm.file'
+        if (file.type.startsWith('image/')) msgtype = 'm.image'
+        else if (file.type.startsWith('video/')) msgtype = 'm.video'
+        else if (file.type.startsWith('audio/')) msgtype = 'm.audio'
+
+        const content: Record<string, unknown> = {
+          msgtype,
+          body: file.name,
+          url: mxcUrl,
+          info: {
+            mimetype: file.type,
+            size: file.size,
+          },
+        }
+
+        // Mark voice messages with MSC3245 voice flag for bridge compatibility
+        if (msgtype === 'm.audio' && file.name.startsWith('voice-message-')) {
+          content['org.matrix.msc3245.voice'] = {}
+        }
+
+        // For images, try to get dimensions
+        if (msgtype === 'm.image') {
+          try {
+            const dimensions = await getImageDimensions(file)
+            ;(content.info as Record<string, unknown>).w = dimensions.width
+            ;(content.info as Record<string, unknown>).h = dimensions.height
+          } catch { /* ignore */ }
+        }
+
+        updateUpload({ progress: 85 })
+        await (client as any).sendEvent(roomId, 'm.room.message', content)
+        updateUpload({ progress: 100, status: 'done' })
+        removeUpload()
+
+        // Refresh messages to show the sent file
+        if (get().activeRoom?.roomId === roomId) {
+          get().loadMessages(roomId)
+        }
+      } catch (err) {
+        updateUpload({
+          status: 'error',
+          error: err instanceof Error ? err.message : 'Upload failed',
+        })
+        removeUpload()
+      }
+    })()
   },
 
   leaveRoom: async (roomId) => {
@@ -1354,6 +1412,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isLoadingMessages: false,
       typingUsers: [],
       searchQuery: '',
+      activeUploads: [],
     })
   },
 }))

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
+import { useChatStore, type MatrixMessage, type FileUploadProgress } from '@/stores/chat-store'
 import { getMatrixClient } from '@/lib/matrix/client'
 import {
   Send,
@@ -35,12 +35,12 @@ const EMOJI_CATEGORIES: Record<string, string[]> = {
 export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: MessageInputProps) {
   const { sendTyping, uploadFile, setDisplayName, joinRoom, inviteMember, setRoomTopic } = useChatStore()
   const activeRoom = useChatStore(s => s.activeRoom)
+  const activeUploads = useChatStore(s => s.activeUploads)
+  const roomUploads = activeUploads.filter(u => u.roomId === roomId)
   const [content, setContent] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
   const [emojiCategory, setEmojiCategory] = useState('Smileys')
-  // isSending state removed — messages are now sent optimistically
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
-  const [isUploading, setIsUploading] = useState(false)
   const [commandStatus, setCommandStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [recordingDuration, setRecordingDuration] = useState(0)
@@ -274,43 +274,39 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
     const hasFiles = pendingFiles.length > 0
 
     if (!trimmed && !hasFiles) return
-    if (isUploading) return
 
     setCommandStatus(null)
     sendTyping(roomId, false)
-    try {
-      // Upload pending files first
-      if (hasFiles) {
-        setIsUploading(true)
-        for (const file of pendingFiles) {
-          await uploadFile(roomId, file)
-        }
-        setPendingFiles([])
-        setIsUploading(false)
+
+    // Fire-and-forget file uploads — they run in background with progress
+    if (hasFiles) {
+      for (const file of pendingFiles) {
+        uploadFile(roomId, file)
       }
-      // Check for slash commands
-      if (trimmed && trimmed.startsWith('/')) {
-        try {
-          const handled = await handleSlashCommand(trimmed)
-          if (handled) {
-            setContent('')
-            inputRef.current?.focus()
-            return
-          }
-        } catch (err) {
-          setCommandStatus({ type: 'error', message: err instanceof Error ? err.message : 'Command failed' })
+      setPendingFiles([])
+    }
+
+    // Check for slash commands
+    if (trimmed && trimmed.startsWith('/')) {
+      try {
+        const handled = await handleSlashCommand(trimmed)
+        if (handled) {
+          setContent('')
+          inputRef.current?.focus()
           return
         }
+      } catch (err) {
+        setCommandStatus({ type: 'error', message: err instanceof Error ? err.message : 'Command failed' })
+        return
       }
-      // Send text message if present — non-blocking, message appears optimistically
-      if (trimmed) {
-        onSend(trimmed)
-      }
-      setContent('')
-      inputRef.current?.focus()
-    } finally {
-      setIsUploading(false)
     }
+
+    // Send text message if present — non-blocking, message appears optimistically
+    if (trimmed) {
+      onSend(trimmed)
+    }
+    setContent('')
+    inputRef.current?.focus()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -417,7 +413,8 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const getFilePreview = (file: File) => filePreviewUrls.get(file) ?? null
 
   return (
-    <div className="bg-white px-3 py-2.5 dark:bg-m3-surface-container md:px-4 md:py-3">
+    <div className="bg-m3-surface-container-lowest px-2 pb-2 pt-1 dark:bg-m3-surface md:px-4 md:pb-3 md:pt-1.5">
+     <div className="rounded-2xl border border-m3-outline-variant/40 bg-white px-3 py-2.5 shadow-lg shadow-black/8 dark:border-m3-outline-variant/30 dark:bg-m3-surface-container dark:shadow-black/20 md:px-4 md:py-3">
       {/* Command status */}
       {commandStatus && (
         <div
@@ -491,6 +488,29 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         </div>
       )}
 
+      {/* Upload progress indicators */}
+      {roomUploads.length > 0 && (
+        <div className="mb-2 space-y-1.5">
+          {roomUploads.map(upload => (
+            <div key={upload.id} className="flex items-center gap-3 rounded-lg bg-m3-surface-container px-3 py-2 dark:bg-m3-surface-container-high">
+              <Loader2 className={`h-4 w-4 flex-shrink-0 ${upload.status === 'error' ? 'text-m3-error' : 'text-m3-primary animate-spin'}`} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium text-m3-on-surface">{upload.fileName}</p>
+                <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-m3-outline-variant/30">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${upload.status === 'error' ? 'bg-m3-error' : upload.status === 'done' ? 'bg-green-500' : 'bg-m3-primary'}`}
+                    style={{ width: `${upload.progress}%` }}
+                  />
+                </div>
+              </div>
+              <span className="flex-shrink-0 text-xs text-m3-on-surface-variant">
+                {upload.status === 'uploading' ? 'Uploading...' : upload.status === 'sending' ? 'Sending...' : upload.status === 'done' ? 'Sent' : upload.error || 'Failed'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="relative flex items-center gap-2">
         {/* Hidden file input */}
         <input
@@ -542,7 +562,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
             </button>
           </div>
         ) : (
-          <div className="flex flex-1 items-center rounded-full border border-m3-outline-variant/60 bg-m3-surface-container dark:border-m3-outline-variant/40 dark:bg-m3-surface-container-high">
+          <div className="flex flex-1 items-center rounded-full bg-m3-surface-container/60 dark:bg-m3-surface-container-high/60">
             <textarea
               ref={inputRef}
               value={content}
@@ -552,7 +572,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               placeholder="Type a message..."
               rows={1}
               enterKeyHint="send"
-              className="max-h-32 min-h-[42px] flex-1 resize-none bg-transparent px-5 py-2.5 text-sm text-m3-on-surface placeholder-m3-on-surface-variant focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3"
+              className="max-h-32 min-h-[42px] flex-1 resize-none bg-transparent px-5 py-2.5 text-base text-m3-on-surface placeholder-m3-on-surface-variant focus:outline-none dark:text-m3-on-surface dark:placeholder-m3-outline md:min-h-[44px] md:py-3 md:text-sm"
             />
             {/* Action buttons inside the pill */}
             <div className="flex flex-shrink-0 items-center gap-0.5 pr-2">
@@ -653,18 +673,15 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={(!content.trim() && pendingFiles.length === 0) || isUploading}
+            disabled={!content.trim() && pendingFiles.length === 0}
             className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary text-white transition-all hover:bg-m3-primary/90 active:bg-m3-primary/80 disabled:opacity-30"
             aria-label="Send message"
           >
-            {isUploading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
+            <Send className="h-5 w-5" />
           </button>
         )}
       </div>
+     </div>
     </div>
   )
 }
