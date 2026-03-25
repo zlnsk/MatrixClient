@@ -11,12 +11,7 @@ import type { CallInfo } from '@/stores/call-store'
 
 let currentCall: MatrixCall | null = null
 
-/**
- * Enforce relay-only ICE transport to prevent IP leakage.
- * Disables host candidates so all media flows through TURN servers.
- */
 // Tested against matrix-js-sdk 41.1.0 — peerConn is a private property.
-// If the SDK changes this internal, relay enforcement will fail loudly (see assertion below).
 const SDK_PEER_CONN_FIELD = 'peerConn'
 
 function assertPeerConnAccessible(call: MatrixCall): RTCPeerConnection | null {
@@ -33,11 +28,19 @@ function assertPeerConnAccessible(call: MatrixCall): RTCPeerConnection | null {
   return pc
 }
 
+/**
+ * Enforce relay-only ICE transport to prevent IP leakage,
+ * but only if TURN servers are available. If no TURN servers
+ * are configured, allow all transport types so calls still work.
+ */
 function enforceRelayIcePolicy(call: MatrixCall): void {
   const pc = assertPeerConnAccessible(call)
   if (!pc) return
   const config = pc.getConfiguration()
-  if (config.iceTransportPolicy !== 'relay') {
+  const hasTurnServers = config.iceServers?.some(s =>
+    (Array.isArray(s.urls) ? s.urls : [s.urls]).some((u: string) => u.startsWith('turn:') || u.startsWith('turns:'))
+  )
+  if (hasTurnServers && config.iceTransportPolicy !== 'relay') {
     pc.setConfiguration({ ...config, iceTransportPolicy: 'relay' })
   }
 }

@@ -579,7 +579,7 @@ export async function loginWithPassword(
     logger: filteredLogger,
     cryptoCallbacks,
     timelineSupport: true,
-    fallbackICEServerAllowed: false,
+    fallbackICEServerAllowed: true,
     iceCandidatePoolSize: 20,
     fetchFn: createProxiedFetch(homeserverUrl),
     scheduler: new sdk.MatrixScheduler(
@@ -633,7 +633,7 @@ export function restoreSession(): sdk.MatrixClient | null {
       logger: filteredLogger,
       cryptoCallbacks,
       timelineSupport: true,
-      fallbackICEServerAllowed: false,
+      fallbackICEServerAllowed: true,
       iceCandidatePoolSize: 20,
       fetchFn: createProxiedFetch(session.homeserverUrl),
       scheduler: new sdk.MatrixScheduler(
