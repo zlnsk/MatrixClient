@@ -220,25 +220,39 @@ export function CallOverlay() {
     setIsMinimized,
   } = useCallStore()
 
-  const localVideoRef = useRef<HTMLVideoElement>(null)
-  const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
 
-  // Attach streams to video elements — re-run when minimized state changes
-  // so streams are re-attached after returning from PiP
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream
-    }
-  }, [localStream, isMinimized])
+  // Use callback refs to attach streams immediately when video elements mount.
+  // This is more reliable than useEffect + useRef, which can miss the element
+  // when returning from PiP (the old ref is stale, the new element hasn't
+  // been assigned to the ref yet when the effect runs).
+  const localVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    if (el && localStream) el.srcObject = localStream
+  }, [localStream])
 
-  useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream
-    }
-  }, [remoteStream, isMinimized])
+  const remoteVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    if (el && remoteStream) el.srcObject = remoteStream
+  }, [remoteStream])
 
   const [isLandscape, setIsLandscape] = useState(false)
+  const [resolution, setResolution] = useState('')
+
+  // Track remote video resolution
+  useEffect(() => {
+    if (!remoteStream) { setResolution(''); return }
+    const videoTrack = remoteStream.getVideoTracks()[0]
+    if (!videoTrack) { setResolution(''); return }
+
+    const update = () => {
+      const settings = videoTrack.getSettings()
+      if (settings.width && settings.height) {
+        setResolution(`${settings.width}×${settings.height}`)
+      }
+    }
+    update()
+    const interval = setInterval(update, 3000)
+    return () => clearInterval(interval)
+  }, [remoteStream])
 
   // Play ringing sounds based on call status
   useEffect(() => {
@@ -317,6 +331,13 @@ export function CallOverlay() {
             playsInline
             className={`absolute inset-0 h-full w-full ${isLandscape ? 'object-contain bg-black' : 'object-cover'}`}
           />
+        )}
+
+        {/* Resolution overlay */}
+        {isVideo && isConnected && resolution && (
+          <span className="absolute top-4 left-4 z-10 rounded-md bg-black/50 px-2 py-0.5 text-[10px] font-mono text-white/70 backdrop-blur-sm">
+            {resolution}
+          </span>
         )}
 
         {/* When no remote video, show avatar */}
