@@ -52,9 +52,18 @@ async function handler(
   const matrixPath = '/' + path.join('/')
   const search = request.nextUrl.search
 
-  // Only allow proxying /_matrix/ paths to prevent SSRF
-  if (!matrixPath.startsWith('/_matrix/')) {
-    return NextResponse.json({ error: 'Only /_matrix/ paths are allowed' }, { status: 403 })
+  // Only allow proxying specific /_matrix/ path prefixes to prevent SSRF
+  const ALLOWED_MATRIX_PREFIXES = [
+    '/_matrix/client/',
+    '/_matrix/media/',
+    '/_matrix/key/',
+    '/_matrix/federation/',
+  ]
+  if (!ALLOWED_MATRIX_PREFIXES.some(prefix => matrixPath.startsWith(prefix))) {
+    return NextResponse.json(
+      { error: 'Only /_matrix/client/, /_matrix/media/, /_matrix/key/, and /_matrix/federation/ paths are allowed' },
+      { status: 403 }
+    )
   }
 
   const targetUrl = `${hsUrl.origin}${matrixPath}${search}`

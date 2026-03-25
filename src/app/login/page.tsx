@@ -6,9 +6,22 @@ import { useAuthStore } from '@/stores/auth-store'
 import { resolveHomeserver } from '@/lib/matrix/client'
 import { Eye, EyeOff, Loader2, Server, CheckCircle, AlertCircle } from 'lucide-react'
 
-// Rate limiting state (module-level so it persists across re-renders)
-let failedAttempts = 0
-let lockoutUntil = 0
+// Rate limiting state persisted in sessionStorage so it survives page refreshes
+// but not tab/browser close (intentional — lockout is per-session)
+function getRateLimitState(): { failedAttempts: number; lockoutUntil: number } {
+  if (typeof window === 'undefined') return { failedAttempts: 0, lockoutUntil: 0 }
+  try {
+    const raw = sessionStorage.getItem('matrix_login_ratelimit')
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return { failedAttempts: 0, lockoutUntil: 0 }
+}
+
+function setRateLimitState(failedAttempts: number, lockoutUntil: number): void {
+  try {
+    sessionStorage.setItem('matrix_login_ratelimit', JSON.stringify({ failedAttempts, lockoutUntil }))
+  } catch { /* ignore */ }
+}
 
 function mapLoginError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err)
@@ -81,10 +94,11 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
 
-    // Rate limiting — exponential backoff after failed attempts
+    // Rate limiting — exponential backoff after failed attempts (persisted in sessionStorage)
+    const rateLimit = getRateLimitState()
     const now = Date.now()
-    if (lockoutUntil > now) {
-      const secs = Math.ceil((lockoutUntil - now) / 1000)
+    if (rateLimit.lockoutUntil > now) {
+      const secs = Math.ceil((rateLimit.lockoutUntil - now) / 1000)
       setError(`Too many failed attempts. Please wait ${secs}s before trying again.`)
       return
     }
@@ -103,8 +117,7 @@ export default function LoginPage() {
       // Step 2: Authenticate
       setLoginStep('authenticating')
       await signIn(username, password, homeserverUrl)
-      failedAttempts = 0
-      lockoutUntil = 0
+      setRateLimitState(0, 0)
 
       // Step 3: Sync
       setLoginStep('syncing')
@@ -113,11 +126,14 @@ export default function LoginPage() {
       setLoginStep('done')
       router.push('/')
     } catch (err) {
-      failedAttempts++
-      if (failedAttempts >= 3) {
-        const delay = Math.min(2000 * Math.pow(2, failedAttempts - 3), 30000)
-        lockoutUntil = Date.now() + delay
+      const rl = getRateLimitState()
+      const newAttempts = rl.failedAttempts + 1
+      let newLockout = 0
+      if (newAttempts >= 3) {
+        const delay = Math.min(2000 * Math.pow(2, newAttempts - 3), 30000)
+        newLockout = Date.now() + delay
       }
+      setRateLimitState(newAttempts, newLockout)
       setLoginStep('error')
       setError(mapLoginError(err))
       // Reset to idle after showing error

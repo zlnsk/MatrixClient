@@ -3,6 +3,7 @@
 import * as sdk from 'matrix-js-sdk'
 import type { Logger } from 'matrix-js-sdk/lib/logger'
 import type { CryptoCallbacks } from 'matrix-js-sdk/lib/crypto-api'
+import { reportError } from '@/lib/error-reporter'
 
 let matrixClient: sdk.MatrixClient | null = null
 
@@ -152,21 +153,27 @@ function isSuppressed(args: any[]): boolean {
 // Log suppression is handled exclusively via filteredLogger passed to the SDK.
 // Global console monkey-patching is intentionally avoided to prevent masking
 // errors from the application or third-party libraries.
+//
+// Suppressed messages are logged at debug level instead of being discarded,
+// so they remain accessible in browser DevTools when verbose logging is enabled.
 
 /**
  * A logger that filters out noisy crypto decryption warnings.
  * These occur for every historical message sent before this device logged in
  * when key backup hasn't been restored yet - expected behavior, not errors.
+ *
+ * Suppressed messages are downgraded to console.debug instead of being discarded,
+ * making them available when DevTools verbose logging is enabled.
  */
 const filteredLogger: Logger = {
   getChild(namespace: string): Logger {
     return filteredLogger
   },
-  trace(...msg: any[]) { if (!isSuppressed(msg)) console.trace(...msg) },
+  trace(...msg: any[]) { if (!isSuppressed(msg)) console.trace(...msg); else console.debug('[suppressed:trace]', ...msg) },
   debug(...msg: any[]) { if (!isSuppressed(msg)) console.debug(...msg) },
-  info(...msg: any[]) { if (!isSuppressed(msg)) console.info(...msg) },
-  warn(...msg: any[]) { if (!isSuppressed(msg)) console.warn(...msg) },
-  error(...msg: any[]) { if (!isSuppressed(msg)) console.error(...msg) },
+  info(...msg: any[]) { if (!isSuppressed(msg)) console.info(...msg); else console.debug('[suppressed:info]', ...msg) },
+  warn(...msg: any[]) { if (!isSuppressed(msg)) console.warn(...msg); else console.debug('[suppressed:warn]', ...msg) },
+  error(...msg: any[]) { if (!isSuppressed(msg)) console.error(...msg); else console.debug('[suppressed:error]', ...msg) },
 }
 
 export function getMatrixClient(): sdk.MatrixClient | null {
@@ -236,11 +243,11 @@ async function initCrypto(client: sdk.MatrixClient): Promise<void> {
           useIndexedDB: true,
         })
       } catch (retryErr) {
-        console.error('Crypto initialization failed after clearing store:', retryErr)
+        reportError('crypto', retryErr)
         throw retryErr
       }
     } else {
-      console.error('Crypto initialization failed:', err)
+      reportError('crypto', err)
       throw err
     }
   }

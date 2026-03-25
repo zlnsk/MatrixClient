@@ -15,14 +15,27 @@ let currentCall: MatrixCall | null = null
  * Enforce relay-only ICE transport to prevent IP leakage.
  * Disables host candidates so all media flows through TURN servers.
  */
-// Tested against matrix-js-sdk 41.2.0 — peerConn is a private property.
-// If the SDK changes this internal, relay enforcement silently breaks.
-function enforceRelayIcePolicy(call: MatrixCall): void {
-  const pc = (call as any).peerConn as RTCPeerConnection | undefined
+// Tested against matrix-js-sdk 41.1.0 — peerConn is a private property.
+// If the SDK changes this internal, relay enforcement will fail loudly (see assertion below).
+const SDK_PEER_CONN_FIELD = 'peerConn'
+
+function assertPeerConnAccessible(call: MatrixCall): RTCPeerConnection | null {
+  const pc = (call as any)[SDK_PEER_CONN_FIELD] as RTCPeerConnection | undefined
   if (!pc) {
-    console.warn('[voip] Cannot enforce relay ICE policy — peerConn not accessible. IP leak possible.')
-    return
+    console.error(
+      `[voip] CRITICAL: '${SDK_PEER_CONN_FIELD}' not found on MatrixCall. ` +
+      `matrix-js-sdk may have changed its internals. ` +
+      `Relay-only ICE and HD bitrate controls are BROKEN. ` +
+      `Pin matrix-js-sdk to 41.1.0 or update the field name.`
+    )
+    return null
   }
+  return pc
+}
+
+function enforceRelayIcePolicy(call: MatrixCall): void {
+  const pc = assertPeerConnAccessible(call)
+  if (!pc) return
   const config = pc.getConfiguration()
   if (config.iceTransportPolicy !== 'relay') {
     pc.setConfiguration({ ...config, iceTransportPolicy: 'relay' })
@@ -166,12 +179,9 @@ async function applyHdConstraints(call: MatrixCall, isVideo: boolean): Promise<v
     }
   }
 
-  // Boost max bitrate via RTCRtpSender (accesses SDK private peerConn — see enforceRelayIcePolicy)
-  const pc = (call as any).peerConn as RTCPeerConnection | undefined
-  if (!pc) {
-    console.warn('[voip] Cannot apply HD bitrate — peerConn not accessible')
-    return
-  }
+  // Boost max bitrate via RTCRtpSender
+  const pc = assertPeerConnAccessible(call)
+  if (!pc) return
   for (const sender of pc.getSenders()) {
     const params = sender.getParameters()
     if (!params.encodings || params.encodings.length === 0) {
@@ -212,12 +222,8 @@ async function applyStandardConstraints(call: MatrixCall, isVideo: boolean): Pro
     }
   }
 
-  // Accesses SDK private peerConn — see enforceRelayIcePolicy
-  const pc = (call as any).peerConn as RTCPeerConnection | undefined
-  if (!pc) {
-    console.warn('[voip] Cannot revert bitrate — peerConn not accessible')
-    return
-  }
+  const pc = assertPeerConnAccessible(call)
+  if (!pc) return
   for (const sender of pc.getSenders()) {
     const params = sender.getParameters()
     if (!params.encodings || params.encodings.length === 0) continue
