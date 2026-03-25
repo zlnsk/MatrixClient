@@ -114,7 +114,9 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
     // profile has their real face.
     const isSmallRoom = room.members.length > 0 && room.members.length <= 3
     if ((room.isDirect || isSmallRoom || room.isBridged) && room.members.length > 0) {
-      const other = room.members.find(m => m.userId !== user?.userId)
+      const others = room.members.filter(m => m.userId !== user?.userId)
+      // Prefer the member that actually has an avatar (puppet > bot)
+      const other = others.find(m => m.avatarUrl) || others[0]
       return other?.avatarUrl || room.avatarUrl
     }
     return room.avatarUrl

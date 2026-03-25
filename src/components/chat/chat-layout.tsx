@@ -24,6 +24,13 @@ export function ChatLayout() {
   const [settingsSection, setSettingsSection] = useState<'main' | 'profile' | 'security' | 'about'>('main')
   const [showMobileSidebar, setShowMobileSidebar] = useState(true)
   const activeRoom = useChatStore(s => s.activeRoom)
+  const rooms = useChatStore(s => s.rooms)
+
+  // Update document title with unread message count
+  useEffect(() => {
+    const totalUnread = rooms.reduce((sum, r) => sum + r.unreadCount, 0)
+    document.title = totalUnread > 0 ? `(${totalUnread}) szept matrix` : 'szept matrix'
+  }, [rooms])
 
   // Resizable sidebar (desktop only)
   const [sidebarWidth, setSidebarWidth] = useState(() => {

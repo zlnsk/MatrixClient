@@ -222,7 +222,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
   const isSmallOrBridged = activeRoom.isDirect || activeRoom.isBridged || activeRoom.members.length <= 3
   const otherMember = isSmallOrBridged
-    ? activeRoom.members.find(m => m.userId !== user.userId)
+    ? (activeRoom.members.filter(m => m.userId !== user.userId).find(m => m.avatarUrl) || activeRoom.members.find(m => m.userId !== user.userId))
     : null
 
   const roomDisplayName = activeRoom.name

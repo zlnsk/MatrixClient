@@ -208,7 +208,11 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const isBridgedRoom = members.some(m => /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId))
   const isSmallRoom = (joinedCount <= 3 || summaryCount <= 3) && (joinedCount > 0 || summaryCount > 0)
   if (client && (isDirect || isSmallRoom || isBridgedRoom)) {
-    const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
+    const otherMembers = room.getJoinedMembers().filter((m: RoomMember) => m.userId !== client.getUserId())
+    // Prefer the member that has an avatar (puppet > bot)
+    const otherMember = otherMembers.find((m: RoomMember) => {
+      return profileAvatarCache.get(m.userId) || m.getMxcAvatarUrl()
+    }) || otherMembers[0]
     // Prefer profile cache (real avatar) over room member avatar (may be bridge default like Signal logo)
     const memberAvatar = (otherMember ? profileAvatarCache.get(otherMember.userId) : undefined) || otherMember?.getMxcAvatarUrl()
     if (memberAvatar) {
@@ -611,7 +615,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // profile has their real face. Always fetch to get the best avatar.
         const profileFetches: Promise<void>[] = []
         for (const sdkRoom of roomsNeedingMembers) {
-          const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
+          const otherMembers = sdkRoom.getJoinedMembers().filter((m: RoomMember) => m.userId !== client!.getUserId())
+          // Prefer member with avatar (puppet > bot), then fallback hero
+          const otherMember = otherMembers.find((m: RoomMember) => m.getMxcAvatarUrl()) || otherMembers[0]
             || sdkRoom.getAvatarFallbackMember()
           if (!otherMember) continue
 
@@ -647,8 +653,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 return m
               })
               let roomAvatar = room.avatarUrl
-              if ((room.isDirect || room.members.length <= 2) && !roomAvatar) {
-                const other = updatedMembers.find(m => m.userId !== myUserId)
+              if ((room.isDirect || room.isBridged || room.members.length <= 3) && !roomAvatar) {
+                const others = updatedMembers.filter(m => m.userId !== myUserId)
+                const other = others.find(m => m.avatarUrl) || others[0]
                 if (other?.avatarUrl) {
                   roomAvatar = other.avatarUrl
                   hasUpdate = true
