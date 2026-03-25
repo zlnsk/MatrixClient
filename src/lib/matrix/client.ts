@@ -141,6 +141,8 @@ const SUPPRESSED_PATTERNS = [
   // Push rules / TURN server 404 on servers that don't support them (Conduit etc.)
   'Getting push rules failed',
   'Failed to get TURN URIs',
+  'failed to get TURN credentials',
+  'Failed to get TURN credentials',
   'getPushRules',
   'pushrules',
 ]
