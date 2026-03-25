@@ -524,7 +524,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                   : message.status === 'sending'
                     ? 'bg-m3-primary/85 text-white'
                     : 'bg-m3-primary text-white'
-                : 'border border-m3-outline-variant/50 bg-m3-surface-container-lowest text-m3-on-surface dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high dark:text-m3-on-surface'
+                : 'border border-m3-outline-variant/50 bg-m3-surface-container-lowest text-m3-on-surface shadow-sm shadow-black/5 dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:shadow-black/10'
             }`}
           >
             {/* Inline reply quote */}
