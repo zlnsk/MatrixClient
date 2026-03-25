@@ -22,6 +22,7 @@ import {
   Minimize2,
   Maximize2,
   Sparkles,
+  RotateCcw,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { startIncomingRing, startOutgoingRingback, stopRinging } from '@/lib/notification-sound'
@@ -227,6 +228,8 @@ export function CallOverlay() {
     }
   }, [remoteStream])
 
+  const [isLandscape, setIsLandscape] = useState(false)
+
   // Play ringing sounds based on call status
   useEffect(() => {
     if (status === 'ringing') {
@@ -302,7 +305,7 @@ export function CallOverlay() {
             ref={remoteVideoRef}
             autoPlay
             playsInline
-            className="absolute inset-0 h-full w-full object-cover"
+            className={`absolute inset-0 h-full w-full ${isLandscape ? 'object-contain bg-black' : 'object-cover'}`}
           />
         )}
 
@@ -337,7 +340,11 @@ export function CallOverlay() {
 
         {/* Local video (picture-in-picture) */}
         {isVideo && localStream && (
-          <div className="absolute top-20 right-6 h-36 w-28 overflow-hidden rounded-xl border-2 border-white/20 shadow-lg sm:h-48 sm:w-36">
+          <div className={`absolute overflow-hidden rounded-xl border-2 border-white/20 shadow-lg ${
+            isLandscape
+              ? 'top-6 right-6 h-28 w-36 sm:h-32 sm:w-44'
+              : 'top-20 right-6 h-36 w-28 sm:h-48 sm:w-36'
+          }`}>
             <video
               ref={localVideoRef}
               autoPlay
@@ -426,6 +433,21 @@ export function CallOverlay() {
                 >
                   <Minimize2 className="h-6 w-6" />
                 </button>
+
+                {/* Landscape/portrait toggle (video calls only) */}
+                {isVideo && (
+                  <button
+                    onClick={() => setIsLandscape(!isLandscape)}
+                    className={`flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 ${
+                      isLandscape
+                        ? 'bg-m3-primary text-white'
+                        : 'bg-white/20 text-white hover:bg-white/30'
+                    }`}
+                    title={isLandscape ? 'Switch to portrait' : 'Switch to landscape'}
+                  >
+                    <RotateCcw className="h-6 w-6" />
+                  </button>
+                )}
 
                 {/* Fullscreen toggle */}
                 <button

@@ -336,8 +336,6 @@ export async function placeCall(roomId: string, isVideo: boolean): Promise<void>
     } else {
       await call.placeVoiceCall()
     }
-    // Apply relay policy after peerConn is created by placeCall
-    enforceRelayIcePolicy(call)
   } catch (err) {
     console.error('Failed to place call:', err)
     endCallCleanup()
@@ -369,8 +367,9 @@ export function handleIncomingCall(call: MatrixCall): void {
   useCallStore.getState().setStatus('ringing')
 
   attachCallListeners(call)
-  // Don't enforce relay here — peerConn may not exist yet.
-  // It will be applied after answerCall().
+  // For incoming calls, peerConn is created when the invite arrives,
+  // so we can inject STUN servers before answering.
+  enforceRelayIcePolicy(call)
 }
 
 /**
@@ -381,8 +380,9 @@ export async function answerCall(): Promise<void> {
 
   try {
     useCallStore.getState().setStatus('connecting')
-    await currentCall.answer()
+    // Inject STUN servers before answering so ICE uses them from the start
     enforceRelayIcePolicy(currentCall)
+    await currentCall.answer()
   } catch (err) {
     console.error('Failed to answer call:', err)
     endCallCleanup()
