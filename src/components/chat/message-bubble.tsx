@@ -322,15 +322,16 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   useEffect(() => {
     function handleClickOutside(e: MouseEvent | TouchEvent) {
       const target = e.target as Node
-      // Don't close desktop menus if click is inside actions area
-      if (actionsRef.current && !actionsRef.current.contains(target)) {
+      // Don't close if click is inside the actions area or any portal
+      // (emoji picker, context menu, forward picker are rendered via portal)
+      const isInsideActions = actionsRef.current?.contains(target)
+      const isInsidePortal = (target as HTMLElement).closest?.('.message-bubble-portal')
+      if (!isInsideActions && !isInsidePortal) {
         setShowActions(false)
         setShowEmojiPicker(false)
         setShowContextMenu(false)
         setShowForwardPicker(false)
       }
-      // Touch menu is a portal — check its own ref separately
-      // Don't close it here; it has its own backdrop dismiss handler
     }
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('touchstart', handleClickOutside)
@@ -737,7 +738,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             }
             return createPortal(
               <div
-                className="hidden md:grid grid-cols-5 gap-1 rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest p-2.5 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high"
+                className="message-bubble-portal hidden md:grid grid-cols-5 gap-1 rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest p-2.5 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high"
                 style={pickerStyle}
               >
                 {QUICK_EMOJIS.map(emoji => (
@@ -766,7 +767,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             return createPortal(
               <>
                 <div className="fixed inset-0 z-[9998]" onClick={() => { setShowContextMenu(false); setShowActions(false) }} />
-                <div className="hidden md:block min-w-[160px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high" style={menuStyle}>
+                <div className="message-bubble-portal hidden md:block min-w-[160px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high" style={menuStyle}>
                   <button
                     onClick={handleCopy}
                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
