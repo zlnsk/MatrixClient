@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
+import { resolveRoomAvatarFromSDK } from '@/lib/matrix/client'
 import { Avatar } from '@/components/ui/avatar'
 import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
@@ -224,6 +225,10 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const otherMember = isSmallOrBridged
     ? (activeRoom.members.filter(m => m.userId !== user.userId).find(m => m.avatarUrl) || activeRoom.members.find(m => m.userId !== user.userId))
     : null
+  // Fallback: query SDK directly if store data doesn't have the avatar
+  const headerAvatarUrl = (isSmallOrBridged ? otherMember?.avatarUrl : null)
+    || activeRoom.avatarUrl
+    || resolveRoomAvatarFromSDK(activeRoom.roomId)
 
   const roomDisplayName = activeRoom.name
   const roomStatus = isSmallOrBridged
@@ -290,7 +295,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         </button>
         <div className="flex min-w-0 flex-1 items-center gap-3 px-2">
           <Avatar
-            src={isSmallOrBridged ? (otherMember?.avatarUrl || activeRoom.avatarUrl) : activeRoom.avatarUrl}
+            src={headerAvatarUrl}
             name={roomDisplayName}
             size="md"
             status={isSmallOrBridged ? (otherMember?.presence === 'online' ? 'online' : otherMember?.presence === 'unavailable' ? 'away' : 'offline') : null}
@@ -546,7 +551,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {/* Avatar + name hero section */}
             <div className="flex flex-col items-center px-6 py-8">
               <Avatar
-                src={isSmallOrBridged ? (otherMember?.avatarUrl || activeRoom.avatarUrl) : activeRoom.avatarUrl}
+                src={headerAvatarUrl}
                 name={roomDisplayName}
                 size="lg"
               />

@@ -751,3 +751,38 @@ export function getUserId(): string | null {
   return matrixClient?.getUserId() || null
 }
 
+/**
+ * Resolve the "other member" avatar for a room directly from the SDK.
+ * Used as a fallback when the store's room data has stale/missing avatars.
+ */
+export function resolveRoomAvatarFromSDK(roomId: string): string | null {
+  if (!matrixClient) return null
+  const room = matrixClient.getRoom(roomId)
+  if (!room) return null
+
+  const myUserId = matrixClient.getUserId()
+
+  // Try all members (not just getJoinedMembers which may be incomplete with lazy loading)
+  const members = room.getMembers()
+  const others = members.filter(m => m.userId !== myUserId && m.membership === 'join')
+
+  // Find a member with an avatar
+  for (const m of others) {
+    const mxc = m.getMxcAvatarUrl()
+    if (mxc) return mxc
+  }
+
+  // Try fallback member (from room heroes)
+  const fallback = room.getAvatarFallbackMember()
+  if (fallback) {
+    const mxc = fallback.getMxcAvatarUrl()
+    if (mxc) return mxc
+  }
+
+  // Try the room's own avatar
+  const roomMxc = room.getMxcAvatarUrl()
+  if (roomMxc) return roomMxc
+
+  return null
+}
+

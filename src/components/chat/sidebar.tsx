@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo, memo, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
+import { resolveRoomAvatarFromSDK } from '@/lib/matrix/client'
 import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 
@@ -110,16 +111,17 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
 
   const getOtherMemberAvatar = (room: MatrixRoom) => {
     // For DMs or small rooms (≤3 to cover bridge bot), prefer the other member's avatar.
-    // The room avatar may be a bridge default (Signal logo) while the member's
-    // profile has their real face.
     const isSmallRoom = room.members.length > 0 && room.members.length <= 3
     if ((room.isDirect || isSmallRoom || room.isBridged) && room.members.length > 0) {
       const others = room.members.filter(m => m.userId !== user?.userId)
-      // Prefer the member that actually has an avatar (puppet > bot)
       const other = others.find(m => m.avatarUrl) || others[0]
-      return other?.avatarUrl || room.avatarUrl
+      const storeResult = other?.avatarUrl || room.avatarUrl
+      if (storeResult) return storeResult
     }
-    return room.avatarUrl
+    if (room.avatarUrl) return room.avatarUrl
+
+    // Fallback: query the SDK directly (store may have stale data from lazy loading)
+    return resolveRoomAvatarFromSDK(room.roomId)
   }
 
   const getOtherMemberPresence = (room: MatrixRoom): 'online' | 'offline' | 'away' | null => {
