@@ -73,10 +73,10 @@ export function ChatLayout() {
 
   return (
     <div className="flex h-dvh overflow-hidden bg-white dark:bg-m3-surface">
-      {/* Sidebar — full width on mobile, fixed width on desktop */}
+      {/* Sidebar — full width on mobile, fixed width on desktop when chat is open */}
       <div className={`${
-        activeRoom ? 'hidden md:flex' : 'flex'
-      } w-full flex-col border-r border-m3-outline-variant bg-white dark:border-m3-outline-variant dark:bg-m3-surface md:w-[380px] md:flex-shrink-0 lg:w-[420px]`}>
+        activeRoom ? 'hidden md:flex md:w-[380px] lg:w-[420px] md:flex-shrink-0' : 'flex'
+      } w-full flex-col bg-white dark:bg-m3-surface ${activeRoom ? 'border-r border-m3-outline-variant dark:border-m3-outline-variant' : ''}`}>
         <Sidebar
           onSettingsClick={() => { setSettingsSection('main'); setShowSettings(true) }}
           onChatSelect={handleChatSelect}
@@ -90,7 +90,7 @@ export function ChatLayout() {
           <ChatArea onBackClick={handleBackToSidebar} />
         </div>
       ) : (
-        <div className="hidden flex-1 md:flex">
+        <div className="hidden">
           <EmptyState />
         </div>
       )}

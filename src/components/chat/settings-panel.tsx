@@ -171,8 +171,7 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
       const uploadResponse = await client.uploadContent(file, { name: file.name, type: file.type })
       const mxcUrl = uploadResponse.content_uri
       await client.setAvatarUrl(mxcUrl)
-      const httpUrl = client.mxcUrlToHttp(mxcUrl) || undefined
-      updateProfile({ avatarUrl: httpUrl })
+      updateProfile({ avatarUrl: mxcUrl })
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : 'Failed to upload avatar')
     } finally {
