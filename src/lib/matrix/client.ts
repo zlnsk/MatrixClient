@@ -606,6 +606,125 @@ export async function loginWithPassword(
   return matrixClient
 }
 
+/**
+ * Registration flow types for Matrix UIA (User-Interactive Authentication).
+ */
+export interface RegistrationFlow {
+  stages: string[]
+}
+
+export interface RegistrationState {
+  session: string
+  flows: RegistrationFlow[]
+  completed: string[]
+  params: Record<string, any>
+}
+
+/**
+ * Start registration: probe the server for required auth stages.
+ * Returns the UIA state (session, flows, params) needed to complete registration.
+ */
+export async function startRegistration(homeserverUrl: string): Promise<RegistrationState> {
+  const tmpClient = sdk.createClient({
+    baseUrl: homeserverUrl,
+    fetchFn: createProxiedFetch(homeserverUrl),
+  })
+
+  try {
+    // Probe with empty auth to get the UIA flow requirements
+    await tmpClient.register('', '', null, { type: 'm.login.dummy' } as any)
+    // If this succeeds (unlikely), registration is open with no auth
+    throw new Error('Unexpected: registration succeeded without auth')
+  } catch (err: any) {
+    if (err.httpStatus === 401 && err.data) {
+      return {
+        session: err.data.session || '',
+        flows: err.data.flows || [],
+        completed: err.data.completed || [],
+        params: err.data.params || {},
+      }
+    }
+    // Re-throw registration errors
+    const msg = err.data?.error || err.message || String(err)
+    if (msg.includes('M_FORBIDDEN') || msg.includes('not allowed'))
+      throw new Error('Registration is disabled on this server')
+    throw new Error(msg)
+  }
+}
+
+/**
+ * Submit a registration step (username, password, auth stage).
+ * Returns the UIA state for next steps, or the completed registration response.
+ */
+export async function submitRegistrationStep(
+  homeserverUrl: string,
+  username: string,
+  password: string,
+  auth: Record<string, any>,
+): Promise<{ done: true; response: any } | { done: false; state: RegistrationState }> {
+  const res = await fetch(`/api/matrix-proxy/_matrix/client/v3/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Matrix-Homeserver': homeserverUrl,
+    },
+    body: JSON.stringify({
+      username,
+      password,
+      auth,
+      initial_device_display_name: 'szept Web',
+    }),
+  })
+
+  const data = await res.json()
+
+  if (res.ok) {
+    // Registration complete — set up client
+    matrixClient = sdk.createClient({
+      baseUrl: homeserverUrl,
+      accessToken: data.access_token,
+      userId: data.user_id,
+      deviceId: data.device_id,
+      logger: filteredLogger,
+      cryptoCallbacks,
+      timelineSupport: true,
+      fallbackICEServerAllowed: true,
+      iceCandidatePoolSize: 20,
+      fetchFn: createProxiedFetch(homeserverUrl),
+      scheduler: new sdk.MatrixScheduler(
+        sdk.MatrixScheduler.RETRY_BACKOFF_RATELIMIT,
+        sdk.MatrixScheduler.QUEUE_MESSAGES,
+      ),
+    })
+
+    localStorage.setItem(
+      'matrix_session',
+      JSON.stringify({
+        accessToken: data.access_token,
+        userId: data.user_id,
+        deviceId: data.device_id,
+        homeserverUrl,
+      })
+    )
+
+    return { done: true, response: data }
+  }
+
+  if (res.status === 401 && data) {
+    return {
+      done: false,
+      state: {
+        session: data.session || '',
+        flows: data.flows || [],
+        completed: data.completed || [],
+        params: data.params || {},
+      },
+    }
+  }
+
+  throw new Error(data.error || `Registration failed (${res.status})`)
+}
+
 export function restoreSession(): sdk.MatrixClient | null {
   const stored = localStorage.getItem('matrix_session')
   if (!stored) return null
