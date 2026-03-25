@@ -566,6 +566,47 @@ export const useChatStore = create<ChatState>((set, get) => ({
         isBridged: false,
       } satisfies MatrixRoom))
 
+    // Preserve avatar data from current state when the fresh SDK build doesn't
+    // have it yet (lazy loading may not have completed for all rooms).
+    const currentRooms = get().rooms
+    if (currentRooms.length > 0) {
+      const currentByRoomId = new Map(currentRooms.map(r => [r.roomId, r]))
+      for (let i = 0; i < rooms.length; i++) {
+        const prev = currentByRoomId.get(rooms[i].roomId)
+        if (!prev) continue
+        // Preserve room avatar if fresh build lost it
+        if (!rooms[i].avatarUrl && prev.avatarUrl) {
+          rooms[i] = { ...rooms[i], avatarUrl: prev.avatarUrl }
+        }
+        // Preserve member avatars if fresh build has fewer or lost them
+        if (prev.members.length > rooms[i].members.length ||
+            prev.members.some(pm => pm.avatarUrl && !rooms[i].members.find(m => m.userId === pm.userId)?.avatarUrl)) {
+          const prevMemberMap = new Map(prev.members.map(m => [m.userId, m]))
+          const mergedMembers = rooms[i].members.map(m => {
+            const pm = prevMemberMap.get(m.userId)
+            if (!m.avatarUrl && pm?.avatarUrl) return { ...m, avatarUrl: pm.avatarUrl }
+            return m
+          })
+          // Add members that exist in prev but not in fresh build (lazy loading gap)
+          for (const pm of prev.members) {
+            if (!mergedMembers.some(m => m.userId === pm.userId)) {
+              mergedMembers.push(pm)
+            }
+          }
+          rooms[i] = { ...rooms[i], members: mergedMembers }
+          // Re-derive room avatar from merged members for small/bridged rooms
+          if (!rooms[i].avatarUrl && (rooms[i].isDirect || rooms[i].isBridged || mergedMembers.length <= 3)) {
+            const myId = getUserId()
+            const others = mergedMembers.filter(m => m.userId !== myId)
+            const other = others.find(m => m.avatarUrl) || others[0]
+            if (other?.avatarUrl) {
+              rooms[i] = { ...rooms[i], avatarUrl: other.avatarUrl }
+            }
+          }
+        }
+      }
+    }
+
     set({ rooms, pendingInvites })
 
     // With lazyLoadMembers, room member state events (including avatars) aren't
@@ -707,6 +748,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     try {
+      // Ensure full member list is loaded (lazy loading may have deferred this)
+      await room.loadMembersIfNeeded().catch(() => {})
+
       // Paginate backwards to load more history if the timeline is small
       const timelineSet = room.getLiveTimeline()
       const events = timelineSet.getEvents()
