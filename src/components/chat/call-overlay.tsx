@@ -74,6 +74,8 @@ function PipOverlay() {
 
   // Drag handling
   const onPointerDown = useCallback((e: React.PointerEvent) => {
+    // Don't start drag if clicking a button
+    if ((e.target as HTMLElement).closest('button')) return
     const el = pipRef.current
     if (!el) return
     el.setPointerCapture(e.pointerId)
@@ -98,6 +100,13 @@ function PipOverlay() {
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
     if (!dragState.current || !pipRef.current) {
+      dragState.current = null
+      return
+    }
+    // If pointer barely moved, treat as tap — don't snap (let button clicks through)
+    const dx = Math.abs(e.clientX - dragState.current.startX)
+    const dy = Math.abs(e.clientY - dragState.current.startY)
+    if (dx < 5 && dy < 5) {
       dragState.current = null
       return
     }
