@@ -16,7 +16,7 @@ export default function proxy(request: NextRequest) {
     "connect-src 'self' https: wss:",
     "manifest-src 'self' https:",
     "font-src 'self'",
-    "worker-src 'self'",
+    "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
