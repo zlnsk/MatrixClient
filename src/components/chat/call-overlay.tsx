@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
+import { startIncomingRing, startOutgoingRingback, stopRinging } from '@/lib/notification-sound'
 
 function formatDuration(seconds: number): string {
   const hrs = Math.floor(seconds / 3600)
@@ -225,6 +226,20 @@ export function CallOverlay() {
       remoteVideoRef.current.srcObject = remoteStream
     }
   }, [remoteStream])
+
+  // Play ringing sounds based on call status
+  useEffect(() => {
+    if (status === 'ringing') {
+      if (callInfo?.isIncoming) {
+        startIncomingRing()
+      } else {
+        startOutgoingRingback()
+      }
+    } else {
+      stopRinging()
+    }
+    return () => stopRinging()
+  }, [status, callInfo?.isIncoming])
 
   // Handle fullscreen changes
   useEffect(() => {
