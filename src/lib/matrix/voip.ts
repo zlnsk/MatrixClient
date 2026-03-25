@@ -23,10 +23,16 @@ function assertPeerConnAccessible(call: MatrixCall): RTCPeerConnection | null {
   return pc
 }
 
+// Public STUN servers used as fallback when homeserver has no TURN
+const FALLBACK_ICE_SERVERS: RTCIceServer[] = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+]
+
 /**
- * Enforce relay-only ICE transport to prevent IP leakage,
- * but only if TURN servers are available. If no TURN servers
- * are configured, allow all transport types so calls still work.
+ * Ensure the call has usable ICE servers. If TURN servers are present,
+ * enforce relay-only policy. Otherwise inject public STUN servers and
+ * allow all transport types so the call can still connect.
  */
 function enforceRelayIcePolicy(call: MatrixCall): void {
   const pc = assertPeerConnAccessible(call)
@@ -35,8 +41,22 @@ function enforceRelayIcePolicy(call: MatrixCall): void {
   const hasTurnServers = config.iceServers?.some(s =>
     (Array.isArray(s.urls) ? s.urls : [s.urls]).some((u: string) => u.startsWith('turn:') || u.startsWith('turns:'))
   )
-  if (hasTurnServers && config.iceTransportPolicy !== 'relay') {
-    pc.setConfiguration({ ...config, iceTransportPolicy: 'relay' })
+
+  if (hasTurnServers) {
+    // TURN available — force relay for privacy
+    if (config.iceTransportPolicy !== 'relay') {
+      pc.setConfiguration({ ...config, iceTransportPolicy: 'relay' })
+    }
+  } else {
+    // No TURN — inject public STUN servers and allow all transport types
+    const hasAnyIceServers = config.iceServers && config.iceServers.length > 0
+    if (!hasAnyIceServers) {
+      pc.setConfiguration({
+        ...config,
+        iceServers: FALLBACK_ICE_SERVERS,
+        iceTransportPolicy: 'all',
+      })
+    }
   }
 }
 let durationInterval: ReturnType<typeof setInterval> | null = null
@@ -349,7 +369,8 @@ export function handleIncomingCall(call: MatrixCall): void {
   useCallStore.getState().setStatus('ringing')
 
   attachCallListeners(call)
-  enforceRelayIcePolicy(call)
+  // Don't enforce relay here — peerConn may not exist yet.
+  // It will be applied after answerCall().
 }
 
 /**
