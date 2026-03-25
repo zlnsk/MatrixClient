@@ -199,7 +199,7 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
   const sectionTitle = activeSection === 'main' ? 'Settings' : activeSection === 'profile' ? 'Profile' : activeSection === 'security' ? 'Security' : 'About'
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-m3-surface animate-fade-in">
+    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-m3-surface animate-fade-in safe-area-pad">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-m3-outline-variant bg-white px-2 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4">
         <button

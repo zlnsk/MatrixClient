@@ -95,7 +95,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-white dark:bg-m3-surface animate-fade-in">
+    <div className="fixed inset-0 z-50 flex bg-white dark:bg-m3-surface animate-fade-in safe-area-pad">
       {/* Full-page new conversation view — Google Messages style */}
       <div className="flex flex-1 flex-col">
         {/* Header */}

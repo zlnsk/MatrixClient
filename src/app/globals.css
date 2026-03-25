@@ -291,6 +291,15 @@ body {
   animation: seenPop 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* ---- PWA safe area insets for edge-to-edge Android/iOS displays ---- */
+/* Applied to fullscreen overlay panels that use fixed inset-0 */
+.safe-area-pad {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
 /* ---- Performance optimizations ---- */
 .message-scroll-container {
   will-change: transform;

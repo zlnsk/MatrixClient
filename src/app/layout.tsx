@@ -29,7 +29,7 @@ export const viewport = {
   userScalable: true,
   interactiveWidget: 'resizes-content',
   viewportFit: 'cover',
-  themeColor: '#131318',
+  themeColor: '#1f1f1f',
 }
 
 export default async function RootLayout({
@@ -42,7 +42,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className="dark h-dvh">
       <head />
-      <body className="h-dvh overflow-hidden antialiased" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <body className="h-dvh overflow-hidden antialiased bg-m3-surface" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
         <ErrorBoundary>
           <ThemeProvider>
             <AuthProvider>
