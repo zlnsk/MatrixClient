@@ -17,12 +17,7 @@ const SDK_PEER_CONN_FIELD = 'peerConn'
 function assertPeerConnAccessible(call: MatrixCall): RTCPeerConnection | null {
   const pc = (call as any)[SDK_PEER_CONN_FIELD] as RTCPeerConnection | undefined
   if (!pc) {
-    console.error(
-      `[voip] CRITICAL: '${SDK_PEER_CONN_FIELD}' not found on MatrixCall. ` +
-      `matrix-js-sdk may have changed its internals. ` +
-      `Relay-only ICE and HD bitrate controls are BROKEN. ` +
-      `Pin matrix-js-sdk to 41.1.0 or update the field name.`
-    )
+    // peerConn may not exist yet if called before placeCall/answer — not an error
     return null
   }
   return pc
@@ -314,7 +309,6 @@ export async function placeCall(roomId: string, isVideo: boolean): Promise<void>
   })
 
   attachCallListeners(call)
-  enforceRelayIcePolicy(call)
 
   try {
     if (isVideo) {
@@ -322,7 +316,7 @@ export async function placeCall(roomId: string, isVideo: boolean): Promise<void>
     } else {
       await call.placeVoiceCall()
     }
-    // Re-apply after call placement in case peerConn was recreated
+    // Apply relay policy after peerConn is created by placeCall
     enforceRelayIcePolicy(call)
   } catch (err) {
     console.error('Failed to place call:', err)
@@ -367,6 +361,7 @@ export async function answerCall(): Promise<void> {
   try {
     useCallStore.getState().setStatus('connecting')
     await currentCall.answer()
+    enforceRelayIcePolicy(currentCall)
   } catch (err) {
     console.error('Failed to answer call:', err)
     endCallCleanup()

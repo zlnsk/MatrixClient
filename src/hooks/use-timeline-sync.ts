@@ -20,13 +20,16 @@ export function useTimelineSync(userId: string | undefined) {
     const { loadRooms, loadMessages, unarchiveRoom, markAsRead } = useChatStore.getState()
 
     // --- Debounce helpers ---
+    // Use a longer debounce (800ms) for room list reloads to prevent
+    // the list from jumping around during rapid message bursts
+    // (e.g., bridge syncs dumping many messages at once).
     let loadRoomsTimer: ReturnType<typeof setTimeout> | null = null
     const debouncedLoadRooms = () => {
       if (loadRoomsTimer) clearTimeout(loadRoomsTimer)
       loadRoomsTimer = setTimeout(() => {
         loadRooms()
         loadRoomsTimer = null
-      }, 300)
+      }, 800)
     }
 
     let loadMessagesTimer: ReturnType<typeof setTimeout> | null = null
