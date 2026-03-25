@@ -114,6 +114,14 @@ function renderRichContent(content: string, formattedContent: string | null): st
   return DOMPurify.sanitize(html, PURIFY_CONFIG_PLAIN)
 }
 
+// Match messages containing only emoji (1-3 emoji, no other text).
+// Uses Unicode emoji ranges including modifiers, ZWJ sequences, and flags.
+const EMOJI_ONLY_RE = /^\s*(?:[\p{Emoji_Presentation}\p{Extended_Pictographic}][\u{FE00}-\u{FE0F}\u{200D}\p{Emoji_Presentation}\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}]*\s*){1,3}\s*$/u
+
+function isEmojiOnly(text: string): boolean {
+  return EMOJI_ONLY_RE.test(text)
+}
+
 function extractFirstUrl(text: string): string | null {
   const match = text.match(/https?:\/\/[^\s<]+/)
   return match ? match[0] : null
@@ -517,14 +525,20 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 setEditContent(message.content)
               }
             }}
-            className={`rounded-[20px] overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'w-fit border border-m3-outline-variant/30 p-2 dark:border-m3-outline-variant/20' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
-              isOwn
-                ? message.status === 'failed'
-                  ? 'bg-m3-primary/70 text-white ring-2 ring-red-400/50'
-                  : message.status === 'sending'
-                    ? 'bg-m3-primary/85 text-white'
-                    : 'bg-m3-primary text-white'
-                : 'border border-m3-outline-variant/50 bg-m3-surface-container-lowest text-m3-on-surface shadow-sm shadow-black/5 dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:shadow-black/10'
+            className={`rounded-[20px] overflow-hidden ${
+              message.type === 'm.image' || message.type === 'm.video'
+                ? 'w-fit border border-m3-outline-variant/30 p-2 dark:border-m3-outline-variant/20'
+                : isEmojiOnly(message.content) ? 'px-1 py-0.5' : 'px-4 py-2.5'
+            } ${isOwn ? 'cursor-pointer ' : ''}${
+              isEmojiOnly(message.content)
+                ? '' // no background for emoji-only messages
+                : isOwn
+                  ? message.status === 'failed'
+                    ? 'bg-m3-primary/70 text-white ring-2 ring-red-400/50'
+                    : message.status === 'sending'
+                      ? 'bg-m3-primary/85 text-white'
+                      : 'bg-m3-primary text-white'
+                  : 'border border-m3-outline-variant/50 bg-m3-surface-container-lowest text-m3-on-surface shadow-sm shadow-black/5 dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:shadow-black/10'
             }`}
           >
             {/* Inline reply quote */}
@@ -634,7 +648,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               </div>
             ) : (
               <div
-                className={`rich-content text-base leading-relaxed md:text-[15px] whitespace-pre-wrap break-words ${message.msgtype === 'm.notice' ? 'italic opacity-70' : ''}`}
+                className={`rich-content whitespace-pre-wrap break-words ${
+                  isEmojiOnly(message.content)
+                    ? 'text-5xl leading-tight'
+                    : `text-base leading-relaxed md:text-[15px] ${message.msgtype === 'm.notice' ? 'italic opacity-70' : ''}`
+                }`}
                 dangerouslySetInnerHTML={{
                   __html: applySearchHighlight(renderRichContent(message.content, message.formattedContent), searchHighlight || ''),
                 }}
