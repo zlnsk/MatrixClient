@@ -224,18 +224,19 @@ export function CallOverlay() {
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
 
-  // Attach streams to video elements
+  // Attach streams to video elements — re-run when minimized state changes
+  // so streams are re-attached after returning from PiP
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream
     }
-  }, [localStream])
+  }, [localStream, isMinimized])
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream
     }
-  }, [remoteStream])
+  }, [remoteStream, isMinimized])
 
   const [isLandscape, setIsLandscape] = useState(false)
 
