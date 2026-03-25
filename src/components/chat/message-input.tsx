@@ -417,7 +417,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const getFilePreview = (file: File) => filePreviewUrls.get(file) ?? null
 
   return (
-    <div className="bg-white px-3 py-2.5 dark:bg-m3-surface-container md:px-4 md:py-3" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>
+    <div className="bg-white px-3 py-2.5 dark:bg-m3-surface-container md:px-4 md:py-3">
       {/* Command status */}
       {commandStatus && (
         <div

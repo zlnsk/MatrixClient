@@ -278,7 +278,7 @@ export function CallOverlay() {
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm safe-area-pad"
     >
       <div className="relative flex h-full w-full max-h-screen flex-col items-center justify-center">
         {/* Remote video (full background) */}

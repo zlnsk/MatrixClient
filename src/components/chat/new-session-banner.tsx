@@ -37,7 +37,7 @@ export function NewSessionBanner({ onVerifyWithSession, onVerifyWithKey, onDismi
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-40 animate-slide-in">
+    <div className="fixed top-0 left-0 right-0 z-40 animate-slide-in" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="mx-auto max-w-2xl px-4 pt-3">
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-lg dark:border-amber-800/50 dark:bg-amber-900/30">
           <div className="flex items-start gap-3">
