@@ -139,10 +139,8 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
     setImgError(false)
   }, [src])
 
-  const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    if (isPlaceholderImage(e.currentTarget)) {
-      setImgError(true)
-    }
+  const handleLoad = useCallback((_e: React.SyntheticEvent<HTMLImageElement>) => {
+    // Image loaded successfully — accept it as-is
   }, [])
 
   const displayUrl = blobUrl

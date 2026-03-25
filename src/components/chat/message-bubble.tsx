@@ -682,28 +682,28 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           <div className={`absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center gap-0.5 rounded-xl border border-m3-outline-variant/80 bg-m3-surface-container-lowest p-0.5 shadow-lg dark:border-m3-outline-variant dark:bg-m3-surface-container-high transition-all duration-150 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'} ${showActions && !isEditing ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none ' + (isOwn ? 'translate-x-1' : '-translate-x-1')}`}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
+                className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
                 title="React"
                 aria-label="Add reaction"
               >
-                <Smile className="h-3.5 w-3.5" />
+                <Smile className="h-5 w-5" />
               </button>
               <button
                 onClick={onReply}
-                className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
+                className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
                 title="Reply"
                 aria-label="Reply to message"
               >
-                <Reply className="h-3.5 w-3.5" />
+                <Reply className="h-5 w-5" />
               </button>
               <button
                 onClick={() => setShowContextMenu(!showContextMenu)}
-                className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
+                className="rounded-lg p-2 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
                 title="More"
                 aria-label="More actions"
                 aria-haspopup="menu"
               >
-                <MoreHorizontal className="h-3.5 w-3.5" />
+                <MoreHorizontal className="h-5 w-5" />
               </button>
             </div>
 
