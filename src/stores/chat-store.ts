@@ -343,6 +343,10 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   // Check for reply
   let replyToEvent = null
   const relatesTo = content['m.relates_to']
+
+  // Skip edit events — they are folded into the original by replacingEvent()
+  if (relatesTo?.rel_type === 'm.replace') return null
+
   if (relatesTo?.['m.in_reply_to']?.event_id) {
     const replyEvt = room.findEventById(relatesTo['m.in_reply_to'].event_id)
     if (replyEvt) {
