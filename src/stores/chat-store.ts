@@ -521,16 +521,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const rooms = allJoinedRooms.filter(r => !duplicateRoomIds.has(r.roomId))
 
-    // Auto-archive rooms inactive for more than 1 hour
-    const ONE_HOUR = 60 * 60 * 1000
-    const now = Date.now()
-    for (const room of rooms) {
-      if (!room.isArchived && room.lastMessageTs > 0 && (now - room.lastMessageTs) > ONE_HOUR) {
-        client.setRoomTag(room.roomId, 'm.lowpriority', { order: 0.5 }).catch(() => {})
-        room.isArchived = true
-      }
-    }
-
     const pendingInvites = allRooms
       .filter(r => r.getMyMembership() === 'invite')
       .map((r) => ({
