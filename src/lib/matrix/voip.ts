@@ -9,8 +9,14 @@ import { getMatrixClient, getAvatarUrl } from './client'
 import { reportError } from '@/lib/error-reporter'
 import { useCallStore } from '@/stores/call-store'
 import type { CallInfo } from '@/stores/call-store'
+// Static import for SDK version check — avoids runtime require() which may
+// be stripped by the bundler in production builds.
+import sdkPackageJson from 'matrix-js-sdk/package.json'
 
 let currentCall: MatrixCall | null = null
+
+// ---- VoIP disabled flag: set true if SDK internals are incompatible ----
+let voipDisabled = false
 
 /**
  * Enforce relay-only ICE transport to prevent IP leakage.
@@ -21,6 +27,14 @@ let currentCall: MatrixCall | null = null
 const SDK_PEER_CONN_FIELD = 'peerConn'
 const SUPPORTED_SDK_VERSION = '41.1.0'
 
+// Validate SDK version at module load time (fail-fast)
+if (sdkPackageJson.version && sdkPackageJson.version !== SUPPORTED_SDK_VERSION) {
+  const msg = `matrix-js-sdk version ${sdkPackageJson.version} differs from tested ${SUPPORTED_SDK_VERSION}. VoIP relay-only ICE enforcement may not work — calls are disabled until the SDK compatibility is verified.`
+  reportError('voip', msg)
+  console.error(`[voip] ${msg}`)
+  voipDisabled = true
+}
+
 /**
  * Access the private RTCPeerConnection from a MatrixCall.
  *
@@ -29,14 +43,6 @@ const SUPPORTED_SDK_VERSION = '41.1.0'
  * assertion ensure this fails loudly if the SDK internals change.
  */
 function getPeerConnection(call: MatrixCall): RTCPeerConnection | null {
-  // Runtime SDK version check — warn if version doesn't match pinned expectation
-  try {
-    const sdkPkg = require('matrix-js-sdk/package.json')
-    if (sdkPkg.version && sdkPkg.version !== SUPPORTED_SDK_VERSION) {
-      reportError('voip', `matrix-js-sdk version ${sdkPkg.version} differs from tested ${SUPPORTED_SDK_VERSION}. Relay-only ICE and bitrate controls may not work.`)
-    }
-  } catch { /* version check is best-effort */ }
-
   const pc = (call as unknown as Record<string, unknown>)[SDK_PEER_CONN_FIELD] as RTCPeerConnection | undefined
   if (!pc) {
     reportError('voip',
@@ -45,6 +51,7 @@ function getPeerConnection(call: MatrixCall): RTCPeerConnection | null {
       `Relay-only ICE and HD bitrate controls are BROKEN. ` +
       `Pin matrix-js-sdk to ${SUPPORTED_SDK_VERSION} or update the field name.`
     )
+    voipDisabled = true
     return null
   }
   return pc
@@ -291,6 +298,11 @@ function endCallCleanup(): void {
  * Place an outgoing call (audio or video) to a room.
  */
 export async function placeCall(roomId: string, isVideo: boolean): Promise<void> {
+  if (voipDisabled) {
+    console.error('VoIP is disabled due to SDK incompatibility — relay-only ICE cannot be enforced. Update SDK_PEER_CONN_FIELD or pin matrix-js-sdk.')
+    return
+  }
+
   const client = getMatrixClient()
   if (!client) {
     console.error('Matrix client not initialized')
@@ -348,6 +360,12 @@ export async function placeCall(roomId: string, isVideo: boolean): Promise<void>
  * Handle an incoming call from the CallEventHandler.
  */
 export function handleIncomingCall(call: MatrixCall): void {
+  if (voipDisabled) {
+    console.error('VoIP is disabled due to SDK incompatibility — rejecting incoming call')
+    call.reject()
+    return
+  }
+
   if (currentCall) {
     // Already in a call, reject the incoming one
     call.reject()

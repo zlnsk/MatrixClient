@@ -10,6 +10,35 @@ import { NextRequest, NextResponse } from 'next/server'
  * Proxy sends: POST https://matrix.lukasz.com/_matrix/client/v3/sync?...
  */
 
+// ---- Per-IP rate limiting (sliding window) ----
+const RATE_LIMIT_WINDOW_MS = 60_000 // 1 minute
+const RATE_LIMIT_MAX_LOGIN = 5       // max login attempts per window
+const loginAttempts = new Map<string, { count: number; windowStart: number }>()
+
+function isLoginRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = loginAttempts.get(ip)
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    loginAttempts.set(ip, { count: 1, windowStart: now })
+    return false
+  }
+  entry.count++
+  if (entry.count > RATE_LIMIT_MAX_LOGIN) return true
+  return false
+}
+
+// Periodic cleanup of stale entries (every 5 minutes)
+if (typeof globalThis !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now()
+    for (const [ip, entry] of loginAttempts) {
+      if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS * 2) {
+        loginAttempts.delete(ip)
+      }
+    }
+  }, 5 * 60_000).unref?.()
+}
+
 // Headers that should NOT be forwarded to the upstream server
 const STRIP_REQUEST_HEADERS = new Set([
   'host',
@@ -64,6 +93,19 @@ async function handler(
       { error: 'Only /_matrix/client/, /_matrix/media/, /_matrix/key/, and /_matrix/federation/ paths are allowed' },
       { status: 403 }
     )
+  }
+
+  // Rate limit login attempts per IP to prevent brute force
+  if (matrixPath.includes('/login') && request.method === 'POST') {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || request.headers.get('x-real-ip')
+      || 'unknown'
+    if (isLoginRateLimited(ip)) {
+      return NextResponse.json(
+        { errcode: 'M_LIMIT_EXCEEDED', error: 'Too many login attempts. Please wait before trying again.' },
+        { status: 429 }
+      )
+    }
   }
 
   const targetUrl = `${hsUrl.origin}${matrixPath}${search}`

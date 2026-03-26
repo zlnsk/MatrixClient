@@ -5,6 +5,7 @@ import type { Logger } from 'matrix-js-sdk/lib/logger'
 import { logger as sdkGlobalLogger } from 'matrix-js-sdk/lib/logger'
 import type { CryptoCallbacks } from 'matrix-js-sdk/lib/crypto-api'
 import { reportError } from '@/lib/error-reporter'
+import { clearTurnServerPolling } from './sdk-compat'
 
 let matrixClient: sdk.MatrixClient | null = null
 
@@ -14,7 +15,7 @@ let matrixClient: sdk.MatrixClient | null = null
 export function getHomeserverUrl(): string | null {
   if (typeof window === 'undefined') return null
   try {
-    const session = localStorage.getItem('matrix_session')
+    const session = sessionStorage.getItem('matrix_session')
     if (session) {
       return JSON.parse(session).homeserverUrl || null
     }
@@ -634,8 +635,10 @@ export async function loginWithPassword(
 
   // Crypto is initialized in startSync() — no need to call initCrypto here
 
-  // Persist session
-  localStorage.setItem(
+  // Persist session in sessionStorage (not localStorage) to limit exposure:
+  // sessionStorage is scoped to the tab and cleared on close, reducing the
+  // window for token exfiltration via XSS compared to localStorage.
+  sessionStorage.setItem(
     'matrix_session',
     JSON.stringify({
       accessToken: response.access_token,
@@ -649,7 +652,7 @@ export async function loginWithPassword(
 }
 
 export function restoreSession(): sdk.MatrixClient | null {
-  const stored = localStorage.getItem('matrix_session')
+  const stored = sessionStorage.getItem('matrix_session')
   if (!stored) return null
 
   try {
@@ -657,7 +660,7 @@ export function restoreSession(): sdk.MatrixClient | null {
 
     // Validate session data
     if (!session.accessToken || !session.userId || !session.deviceId || !session.homeserverUrl) {
-      localStorage.removeItem('matrix_session')
+      sessionStorage.removeItem('matrix_session')
       return null
     }
 
@@ -665,7 +668,7 @@ export function restoreSession(): sdk.MatrixClient | null {
     try {
       new URL(session.homeserverUrl)
     } catch {
-      localStorage.removeItem('matrix_session')
+      sessionStorage.removeItem('matrix_session')
       return null
     }
 
@@ -687,7 +690,7 @@ export function restoreSession(): sdk.MatrixClient | null {
     })
     return matrixClient
   } catch {
-    localStorage.removeItem('matrix_session')
+    sessionStorage.removeItem('matrix_session')
     return null
   }
 }
@@ -711,10 +714,7 @@ export async function startSync(): Promise<void> {
   // Stop the SDK's periodic TURN server polling — our VoIP module handles
   // ICE servers independently, and the polling causes 404 errors on servers
   // that don't support the /voip/turnServer endpoint.
-  if ((matrixClient as any).checkTurnServersIntervalID) {
-    clearInterval((matrixClient as any).checkTurnServersIntervalID)
-    ;(matrixClient as any).checkTurnServersIntervalID = undefined
-  }
+  clearTurnServerPolling(matrixClient)
 
   // Wait for initial sync (with timeout to avoid infinite "Connecting..." spinner)
   await new Promise<void>((resolve, reject) => {
@@ -737,7 +737,7 @@ export async function startSync(): Promise<void> {
         console.warn('Sync returned 401 — token rejected, forcing logout')
         matrixClient?.stopClient()
         matrixClient = null
-        localStorage.removeItem('matrix_session')
+        sessionStorage.removeItem('matrix_session')
         window.location.href = '/login'
       }
     }
@@ -764,7 +764,7 @@ export async function logout(): Promise<void> {
     }
   }
   matrixClient = null
-  localStorage.removeItem('matrix_session')
+  sessionStorage.removeItem('matrix_session')
 }
 
 export function getAvatarUrl(

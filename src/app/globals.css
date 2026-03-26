@@ -114,6 +114,22 @@ html {
   color-scheme: dark;
 }
 
+/* Ensure all interactive elements show pointer cursor on hover */
+a[href],
+button:not(:disabled),
+[role="button"],
+[role="link"],
+[role="tab"],
+[role="menuitem"],
+[tabindex]:not([tabindex="-1"]),
+input[type="checkbox"],
+input[type="radio"],
+select,
+label[for],
+summary {
+  cursor: pointer;
+}
+
 * {
   scrollbar-width: thin;
 }
@@ -230,6 +246,7 @@ body {
   color: var(--m3-primary);
   text-decoration: underline;
   text-underline-offset: 2px;
+  cursor: pointer;
 }
 
 .rich-content a:hover {
@@ -240,6 +257,7 @@ body {
 .rich-content.own-bubble a {
   color: white;
   text-decoration-color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
 }
 
 .rich-content.own-bubble code {

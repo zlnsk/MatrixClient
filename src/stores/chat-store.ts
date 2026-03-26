@@ -1,5 +1,17 @@
 import { create } from 'zustand'
 import { getMatrixClient, getAvatarUrl, getUserId } from '@/lib/matrix/client'
+import {
+  getClearContent,
+  getEventStatus,
+  getUnreadNotificationCount,
+  getReactionIndex,
+  setReactionIndex,
+  getAccountDataContent,
+  setAccountData,
+  sendEvent,
+  sendStateEvent,
+  searchRoomEvents,
+} from '@/lib/matrix/sdk-compat'
 import type { Room, MatrixEvent, RoomMember } from 'matrix-js-sdk'
 import { EventStatus } from 'matrix-js-sdk/lib/models/event-status'
 
@@ -11,11 +23,27 @@ const PROFILE_CACHE_MAX = 2000
 const profileAvatarCache = new Map<string, string>()
 
 function setProfileCache(userId: string, value: string) {
+  // True LRU: delete-then-reinsert moves the key to the end of Map iteration
+  // order, so the oldest-accessed entry is always first (evicted on overflow).
+  if (profileAvatarCache.has(userId)) {
+    profileAvatarCache.delete(userId)
+  }
   profileAvatarCache.set(userId, value)
   if (profileAvatarCache.size > PROFILE_CACHE_MAX) {
     const firstKey = profileAvatarCache.keys().next().value!
     profileAvatarCache.delete(firstKey)
   }
+}
+
+/** Read from profile cache with LRU promotion. */
+function getProfileCache(userId: string): string | undefined {
+  const value = profileAvatarCache.get(userId)
+  if (value !== undefined) {
+    // Promote to most-recently-used
+    profileAvatarCache.delete(userId)
+    profileAvatarCache.set(userId, value)
+  }
+  return value
 }
 
 /**
@@ -150,7 +178,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   ).pop()
 
   // Use decrypted content for last message preview
-  const lastClear = lastEvent ? (lastEvent as any).getClearContent?.() : null
+  const lastClear = lastEvent ? getClearContent(lastEvent) : null
   const lastContent = lastClear || lastEvent?.getContent()
   let lastMessage: string | null = null
   if (lastContent) {
@@ -173,7 +201,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     displayName: m.name || m.userId,
     // Prefer profile cache (has real avatar) over room member avatar (may be bridge default like Signal logo)
     // Empty string in cache means "no avatar" (negative cache) — skip it
-    avatarUrl: getAvatarUrl(profileAvatarCache.get(m.userId) || m.getMxcAvatarUrl() || null),
+    avatarUrl: getAvatarUrl(getProfileCache(m.userId) || m.getMxcAvatarUrl() || null),
     membership: m.membership || 'join',
     presence: (client?.getUser(m.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
   }))
@@ -186,14 +214,14 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     members.push({
       userId: fallbackMember.userId,
       displayName: fallbackMember.name || fallbackMember.userId,
-      avatarUrl: getAvatarUrl(profileAvatarCache.get(fallbackMember.userId) || fallbackMember.getMxcAvatarUrl()),
+      avatarUrl: getAvatarUrl(getProfileCache(fallbackMember.userId) || fallbackMember.getMxcAvatarUrl()),
       membership: fallbackMember.membership || 'join',
       presence: (client?.getUser(fallbackMember.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
     })
   }
 
   // Check if direct message
-  const dmMap = (client as any)?.getAccountData('m.direct')?.getContent() || {}
+  const dmMap = client ? getAccountDataContent(client, 'm.direct') : {}
   let isDirect = false
   for (const userRooms of Object.values(dmMap) as string[][]) {
     if (userRooms.includes(room.roomId)) {
@@ -219,10 +247,10 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     const otherMembers = room.getJoinedMembers().filter((m: RoomMember) => m.userId !== client.getUserId())
     // Prefer the member that has an avatar (puppet > bot)
     const otherMember = otherMembers.find((m: RoomMember) => {
-      return profileAvatarCache.get(m.userId) || m.getMxcAvatarUrl()
+      return getProfileCache(m.userId) || m.getMxcAvatarUrl()
     }) || otherMembers[0]
     // Prefer profile cache (real avatar) over room member avatar (may be bridge default like Signal logo)
-    const memberAvatar = (otherMember ? profileAvatarCache.get(otherMember.userId) : undefined) || otherMember?.getMxcAvatarUrl()
+    const memberAvatar = (otherMember ? getProfileCache(otherMember.userId) : undefined) || otherMember?.getMxcAvatarUrl()
     if (memberAvatar) {
       roomAvatarMxc = memberAvatar
     } else {
@@ -230,7 +258,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
       // bridged user yet. getAvatarFallbackMember() uses room summary heroes
       // which are available even before full member loading completes.
       const fallbackMember = room.getAvatarFallbackMember()
-      const fallbackAvatar = (fallbackMember ? profileAvatarCache.get(fallbackMember.userId) : undefined) || fallbackMember?.getMxcAvatarUrl()
+      const fallbackAvatar = (fallbackMember ? getProfileCache(fallbackMember.userId) : undefined) || fallbackMember?.getMxcAvatarUrl()
       if (fallbackAvatar) {
         roomAvatarMxc = fallbackAvatar
       }
@@ -246,7 +274,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     lastMessage,
     lastMessageTs: lastEvent?.getTs() || room.getLastActiveTimestamp() || 0,
     lastSenderName: lastEvent ? cleanDisplayName(room.getMember(lastEvent.getSender()!)?.name || lastEvent.getSender() || '') || null : null,
-    unreadCount: (room as any).getUnreadNotificationCount('total') || 0,
+    unreadCount: getUnreadNotificationCount(room),
     members,
     encrypted: room.hasEncryptionStateEvent(),
     isArchived,
@@ -310,7 +338,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
       roomId: room.roomId,
       senderId: sender,
       senderName,
-      senderAvatar: getAvatarUrl((member ? profileAvatarCache.get(member.userId) : undefined) || member?.getMxcAvatarUrl()),
+      senderAvatar: getAvatarUrl((member ? getProfileCache(member.userId) : undefined) || member?.getMxcAvatarUrl()),
       type: 'm.text',
       msgtype: 'm.text',
       content: stateContent,
@@ -339,7 +367,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   // getClearContent() returns decrypted content only for encrypted events.
   // We check both to handle all SDK code paths (JS crypto vs Rust crypto).
   const rawContent = event.getContent()
-  const clearContent = (event as any).getClearContent?.()
+  const clearContent = getClearContent(event)
   const content = (clearContent?.msgtype ? clearContent : null) || (rawContent?.msgtype ? rawContent : null) || clearContent || rawContent
 
   // If this is an encrypted event that hasn't been decrypted,
@@ -360,7 +388,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     if (replyEvt) {
       const replySender = replyEvt.getSender()!
       const replyMember = room.getMember(replySender)
-      const replyClear = (replyEvt as any).getClearContent?.()
+      const replyClear = getClearContent(replyEvt)
       const replyContent = replyClear || replyEvt.getContent()
       let replyBody = replyContent?.body || ''
       // Strip Matrix reply fallback (> <@user:server> prefix lines)
@@ -382,7 +410,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
 
   // Collect reactions from pre-built index (O(1) per message)
   const reactions = new Map<string, { count: number; users: string[]; includesMe: boolean }>()
-  const reactionIndex = (room as any).__reactionIndex as Map<string, Map<string, { count: number; users: string[]; includesMe: boolean }>> | undefined
+  const reactionIndex = getReactionIndex(room)
   if (reactionIndex) {
     const msgReactions = reactionIndex.get(event.getId()!)
     if (msgReactions) {
@@ -399,7 +427,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   if (content['m.new_content']) {
     displayContent = content['m.new_content']
   } else if (replacingEvt) {
-    const replaceClear = (replacingEvt as any).getClearContent?.()
+    const replaceClear = getClearContent(replacingEvt)
     const replaceContent = replaceClear || replacingEvt.getContent()
     if (replaceContent?.['m.new_content']) {
       displayContent = replaceContent['m.new_content']
@@ -451,7 +479,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
       readBy.push({
         userId: receipt.userId,
         displayName: receiptMember?.name || receipt.userId,
-        avatarUrl: getAvatarUrl((receiptMember ? profileAvatarCache.get(receiptMember.userId) : undefined) || receiptMember?.getMxcAvatarUrl()),
+        avatarUrl: getAvatarUrl((receiptMember ? getProfileCache(receiptMember.userId) : undefined) || receiptMember?.getMxcAvatarUrl()),
         ts: receipt.data?.ts || 0,
       })
     }
@@ -460,7 +488,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   // Message status for own messages
   let status: MatrixMessage['status'] = 'sent'
   if (sender === userId) {
-    const evtStatus = (event as any).status as EventStatus | null
+    const evtStatus = getEventStatus(event) as EventStatus | null
     if (evtStatus === EventStatus.NOT_SENT) {
       status = 'failed'
     } else if (readBy.length > 0) {
@@ -479,7 +507,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     roomId: room.roomId,
     senderId: sender,
     senderName: cleanDisplayName(member?.name || sender),
-    senderAvatar: getAvatarUrl((member ? profileAvatarCache.get(member.userId) : undefined) || member?.getMxcAvatarUrl()),
+    senderAvatar: getAvatarUrl((member ? getProfileCache(member.userId) : undefined) || member?.getMxcAvatarUrl()),
     type: displayContent.msgtype || 'm.text',
     msgtype: displayContent.msgtype || 'm.text',
     content: body,
@@ -700,7 +728,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const updated = state.rooms.map(room => {
               let hasUpdate = false
               const updatedMembers = room.members.map(m => {
-                const cached = profileAvatarCache.get(m.userId)
+                const cached = getProfileCache(m.userId)
                 if (cached && m.avatarUrl !== getAvatarUrl(cached)) {
                   hasUpdate = true
                   return { ...m, avatarUrl: getAvatarUrl(cached) }
@@ -802,7 +830,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         msgReactions.set(emoji, existing)
       }
       // Attach index to room object for eventToMatrixMessage to read
-      ;(room as any).__reactionIndex = reactionIndex
+      setReactionIndex(room, reactionIndex)
 
       const seen = new Set<string>()
       const newMessages: MatrixMessage[] = []
@@ -938,7 +966,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // creating our own optimistic message, which caused double-message flashes.
     ;(async () => {
       try {
-        await (client as any).sendEvent(roomId, 'm.room.message', msgContent)
+        await sendEvent(client, roomId, 'm.room.message', msgContent)
       } catch (err) {
         console.error('Failed to send message:', err)
       }
@@ -986,12 +1014,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const client = getMatrixClient()
     if (!client) return
 
-    await (client as any).sendEvent(roomId, 'm.room.message', {
+    // Sanitize edit content — strip HTML tags to prevent stored XSS.
+    // The display layer (DOMPurify) is the primary defense, but sanitizing
+    // at send prevents storing malicious content server-side.
+    const sanitized = newContent.replace(/<[^>]*>/g, '')
+
+    await sendEvent(client, roomId, 'm.room.message', {
       msgtype: 'm.text',
-      body: `* ${newContent}`,
+      body: `* ${sanitized}`,
       'm.new_content': {
         msgtype: 'm.text',
-        body: newContent,
+        body: sanitized,
       },
       'm.relates_to': {
         rel_type: 'm.replace',
@@ -1017,7 +1050,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Use the pre-built reaction index if available to find existing reaction
     // in O(1), falling back to timeline scan only if needed.
     let existingEventId: string | null = null
-    const reactionIndex = (room as any).__reactionIndex as Map<string, Map<string, { count: number; users: string[]; includesMe: boolean }>> | undefined
+    const reactionIndex = getReactionIndex(room)
     if (reactionIndex) {
       const msgReactions = reactionIndex.get(eventId)
       if (msgReactions?.get(emoji)?.includesMe) {
@@ -1051,7 +1084,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (existingEventId) {
       await client.redactEvent(roomId, existingEventId)
     } else {
-      await (client as any).sendEvent(roomId, 'm.reaction', {
+      await sendEvent(client, roomId, 'm.reaction', {
         'm.relates_to': {
           rel_type: 'm.annotation',
           event_id: eventId,
@@ -1072,10 +1105,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     })
 
     // Mark as direct message
-    const dmMap = (client as any).getAccountData('m.direct')?.getContent() || {}
+    const dmMap = getAccountDataContent(client, 'm.direct') as Record<string, string[]>
     const existing = dmMap[userId] || []
     dmMap[userId] = [...existing, result.room_id]
-    await (client as any).setAccountData('m.direct', dmMap)
+    await setAccountData(client, 'm.direct', dmMap)
 
     return result.room_id
   },
@@ -1255,7 +1288,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       } catch { /* ignore */ }
     }
 
-    await (client as any).sendEvent(roomId, 'm.room.message', content)
+    await sendEvent(client, roomId, 'm.room.message', content)
   },
 
   leaveRoom: async (roomId) => {
@@ -1324,7 +1357,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!client) return
 
     try {
-      await (client as any).sendStateEvent(roomId, 'm.room.encryption', {
+      await sendStateEvent(client, roomId, 'm.room.encryption', {
         algorithm: 'm.megolm.v1.aes-sha2',
       }, '')
       get().loadRooms()
@@ -1396,7 +1429,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const pinEvent = room.currentState.getStateEvents('m.room.pinned_events', '')
       const currentPinned: string[] = pinEvent?.getContent()?.pinned || []
       if (currentPinned.includes(eventId)) return
-      await (client as any).sendStateEvent(roomId, 'm.room.pinned_events', { pinned: [...currentPinned, eventId] }, '')
+      await sendStateEvent(client, roomId, 'm.room.pinned_events', { pinned: [...currentPinned, eventId] }, '')
     } catch (err) {
       console.error('Failed to pin message:', err)
       throw err
@@ -1413,7 +1446,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const pinEvent = room.currentState.getStateEvents('m.room.pinned_events', '')
       const currentPinned: string[] = pinEvent?.getContent()?.pinned || []
       const updated = currentPinned.filter((id: string) => id !== eventId)
-      await (client as any).sendStateEvent(roomId, 'm.room.pinned_events', { pinned: updated }, '')
+      await sendStateEvent(client, roomId, 'm.room.pinned_events', { pinned: updated }, '')
     } catch (err) {
       console.error('Failed to unpin message:', err)
       throw err
@@ -1425,7 +1458,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!client) return []
 
     try {
-      const response = await (client as any).searchRoomEvents({ term: query })
+      const response = await searchRoomEvents(client, { term: query })
       return (response?.results || []).map((r: any) => ({
         roomId: r.result?.room_id || '',
         roomName: client.getRoom(r.result?.room_id)?.name || r.result?.room_id,
@@ -1450,12 +1483,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const event = room.findEventById(eventId)
       if (!event) return
 
-      const clearContent = (event as any).getClearContent?.()
+      const clearContent = getClearContent(event)
       const content = clearContent || event.getContent()
       const msgtype = content.msgtype || 'm.text'
 
       if (msgtype === 'm.image' || msgtype === 'm.video' || msgtype === 'm.audio' || msgtype === 'm.file') {
-        await (client as any).sendEvent(toRoomId, 'm.room.message', {
+        await sendEvent(client, toRoomId, 'm.room.message', {
           msgtype,
           body: content.body || '',
           url: content.url,
@@ -1470,7 +1503,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           forwardContent.format = 'org.matrix.custom.html'
           forwardContent.formatted_body = content.formatted_body
         }
-        await (client as any).sendEvent(toRoomId, 'm.room.message', forwardContent)
+        await sendEvent(client, toRoomId, 'm.room.message', forwardContent)
       }
     } catch (err) {
       console.error('Failed to forward message:', err)
