@@ -4,7 +4,17 @@ review:
   language_hints:
     - TypeScript
     - CSS
+    - JSON
+  scope: "full"
   ignore_paths:
     - "package-lock.json"
     - ".next/**"
     - "public/**"
+    - "node_modules/**"
+    - "*.test.ts"
+  review_areas:
+    - security
+    - performance
+    - best_practices
+    - error_handling
+    - type_safety
