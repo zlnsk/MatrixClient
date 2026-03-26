@@ -32,6 +32,34 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [showRoomInfo, setShowRoomInfo] = useState(false)
   const [showPinnedBanner, setShowPinnedBanner] = useState(true)
+  const [externalLinkConfirm, setExternalLinkConfirm] = useState<string | null>(null)
+
+  // Intercept external link clicks in message content
+  const handleContentClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    const anchor = target.closest('a[href]') as HTMLAnchorElement | null
+    if (!anchor) return
+    const href = anchor.getAttribute('href')
+    if (!href) return
+
+    // Allow matrix.to links and same-origin
+    try {
+      const url = new URL(href, window.location.origin)
+      if (url.origin === window.location.origin) return
+      if (url.hostname === 'matrix.to') return
+
+      // Check trusted domains (remembered by user)
+      const trusted = JSON.parse(localStorage.getItem('trusted_domains') || '[]') as string[]
+      if (trusted.includes(url.hostname)) return
+
+      // Block and show confirmation
+      e.preventDefault()
+      e.stopPropagation()
+      setExternalLinkConfirm(href)
+    } catch {
+      // Invalid URL — let browser handle
+    }
+  }, [])
 
   // Memoize pinned event IDs
   const pinnedEventIds = useMemo(() => {
@@ -251,7 +279,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       )}
 
       {/* Messages */}
-      <div ref={scrollContainerRef} className="message-scroll-container min-h-0 flex-1 overflow-y-auto bg-m3-surface-container-lowest px-2 pt-4 pb-6 dark:bg-m3-surface md:px-6 lg:px-8 md:pb-8">
+      <div ref={scrollContainerRef} onClick={handleContentClick} className="message-scroll-container min-h-0 flex-1 overflow-y-auto bg-m3-surface-container-lowest px-2 pt-4 pb-6 dark:bg-m3-surface md:px-6 lg:px-8 md:pb-8">
         {isLoadingMessages ? (
           <div className="flex h-full flex-col justify-end space-y-4 px-4 py-6">
             {/* Skeleton messages */}
@@ -323,6 +351,54 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
       {/* Upload progress bar */}
       <UploadProgress roomId={activeRoom.roomId} />
+
+      {/* External link confirmation dialog */}
+      {externalLinkConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in" onClick={() => setExternalLinkConfirm(null)}>
+          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl animate-scale-in dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-medium text-m3-on-surface">Open external link?</h3>
+            <p className="mt-2 break-all text-sm text-m3-on-surface-variant">{externalLinkConfirm}</p>
+            <div className="mt-5 flex items-center justify-between">
+              <label className="flex items-center gap-2 text-xs text-m3-on-surface-variant">
+                <input
+                  type="checkbox"
+                  id="trust-domain"
+                  className="rounded"
+                />
+                Trust this domain
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setExternalLinkConfirm(null)}
+                  className="rounded-full px-4 py-2 text-sm font-medium text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const checkbox = document.getElementById('trust-domain') as HTMLInputElement
+                    if (checkbox?.checked) {
+                      try {
+                        const url = new URL(externalLinkConfirm)
+                        const trusted = JSON.parse(localStorage.getItem('trusted_domains') || '[]') as string[]
+                        if (!trusted.includes(url.hostname)) {
+                          trusted.push(url.hostname)
+                          localStorage.setItem('trusted_domains', JSON.stringify(trusted))
+                        }
+                      } catch { /* ignore */ }
+                    }
+                    window.open(externalLinkConfirm, '_blank', 'noopener,noreferrer')
+                    setExternalLinkConfirm(null)
+                  }}
+                  className="rounded-full bg-m3-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-m3-primary/90"
+                >
+                  Open
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Message Input */}
       <MessageInput

@@ -14,6 +14,9 @@ const SettingsPanel = lazy(() =>
     return new Promise(() => {}) // never resolves — page is reloading
   })
 )
+const CommandPalette = lazy(() =>
+  import('./command-palette').then(m => ({ default: m.CommandPalette }))
+)
 
 const SIDEBAR_MIN = 280
 const SIDEBAR_MAX = 600
@@ -23,6 +26,7 @@ export function ChatLayout() {
   const [showSettings, setShowSettings] = useState(false)
   const [settingsSection, setSettingsSection] = useState<'main' | 'profile' | 'security' | 'about'>('main')
   const [showMobileSidebar, setShowMobileSidebar] = useState(true)
+  const [showCommandPalette, setShowCommandPalette] = useState(false)
   const activeRoom = useChatStore(s => s.activeRoom)
   const rooms = useChatStore(s => s.rooms)
 
@@ -103,6 +107,18 @@ export function ChatLayout() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
+  // Cmd/Ctrl+K to open command palette
+  useEffect(() => {
+    const handleCmdK = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowCommandPalette(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleCmdK)
+    return () => window.removeEventListener('keydown', handleCmdK)
+  }, [])
+
   // Alt+1-9 to switch between chats (Alt avoids overriding browser/OS shortcuts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -166,6 +182,22 @@ export function ChatLayout() {
       {showSettings && (
         <Suspense fallback={null}>
           <SettingsPanel onClose={() => setShowSettings(false)} initialSection={settingsSection} />
+        </Suspense>
+      )}
+
+      {/* Command palette (Cmd/Ctrl+K) */}
+      {showCommandPalette && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            onClose={() => setShowCommandPalette(false)}
+            onSelectRoom={(room) => {
+              useChatStore.getState().setActiveRoom(room)
+              useChatStore.getState().markAsRead(room.roomId)
+              setShowMobileSidebar(false)
+              history.pushState({ view: 'chat' }, '')
+            }}
+            onOpenSettings={() => { setSettingsSection('main'); setShowSettings(true) }}
+          />
         </Suspense>
       )}
     </div>

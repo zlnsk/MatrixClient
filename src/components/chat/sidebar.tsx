@@ -50,6 +50,8 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   const [showNewChat, setShowNewChat] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [showInvites, setShowInvites] = useState(true)
+  const [roomFilter, setRoomFilter] = useState<'all' | 'unread' | 'direct' | 'groups'>('all')
+  const [searchTab, setSearchTab] = useState<'conversations' | 'messages'>('conversations')
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [messageResults, setMessageResults] = useState<{roomId: string, roomName: string, eventId: string, sender: string, body: string, timestamp: number}[]>([])
   const [isSearchingMessages, setIsSearchingMessages] = useState(false)
@@ -162,12 +164,18 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
     onChatSelect()
   }, [setActiveRoom, markAsRead, onChatSelect])
 
-  const activeRooms = useMemo(() => rooms.filter(room =>
-    !room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
-  ), [rooms, searchFilter])
+  const activeRooms = useMemo(() => rooms.filter(room => {
+    if (room.isArchived) return false
+    if (searchFilter && !room.name.toLowerCase().includes(searchFilter.toLowerCase())) return false
+    if (roomFilter === 'unread') return room.unreadCount > 0
+    if (roomFilter === 'direct') return room.isDirect
+    if (roomFilter === 'groups') return !room.isDirect
+    return true
+  }), [rooms, searchFilter, roomFilter])
   const archivedRooms = useMemo(() => rooms.filter(room =>
     room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
   ), [rooms, searchFilter])
+  const unreadCount = useMemo(() => rooms.filter(r => !r.isArchived && r.unreadCount > 0).length, [rooms])
 
   // Avatar resolution following Element Web's algorithm:
   // 1. Room avatar (from m.room.avatar state event) — highest priority
@@ -396,6 +404,56 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
         </div>
       </div>
 
+      {/* Filter chips */}
+      {!searchFilter && (
+        <div className="flex gap-1.5 px-4 pb-2 overflow-x-auto no-scrollbar">
+          {([
+            { key: 'all' as const, label: 'All' },
+            { key: 'unread' as const, label: 'Unread', count: unreadCount },
+            { key: 'direct' as const, label: 'Direct' },
+            { key: 'groups' as const, label: 'Groups' },
+          ]).map(f => (
+            <button
+              key={f.key}
+              onClick={() => setRoomFilter(f.key)}
+              className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                roomFilter === f.key
+                  ? 'bg-m3-primary text-white'
+                  : 'bg-m3-surface-container text-m3-on-surface-variant hover:bg-m3-surface-container-high dark:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest'
+              }`}
+            >
+              {f.label}{f.count && f.count > 0 ? ` (${f.count})` : ''}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Search tabs — when searching */}
+      {searchFilter.trim().length >= 1 && (
+        <div className="flex gap-0 border-b border-m3-outline-variant px-4">
+          <button
+            onClick={() => setSearchTab('conversations')}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${
+              searchTab === 'conversations'
+                ? 'border-b-2 border-m3-primary text-m3-primary'
+                : 'text-m3-on-surface-variant hover:text-m3-on-surface'
+            }`}
+          >
+            Conversations
+          </button>
+          <button
+            onClick={() => setSearchTab('messages')}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${
+              searchTab === 'messages'
+                ? 'border-b-2 border-m3-primary text-m3-primary'
+                : 'text-m3-on-surface-variant hover:text-m3-on-surface'
+            }`}
+          >
+            Messages {isSearchingMessages && '...'}
+          </button>
+        </div>
+      )}
+
       {/* Room list */}
       <nav className="flex-1 overflow-y-auto" aria-label="Chat rooms">
         {/* Invitations section */}
@@ -467,7 +525,8 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
           </div>
         )}
 
-        {activeRooms.length === 0 && !showArchived && !(searchFilter.trim() && archivedRooms.length > 0) ? (
+        {/* Show rooms when not searching OR when on "conversations" tab */}
+        {(!searchFilter.trim() || searchTab === 'conversations') && (activeRooms.length === 0 && !showArchived && !(searchFilter.trim() && archivedRooms.length > 0)) ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <MessageSquare className="h-12 w-12 text-m3-outline-variant" />
             <p className="mt-4 text-sm text-m3-on-surface-variant">
@@ -482,7 +541,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
               </button>
             )}
           </div>
-        ) : (
+        ) : (!searchFilter.trim() || searchTab === 'conversations') ? (
           <div>
             {activeRooms.map(room => (
               <RoomListItem
@@ -497,10 +556,10 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
               />
             ))}
           </div>
-        )}
+        ) : null}
 
         {/* Archived section — collapsible in chat list */}
-        {archivedRooms.length > 0 && (
+        {(!searchFilter.trim() || searchTab === 'conversations') && archivedRooms.length > 0 && (
           <div className="border-t border-m3-outline-variant">
             <button
               onClick={() => setShowArchived(!showArchived)}
@@ -529,8 +588,8 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
           </div>
         )}
 
-        {/* Message search results */}
-        {searchFilter.trim().length >= 3 && (
+        {/* Message search results — only in messages tab */}
+        {searchFilter.trim().length >= 3 && searchTab === 'messages' && (
           <div className="border-t border-m3-outline-variant">
             <div className="flex items-center gap-3 px-5 py-2.5 text-xs font-medium text-m3-on-surface-variant">
               <MessageSquareDashed className="h-4 w-4" />

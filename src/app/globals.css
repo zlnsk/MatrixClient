@@ -367,6 +367,10 @@ body {
   }
 }
 
+/* ---- Hide scrollbar for filter chips ---- */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* ---- Interactive element cursor & hover states ---- */
 button, [role="button"], a, [tabindex="0"] {
   cursor: pointer;
