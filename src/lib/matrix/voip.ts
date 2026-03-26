@@ -37,7 +37,7 @@ function getPeerConnection(call: MatrixCall): RTCPeerConnection | null {
     }
   } catch { /* version check is best-effort */ }
 
-  const pc = (call as Record<string, unknown>)[SDK_PEER_CONN_FIELD] as RTCPeerConnection | undefined
+  const pc = (call as unknown as Record<string, unknown>)[SDK_PEER_CONN_FIELD] as RTCPeerConnection | undefined
   if (!pc) {
     reportError('voip',
       `CRITICAL: '${SDK_PEER_CONN_FIELD}' not found on MatrixCall. ` +
