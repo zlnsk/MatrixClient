@@ -14,7 +14,7 @@ export default function middleware(request: NextRequest) {
     "img-src 'self' https: blob: data:",
     "media-src 'self' https: blob:",
     "connect-src 'self' https: wss:",
-    "manifest-src 'self' https:",
+    "manifest-src 'self' https: blob:",
     "font-src 'self'",
     "worker-src 'self'",
     "object-src 'none'",

@@ -451,17 +451,23 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     }
   }
 
-  // Read receipts
+  // Read receipts — use getReceiptsForEvent() directly from SDK.
+  // This works correctly even with lazyLoadMembers because receipts are
+  // tracked independently from the room member list.
+  // For display names/avatars, fall back gracefully if member isn't loaded.
   const readBy: ReadReceipt[] = []
   const roomReceipts = room.getReceiptsForEvent(event)
   if (roomReceipts) {
     for (const receipt of roomReceipts) {
       if (receipt.userId === sender) continue // skip own read receipt
+      // getMember may return null for lazy-loaded rooms — that's OK,
+      // we still record the receipt and use profile cache or userId as fallback
       const receiptMember = room.getMember(receipt.userId)
+      const profileAvatar = getProfileCache(receipt.userId)
       readBy.push({
         userId: receipt.userId,
-        displayName: receiptMember?.name || receipt.userId,
-        avatarUrl: getAvatarUrl((receiptMember ? getProfileCache(receiptMember.userId) : undefined) || receiptMember?.getMxcAvatarUrl()),
+        displayName: receiptMember?.name || cleanDisplayName(receipt.userId),
+        avatarUrl: getAvatarUrl(profileAvatar || receiptMember?.getMxcAvatarUrl()),
         ts: receipt.data?.ts || 0,
       })
     }

@@ -113,7 +113,15 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   const handleVerifyWithKey = useCallback(async (key: string) => {
     await restoreFromRecoveryKey(key)
-    setShowNewSessionBanner(false)
+    // Only dismiss the banner if verification actually succeeded.
+    // restoreFromRecoveryKey() catches and continues on partial failures,
+    // so we must verify the device is actually cross-signed before hiding the prompt.
+    const status = await getCrossSigningStatus()
+    if (status.thisDeviceVerified) {
+      localStorage.setItem('matrix_verify_banner_dismissed', 'true')
+      setShowNewSessionBanner(false)
+    }
+    // If not verified, keep the banner visible so the user knows it's incomplete
   }, [])
 
   return (
