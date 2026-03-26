@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 
-describe('session token storage security', () => {
+describe('session token storage persistence', () => {
   beforeEach(() => {
     sessionStorage.clear()
     localStorage.clear()
   })
 
-  it('getHomeserverUrl reads from sessionStorage, not localStorage', async () => {
-    // Simulate the behavior — session stored in sessionStorage
-    sessionStorage.setItem('matrix_session', JSON.stringify({
+  it('getHomeserverUrl reads from localStorage', async () => {
+    // Simulate the behavior — session stored in localStorage
+    localStorage.setItem('matrix_session', JSON.stringify({
       accessToken: 'test-token',
       userId: '@test:server',
       deviceId: 'DEVICE1',
@@ -20,9 +20,9 @@ describe('session token storage security', () => {
     expect(getHomeserverUrl()).toBe('https://matrix.example.com')
   })
 
-  it('does not read from localStorage for session data', async () => {
-    // Put session data in localStorage (old behavior) — should NOT be found
-    localStorage.setItem('matrix_session', JSON.stringify({
+  it('does not read from sessionStorage for session data', async () => {
+    // Put session data in sessionStorage (old behavior) — should NOT be found
+    sessionStorage.setItem('matrix_session', JSON.stringify({
       accessToken: 'old-token',
       userId: '@old:server',
       deviceId: 'OLD_DEVICE',
@@ -30,7 +30,7 @@ describe('session token storage security', () => {
     }))
 
     const { getHomeserverUrl } = await import('@/lib/matrix/client')
-    // Since sessionStorage is empty, should return null
+    // Since localStorage is empty, should return null
     expect(getHomeserverUrl()).toBeNull()
   })
 })
