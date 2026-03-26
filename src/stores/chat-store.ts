@@ -1223,44 +1223,70 @@ export const useChatStore = create<ChatState>((set, get) => ({
       throw new Error('SVG files are not allowed — they can contain executable code.')
     }
 
-    // Upload file to Matrix content repository
-    const uploadResponse = await client.uploadContent(file, {
-      name: file.name,
-      type: file.type,
+    // Import upload store for progress tracking
+    const { useUploadStore } = await import('./upload-store')
+    const uploadStore = useUploadStore.getState()
+    const taskId = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+    uploadStore.addTask({
+      id: taskId,
+      roomId,
+      fileName: file.name,
+      fileSize: file.size,
     })
-    const mxcUrl = uploadResponse.content_uri
 
-    // Determine message type based on file MIME type
-    let msgtype = 'm.file'
-    if (file.type.startsWith('image/')) msgtype = 'm.image'
-    else if (file.type.startsWith('video/')) msgtype = 'm.video'
-    else if (file.type.startsWith('audio/')) msgtype = 'm.audio'
+    try {
+      // Upload file with progress tracking
+      const uploadResponse = await client.uploadContent(file, {
+        name: file.name,
+        type: file.type,
+        progressHandler: (progress: { loaded: number; total: number }) => {
+          if (progress.total > 0) {
+            const pct = Math.round((progress.loaded / progress.total) * 100)
+            uploadStore.updateProgress(taskId, pct)
+          }
+        },
+      })
+      const mxcUrl = uploadResponse.content_uri
 
-    const content: Record<string, unknown> = {
-      msgtype,
-      body: file.name,
-      url: mxcUrl,
-      info: {
-        mimetype: file.type,
-        size: file.size,
-      },
+      uploadStore.setStatus(taskId, 'sending')
+
+      // Determine message type based on file MIME type
+      let msgtype = 'm.file'
+      if (file.type.startsWith('image/')) msgtype = 'm.image'
+      else if (file.type.startsWith('video/')) msgtype = 'm.video'
+      else if (file.type.startsWith('audio/')) msgtype = 'm.audio'
+
+      const content: Record<string, unknown> = {
+        msgtype,
+        body: file.name,
+        url: mxcUrl,
+        info: {
+          mimetype: file.type,
+          size: file.size,
+        },
+      }
+
+      // Mark voice messages with MSC3245 voice flag for bridge compatibility
+      if (msgtype === 'm.audio' && file.name.startsWith('voice-message-')) {
+        content['org.matrix.msc3245.voice'] = {}
+      }
+
+      // For images, try to get dimensions
+      if (msgtype === 'm.image') {
+        try {
+          const dimensions = await getImageDimensions(file)
+          ;(content.info as Record<string, unknown>).w = dimensions.width
+          ;(content.info as Record<string, unknown>).h = dimensions.height
+        } catch { /* ignore */ }
+      }
+
+      await sendEvent(client, roomId, 'm.room.message', content)
+      uploadStore.setStatus(taskId, 'done')
+    } catch (err) {
+      uploadStore.setStatus(taskId, 'failed', err instanceof Error ? err.message : 'Upload failed')
+      throw err
     }
-
-    // Mark voice messages with MSC3245 voice flag for bridge compatibility
-    if (msgtype === 'm.audio' && file.name.startsWith('voice-message-')) {
-      content['org.matrix.msc3245.voice'] = {}
-    }
-
-    // For images, try to get dimensions
-    if (msgtype === 'm.image') {
-      try {
-        const dimensions = await getImageDimensions(file)
-        ;(content.info as Record<string, unknown>).w = dimensions.width
-        ;(content.info as Record<string, unknown>).h = dimensions.height
-      } catch { /* ignore */ }
-    }
-
-    await sendEvent(client, roomId, 'm.room.message', content)
   },
 
   leaveRoom: async (roomId) => {

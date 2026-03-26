@@ -15,6 +15,7 @@ import {
   Pin,
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
+import { useUploadStore } from '@/stores/upload-store'
 
 interface ChatAreaProps {
   onBackClick: () => void
@@ -311,6 +312,9 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         )}
       </div>
 
+      {/* Upload progress bar */}
+      <UploadProgress roomId={activeRoom.roomId} />
+
       {/* Message Input */}
       <MessageInput
         onSend={handleSend}
@@ -334,6 +338,38 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           onLeaveRoom={leaveRoom}
         />
       )}
+    </div>
+  )
+}
+
+/** Compact upload progress indicators shown above the message input. */
+function UploadProgress({ roomId }: { roomId: string }) {
+  const tasks = useUploadStore(s => s.tasks.filter(t => t.roomId === roomId))
+
+  if (tasks.length === 0) return null
+
+  return (
+    <div className="border-t border-m3-outline-variant/40 bg-m3-surface-container-low px-4 py-2 dark:bg-m3-surface-container">
+      {tasks.map(task => (
+        <div key={task.id} className="flex items-center gap-3 py-1">
+          <span className="text-xs text-m3-on-surface-variant truncate max-w-[180px]">
+            {task.fileName}
+          </span>
+          <div className="flex-1 h-1.5 rounded-full bg-m3-surface-container-high dark:bg-m3-surface-container-highest overflow-hidden">
+            <div
+              className="h-full rounded-full bg-m3-primary transition-all duration-300 ease-out"
+              style={{ width: `${task.status === 'done' ? 100 : task.progress}%` }}
+            />
+          </div>
+          <span className="text-[11px] text-m3-on-surface-variant flex-shrink-0 w-14 text-right">
+            {task.status === 'queued' && 'Queued'}
+            {task.status === 'uploading' && `${task.progress}%`}
+            {task.status === 'sending' && 'Sending'}
+            {task.status === 'done' && 'Done'}
+            {task.status === 'failed' && <span className="text-m3-error">Failed</span>}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }

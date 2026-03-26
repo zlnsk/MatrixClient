@@ -48,7 +48,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const [emojiCategory, setEmojiCategory] = useState('Smileys')
   // isSending state removed — messages are now sent optimistically
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
-  const [isUploading, setIsUploading] = useState(false)
+  // isUploading removed — uploads are now non-blocking with progress tracked in uploadStore
   const [commandStatus, setCommandStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [recordingDuration, setRecordingDuration] = useState(0)
@@ -116,7 +116,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
             blob = await convertWebmToOgg(blob)
           }
           const file = new File([blob], `voice-message-${Date.now()}.ogg`, { type: 'audio/ogg; codecs=opus' })
-          await uploadFile(roomId, file)
+          uploadFile(roomId, file).catch(err => console.error('Voice upload failed:', err))
         }
         setRecordingDuration(0)
       }
@@ -282,19 +282,20 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
     const hasFiles = pendingFiles.length > 0
 
     if (!trimmed && !hasFiles) return
-    if (isUploading) return
+    // No blocking check — uploads run in background
 
     setCommandStatus(null)
     sendTyping(roomId, false)
     try {
-      // Upload pending files first
+      // Upload pending files — fire and forget so input stays usable.
+      // Each upload is tracked in uploadStore with progress bar.
       if (hasFiles) {
-        setIsUploading(true)
         for (const file of pendingFiles) {
-          await uploadFile(roomId, file)
+          uploadFile(roomId, file).catch(err => {
+            console.error('File upload failed:', err)
+          })
         }
         setPendingFiles([])
-        setIsUploading(false)
       }
       // Check for slash commands
       if (trimmed && trimmed.startsWith('/')) {
@@ -316,8 +317,8 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
       }
       setContent('')
       inputRef.current?.focus()
-    } finally {
-      setIsUploading(false)
+    } catch (err) {
+      console.error('Send failed:', err)
     }
   }
 
@@ -661,15 +662,11 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={(!content.trim() && pendingFiles.length === 0) || isUploading}
+            disabled={!content.trim() && pendingFiles.length === 0}
             className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary text-white transition-all hover:bg-m3-primary/90 active:bg-m3-primary/80 disabled:opacity-30"
             aria-label="Send message"
           >
-            {isUploading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
+            <Send className="h-5 w-5" />
           </button>
         )}
       </div>
