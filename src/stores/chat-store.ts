@@ -205,45 +205,32 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const isArchived = 'm.lowpriority' in tags
 
   // Avatar resolution following Element Web's algorithm:
-  // 1. Room avatar (m.room.avatar state event) — highest priority for ALL rooms
-  //    Bridges (mautrix-signal etc.) set this, so it's usually the correct photo.
-  // 2. For DMs only (room in m.direct): fall back to the other member's avatar
-  //    using getAvatarFallbackMember() which filters out bridge bots.
-  // 3. For groups: room avatar or initials only — NEVER a random member's photo.
-  let roomAvatarMxc = room.getMxcAvatarUrl()
-  const isBridgedRoom = members.some(m => /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId))
+  // 1. Room avatar (m.room.avatar) — highest priority for ALL rooms.
+  //    Bridges (mautrix-signal etc.) set this to the contact's real photo.
+  // 2. For DMs without room avatar: fall back to getAvatarFallbackMember().
+  // 3. Groups without room avatar: show initials (never a random member).
+  const roomMxc = room.getMxcAvatarUrl()
+  let roomAvatarMxc = roomMxc || null
 
-  if (isDirect && client) {
-    // DM room: use getAvatarFallbackMember() (same as Element Web)
-    // This correctly identifies the "other person" even in bridged DMs
-    // with 3 members (you + bot + puppet) by filtering functional members.
+  if (isDirect && !roomMxc && client) {
+    // DM with no room avatar: try member fallback (same as Element Web)
     const dmPartner = room.getAvatarFallbackMember()
     if (dmPartner) {
-      // Prefer profile cache (real photo from getProfileInfo) over room member avatar
-      const profileAvatar = getProfileCache(dmPartner.userId)
-      const memberAvatar = profileAvatar || dmPartner.getMxcAvatarUrl()
-      if (memberAvatar) {
-        roomAvatarMxc = memberAvatar
-      }
-    } else {
-      // Fallback: try joined members directly (lazy loading may not have heroes yet)
+      const mxc = dmPartner.getMxcAvatarUrl()
+      if (mxc) roomAvatarMxc = mxc
+    }
+    if (!roomAvatarMxc) {
+      // Lazy loading fallback: try joined members directly
       const otherMembers = room.getJoinedMembers().filter((m: RoomMember) => m.userId !== client.getUserId())
-      // For bridged DMs, skip the bridge bot and pick the puppet
       const puppet = otherMembers.find((m: RoomMember) =>
         /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId)
       )
       const partner = puppet || otherMembers[0]
-      if (partner) {
-        const profileAvatar = getProfileCache(partner.userId)
-        const memberAvatar = profileAvatar || partner.getMxcAvatarUrl()
-        if (memberAvatar) {
-          roomAvatarMxc = memberAvatar
-        }
+      if (partner?.getMxcAvatarUrl()) {
+        roomAvatarMxc = partner.getMxcAvatarUrl()!
       }
     }
   }
-  // For non-DM rooms (groups): roomAvatarMxc stays as room.getMxcAvatarUrl()
-  // which is the m.room.avatar state event. No member avatar fallback.
 
   return {
     roomId: room.roomId,
@@ -719,8 +706,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
               })
 
               let roomAvatar = room.avatarUrl
-              // Only update room avatar for DMs
-              if (room.isDirect) {
+              // Only update room avatar for DMs that have NO room avatar
+              // If the bridge set m.room.avatar, trust it (it's the correct photo)
+              if (room.isDirect && !roomAvatar) {
                 const others = updatedMembers.filter(m => m.userId !== myUserId)
                 const puppet = others.find(m =>
                   /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId)
@@ -730,7 +718,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                   const cached = getProfileCache(partner.userId)
                   if (cached) {
                     const newAvatar = getAvatarUrl(cached)
-                    if (newAvatar && newAvatar !== roomAvatar) {
+                    if (newAvatar) {
                       roomAvatar = newAvatar
                       hasUpdate = true
                     }

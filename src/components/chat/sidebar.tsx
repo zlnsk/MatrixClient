@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo, memo, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
-import { getProfileCache } from '@/lib/profile-cache'
+import { resolveRoomAvatarFromSDK } from '@/lib/matrix/client'
 import { getAccountDataContent, setAccountData } from '@/lib/matrix/sdk-compat'
 import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
@@ -177,39 +177,12 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   ), [rooms, searchFilter])
   const unreadCount = useMemo(() => rooms.filter(r => !r.isArchived && r.unreadCount > 0).length, [rooms])
 
-  // Avatar resolution following Element Web's algorithm:
-  // 1. Room avatar (from m.room.avatar state event) — highest priority
-  // 2. For DMs only: other member's avatar (profile cache > store member avatar)
-  // 3. For groups: room avatar or null (shows initials) — NEVER a random member
-  const avatarMap = useMemo(() => {
-    const map = new Map<string, string | null>()
-    for (const room of rooms) {
-      if (room.isDirect && room.members.length > 0) {
-        // DM: find the other person (not self, prefer bridge puppet over bot)
-        const others = room.members.filter(m => m.userId !== user?.userId)
-        const puppet = others.find(m =>
-          /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId)
-        )
-        const partner = puppet || others[0]
-
-        if (partner) {
-          // Profile cache has real photos from getProfileInfo()
-          const cached = getProfileCache(partner.userId)
-          map.set(room.roomId, cached || partner.avatarUrl || room.avatarUrl || null)
-        } else {
-          map.set(room.roomId, room.avatarUrl || null)
-        }
-      } else {
-        // Group room: use room avatar only, never a member's photo
-        map.set(room.roomId, room.avatarUrl || null)
-      }
-    }
-    return map
-  }, [rooms, user?.userId])
-
-  const getOtherMemberAvatar = (room: MatrixRoom) => {
-    return avatarMap.get(room.roomId) ?? room.avatarUrl ?? null
-  }
+  // Avatar: roomToMatrixRoom() already computes the correct avatar via
+  // Element Web's algorithm. Just use room.avatarUrl, with SDK fallback.
+  const getOtherMemberAvatar = useCallback((room: MatrixRoom) => {
+    if (room.avatarUrl) return room.avatarUrl
+    return resolveRoomAvatarFromSDK(room.roomId)
+  }, [])
 
   const getOtherMemberPresence = (room: MatrixRoom): 'online' | 'offline' | 'away' | null => {
     if (room.isDirect) {

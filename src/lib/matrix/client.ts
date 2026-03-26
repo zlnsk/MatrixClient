@@ -888,9 +888,9 @@ export function getUserId(): string | null {
 
 /**
  * Resolve avatar for a room directly from the SDK.
- * Follows Element Web's algorithm:
+ * Follows Element Web's algorithm exactly:
  * 1. Room avatar (m.room.avatar) — highest priority for ALL rooms
- * 2. For DMs: other member's avatar via getAvatarFallbackMember() (filters out bots)
+ * 2. For DMs without room avatar: other member's avatar via getAvatarFallbackMember()
  * 3. For groups: room avatar or null (shows initials)
  */
 export function resolveRoomAvatarFromSDK(roomId: string): string | null {
@@ -898,45 +898,31 @@ export function resolveRoomAvatarFromSDK(roomId: string): string | null {
   const room = matrixClient.getRoom(roomId)
   if (!room) return null
 
-  // 1. Room avatar (m.room.avatar state event) — bridges set this
+  // 1. Room avatar (m.room.avatar) — bridges set this to the contact's real photo
   const roomMxc = room.getMxcAvatarUrl()
+  if (roomMxc) return roomMxc
 
-  // 2. Check if this is a DM room (use sdk-compat wrapper to avoid strict typing)
+  // 2. Check if DM
   const dmMap = (matrixClient as unknown as { getAccountData: (type: string) => { getContent: () => Record<string, unknown> } | null }).getAccountData('m.direct')?.getContent() || {}
   let isDm = false
   for (const userRooms of Object.values(dmMap) as string[][]) {
     if (userRooms.includes(roomId)) { isDm = true; break }
   }
+  if (!isDm) return null // Group with no room avatar → initials
 
-  if (!isDm) {
-    // Group room: only use room avatar, never a member's photo
-    return roomMxc || null
-  }
-
-  // DM room: try the other member's avatar
+  // 3. DM without room avatar: try member fallback
   const dmPartner = room.getAvatarFallbackMember()
-  if (dmPartner) {
-    const cached = getProfileCache(dmPartner.userId)
-    if (cached) return cached
-    const mxc = dmPartner.getMxcAvatarUrl()
-    if (mxc) return mxc
-  }
+  if (dmPartner?.getMxcAvatarUrl()) return dmPartner.getMxcAvatarUrl()!
 
-  // Fallback: find bridge puppet among joined members
+  // 4. Lazy loading fallback: try joined members directly
   const myUserId = matrixClient.getUserId()
   const others = room.getJoinedMembers().filter(m => m.userId !== myUserId)
   const puppet = others.find(m =>
     /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId)
   )
   const partner = puppet || others[0]
-  if (partner) {
-    const cached = getProfileCache(partner.userId)
-    if (cached) return cached
-    const mxc = partner.getMxcAvatarUrl()
-    if (mxc) return mxc
-  }
+  if (partner?.getMxcAvatarUrl()) return partner.getMxcAvatarUrl()!
 
-  // Last resort: room avatar
-  return roomMxc || null
+  return null
 }
 
