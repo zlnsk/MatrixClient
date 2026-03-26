@@ -887,47 +887,56 @@ export function getUserId(): string | null {
 }
 
 /**
- * Resolve the "other member" avatar for a room directly from the SDK.
- * Prefers the global profile avatar (from profileAvatarCache) over the
- * room-level member avatar, which for bridge puppets is often a generic
- * logo (e.g. Signal's default silhouette) rather than the real face.
+ * Resolve avatar for a room directly from the SDK.
+ * Follows Element Web's algorithm:
+ * 1. Room avatar (m.room.avatar) — highest priority for ALL rooms
+ * 2. For DMs: other member's avatar via getAvatarFallbackMember() (filters out bots)
+ * 3. For groups: room avatar or null (shows initials)
  */
 export function resolveRoomAvatarFromSDK(roomId: string): string | null {
   if (!matrixClient) return null
   const room = matrixClient.getRoom(roomId)
   if (!room) return null
 
-  const myUserId = matrixClient.getUserId()
-
-  // Try all members (not just getJoinedMembers which may be incomplete with lazy loading)
-  const members = room.getMembers()
-  const others = members.filter(m => m.userId !== myUserId && m.membership === 'join')
-
-  // First pass: check profile cache (real photos fetched via getProfileInfo)
-  for (const m of others) {
-    const cached = getProfileCache(m.userId)
-    if (cached) return cached
-  }
-
-  // Second pass: fall back to room-level member avatar
-  for (const m of others) {
-    const mxc = m.getMxcAvatarUrl()
-    if (mxc) return mxc
-  }
-
-  // Try fallback member (from room heroes)
-  const fallback = room.getAvatarFallbackMember()
-  if (fallback) {
-    const cached = getProfileCache(fallback.userId)
-    if (cached) return cached
-    const mxc = fallback.getMxcAvatarUrl()
-    if (mxc) return mxc
-  }
-
-  // Try the room's own avatar
+  // 1. Room avatar (m.room.avatar state event) — bridges set this
   const roomMxc = room.getMxcAvatarUrl()
-  if (roomMxc) return roomMxc
 
-  return null
+  // 2. Check if this is a DM room
+  const dmMap = matrixClient.getAccountData('m.direct')?.getContent() || {}
+  let isDm = false
+  for (const userRooms of Object.values(dmMap) as string[][]) {
+    if (userRooms.includes(roomId)) { isDm = true; break }
+  }
+
+  if (!isDm) {
+    // Group room: only use room avatar, never a member's photo
+    return roomMxc || null
+  }
+
+  // DM room: try the other member's avatar
+  const dmPartner = room.getAvatarFallbackMember()
+  if (dmPartner) {
+    const cached = getProfileCache(dmPartner.userId)
+    if (cached) return cached
+    const mxc = dmPartner.getMxcAvatarUrl()
+    if (mxc) return mxc
+  }
+
+  // Fallback: find bridge puppet among joined members
+  const myUserId = matrixClient.getUserId()
+  const others = room.getJoinedMembers().filter(m => m.userId !== myUserId)
+  const puppet = others.find(m =>
+    /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId)
+  )
+  const partner = puppet || others[0]
+  if (partner) {
+    const cached = getProfileCache(partner.userId)
+    if (cached) return cached
+    const mxc = partner.getMxcAvatarUrl()
+    if (mxc) return mxc
+  }
+
+  // Last resort: room avatar
+  return roomMxc || null
 }
 

@@ -109,30 +109,30 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
     room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
   ), [rooms, searchFilter])
 
-  // Memoize avatar resolution per room.
-  // Uses only profile cache + store data — no SDK calls during render.
+  // Avatar resolution following Element Web's algorithm:
+  // 1. Room avatar (from m.room.avatar state event) — highest priority
+  // 2. For DMs only: other member's avatar (profile cache > store member avatar)
+  // 3. For groups: room avatar or null (shows initials) — NEVER a random member
   const avatarMap = useMemo(() => {
     const map = new Map<string, string | null>()
     for (const room of rooms) {
-      const isSmallRoom = room.members.length > 0 && room.members.length <= 3
-      if ((room.isDirect || isSmallRoom || room.isBridged) && room.members.length > 0) {
+      if (room.isDirect && room.members.length > 0) {
+        // DM: find the other person (not self, prefer bridge puppet over bot)
         const others = room.members.filter(m => m.userId !== user?.userId)
+        const puppet = others.find(m =>
+          /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId)
+        )
+        const partner = puppet || others[0]
 
-        // 1. Check profile cache — has real photos from getProfileInfo()
-        let found: string | null = null
-        for (const m of others) {
-          const cached = getProfileCache(m.userId)
-          if (cached) { found = cached; break }
+        if (partner) {
+          // Profile cache has real photos from getProfileInfo()
+          const cached = getProfileCache(partner.userId)
+          map.set(room.roomId, cached || partner.avatarUrl || room.avatarUrl || null)
+        } else {
+          map.set(room.roomId, room.avatarUrl || null)
         }
-
-        // 2. Fall back to store member/room avatar
-        if (!found) {
-          const other = others.find(m => m.avatarUrl) || others[0]
-          found = other?.avatarUrl || room.avatarUrl || null
-        }
-
-        map.set(room.roomId, found)
       } else {
+        // Group room: use room avatar only, never a member's photo
         map.set(room.roomId, room.avatarUrl || null)
       }
     }
@@ -140,7 +140,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   }, [rooms, user?.userId])
 
   const getOtherMemberAvatar = (room: MatrixRoom) => {
-    return avatarMap.get(room.roomId) || room.avatarUrl || null
+    return avatarMap.get(room.roomId) ?? room.avatarUrl ?? null
   }
 
   const getOtherMemberPresence = (room: MatrixRoom): 'online' | 'offline' | 'away' | null => {
