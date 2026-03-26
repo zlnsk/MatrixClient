@@ -191,6 +191,32 @@ body {
   animation: fadeIn 0.15s cubic-bezier(0.2, 0, 0, 1);
 }
 
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes skeleton {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.animate-skeleton {
+  animation: skeleton 1.8s ease-in-out infinite;
+}
+
+/* Smooth link hover transitions in rich content */
+.rich-content a {
+  transition: opacity 0.15s ease, text-decoration-color 0.15s ease;
+}
+.rich-content a:hover {
+  opacity: 0.8;
+}
+
 @keyframes pulse-dot {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
@@ -339,6 +365,16 @@ body {
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
+}
+
+/* ---- Interactive element cursor & hover states ---- */
+button, [role="button"], a, [tabindex="0"] {
+  cursor: pointer;
+}
+
+button:not(:disabled):active, [role="button"]:not(:disabled):active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
 }
 
 /* ---- Performance optimizations ---- */

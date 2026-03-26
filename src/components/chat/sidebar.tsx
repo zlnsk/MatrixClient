@@ -31,7 +31,9 @@ import {
   Plus,
   ChevronRight,
   Trash2,
+  Pencil,
 } from 'lucide-react'
+import { getMatrixClient } from '@/lib/matrix/client'
 
 interface SidebarProps {
   onSettingsClick: () => void
@@ -51,8 +53,12 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   const [messageResults, setMessageResults] = useState<{roomId: string, roomName: string, eventId: string, sender: string, body: string, timestamp: number}[]>([])
   const [isSearchingMessages, setIsSearchingMessages] = useState(false)
   const [showHamburger, setShowHamburger] = useState(false)
+  const [showProfilePopover, setShowProfilePopover] = useState(false)
+  const [statusText, setStatusText] = useState('')
+  const [currentPresence, setCurrentPresence] = useState<'online' | 'unavailable' | 'offline'>('online')
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hamburgerRef = useRef<HTMLDivElement>(null)
+  const profilePopoverRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (user) loadRooms()
@@ -70,6 +76,39 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
       return () => document.removeEventListener('mousedown', handleClick)
     }
   }, [showHamburger])
+
+  // Close profile popover on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (profilePopoverRef.current && !profilePopoverRef.current.contains(e.target as Node)) {
+        setShowProfilePopover(false)
+      }
+    }
+    if (showProfilePopover) {
+      document.addEventListener('mousedown', handleClick)
+      return () => document.removeEventListener('mousedown', handleClick)
+    }
+  }, [showProfilePopover])
+
+  const handleSaveStatus = useCallback(() => {
+    const client = getMatrixClient()
+    if (!client) return
+    // Set status message via presence
+    try {
+      (client as unknown as { setPresence: (opts: { presence: string; status_msg?: string }) => void })
+        .setPresence({ presence: currentPresence, status_msg: statusText || undefined })
+    } catch { /* ignore */ }
+  }, [statusText, currentPresence])
+
+  const handleSetPresence = useCallback((presence: 'online' | 'unavailable' | 'offline') => {
+    setCurrentPresence(presence)
+    const client = getMatrixClient()
+    if (!client) return
+    try {
+      (client as unknown as { setPresence: (opts: { presence: string; status_msg?: string }) => void })
+        .setPresence({ presence, status_msg: statusText || undefined })
+    } catch { /* ignore */ }
+  }, [statusText])
 
   // Debounced message search when query has 3+ characters
   useEffect(() => {
@@ -236,18 +275,81 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
           <Plus className="h-5 w-5" />
         </button>
 
-        <button
-          onClick={onProfileClick}
-          className="rounded-full transition-opacity hover:opacity-80"
-          aria-label="Profile settings"
-        >
-          <Avatar
-            src={user?.avatarUrl}
-            name={user?.displayName || 'U'}
-            size="md"
-            status="online"
-          />
-        </button>
+        <div className="relative" ref={profilePopoverRef}>
+          <button
+            onClick={() => setShowProfilePopover(!showProfilePopover)}
+            className="rounded-full transition-all hover:ring-2 hover:ring-m3-primary/30 active:scale-95"
+            aria-label="Profile and status"
+          >
+            <Avatar
+              src={user?.avatarUrl}
+              name={user?.displayName || 'U'}
+              size="md"
+              status="online"
+            />
+          </button>
+
+          {/* Profile popover */}
+          {showProfilePopover && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-m3-outline-variant bg-white shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+              {/* User info */}
+              <div className="flex items-center gap-3 px-5 py-4">
+                <Avatar src={user?.avatarUrl} name={user?.displayName || 'U'} size="lg" status="online" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-m3-on-surface">{user?.displayName}</p>
+                  <p className="truncate text-xs text-m3-on-surface-variant">{user?.userId}</p>
+                </div>
+              </div>
+
+              {/* Status input */}
+              <div className="border-t border-m3-outline-variant px-5 py-3 dark:border-m3-outline-variant">
+                <label className="mb-1.5 block text-xs font-medium text-m3-on-surface-variant">Status message</label>
+                <input
+                  type="text"
+                  value={statusText}
+                  onChange={e => setStatusText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { handleSaveStatus(); setShowProfilePopover(false) } }}
+                  placeholder="What's on your mind?"
+                  className="w-full rounded-lg bg-m3-surface-container px-3 py-2 text-sm text-m3-on-surface placeholder-m3-outline transition-colors focus:bg-m3-surface-container-high focus:outline-none dark:bg-m3-surface-container-high dark:focus:bg-m3-surface-container-highest"
+                />
+              </div>
+
+              {/* Presence selector */}
+              <div className="border-t border-m3-outline-variant px-5 py-3 dark:border-m3-outline-variant">
+                <label className="mb-2 block text-xs font-medium text-m3-on-surface-variant">Presence</label>
+                <div className="flex gap-2">
+                  {(['online', 'unavailable', 'offline'] as const).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => handleSetPresence(p)}
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                        currentPresence === p
+                          ? 'bg-m3-primary-container text-m3-primary ring-1 ring-m3-primary/30'
+                          : 'bg-m3-surface-container text-m3-on-surface-variant hover:bg-m3-surface-container-high'
+                      }`}
+                    >
+                      <span className={`h-2 w-2 rounded-full ${
+                        p === 'online' ? 'bg-green-500' : p === 'unavailable' ? 'bg-amber-500' : 'bg-gray-400'
+                      }`} />
+                      {p === 'online' ? 'Online' : p === 'unavailable' ? 'Away' : 'Offline'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="border-t border-m3-outline-variant dark:border-m3-outline-variant">
+                <button
+                  onClick={() => { onProfileClick(); setShowProfilePopover(false) }}
+                  className="flex w-full items-center gap-3 px-5 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container first:rounded-t-none last:rounded-b-2xl dark:hover:bg-m3-surface-container-high"
+                >
+                  <Pencil className="h-4 w-4 text-m3-on-surface-variant" />
+                  Edit profile
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search */}
@@ -546,7 +648,7 @@ const RoomListItem = memo(function RoomListItem({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className={`group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors duration-75 ${
+      className={`group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-all duration-150 active:scale-[0.99] ${
         isActive
           ? 'bg-m3-primary-container/50 dark:bg-m3-surface-container-high'
           : 'hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high/60 dark:active:bg-m3-surface-container-highest'

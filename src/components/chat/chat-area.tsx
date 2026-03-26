@@ -253,8 +253,17 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       {/* Messages */}
       <div ref={scrollContainerRef} className="message-scroll-container min-h-0 flex-1 overflow-y-auto bg-m3-surface-container-lowest px-2 pt-4 pb-6 dark:bg-m3-surface md:px-6 lg:px-8 md:pb-8">
         {isLoadingMessages ? (
-          <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-m3-primary" />
+          <div className="flex h-full flex-col justify-end space-y-4 px-4 py-6">
+            {/* Skeleton messages */}
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className={`flex ${i % 3 === 0 ? 'justify-end' : 'justify-start'}`}>
+                <div className={`animate-skeleton rounded-[20px] ${
+                  i % 3 === 0
+                    ? 'bg-m3-primary/20 dark:bg-m3-primary/10'
+                    : 'bg-m3-surface-container dark:bg-m3-surface-container-high'
+                }`} style={{ width: `${35 + (i * 13) % 40}%`, height: `${36 + (i * 7) % 24}px` }} />
+              </div>
+            ))}
           </div>
         ) : (
           <div className="flex min-h-full flex-col justify-end space-y-4">
