@@ -149,7 +149,28 @@ const SUPPRESSED_PATTERNS = [
   'Missing default',
 ]
 
+// Log suppression can be disabled at runtime for debugging:
+//   - Set localStorage key 'MATRIX_DEBUG_LOGS' to '1' and reload
+//   - Or set env var MATRIX_DEBUG_LOGS=1 at build time
+// A console helper is also available: window.__matrixEnableDebugLogs()
+const LOG_SUPPRESSION_ENABLED =
+  typeof window !== 'undefined'
+    ? !localStorage.getItem('MATRIX_DEBUG_LOGS')
+    : process.env.MATRIX_DEBUG_LOGS !== '1'
+
+if (typeof window !== 'undefined') {
+  (window as any).__matrixEnableDebugLogs = () => {
+    localStorage.setItem('MATRIX_DEBUG_LOGS', '1')
+    console.info('Matrix debug logs enabled. Reload to apply.')
+  };
+  (window as any).__matrixDisableDebugLogs = () => {
+    localStorage.removeItem('MATRIX_DEBUG_LOGS')
+    console.info('Matrix debug logs disabled. Reload to apply.')
+  }
+}
+
 function isSuppressed(args: any[]): boolean {
+  if (!LOG_SUPPRESSION_ENABLED) return false
   const msg = args.map(a => (typeof a === 'string' ? a : a?.message || '')).join(' ')
   return SUPPRESSED_PATTERNS.some(p => msg.includes(p))
 }

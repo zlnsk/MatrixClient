@@ -11,17 +11,28 @@
  *   const log = getErrorLog() // returns recent errors
  */
 
-interface ErrorEntry {
+export interface ErrorEntry {
   timestamp: string
   category: string
   message: string
   stack?: string
 }
 
+export type ErrorTransport = (entry: ErrorEntry) => void
+
 const MAX_LOG_SIZE = 50
 const STORAGE_KEY = 'matrix_error_log'
 
 let errorLog: ErrorEntry[] = []
+let externalTransport: ErrorTransport | null = null
+
+/**
+ * Set an external transport for error reporting (e.g. Sentry, custom endpoint).
+ * The transport receives every error entry after it's been logged locally.
+ */
+export function setErrorTransport(transport: ErrorTransport | null): void {
+  externalTransport = transport
+}
 
 // Restore from localStorage on init
 if (typeof window !== 'undefined') {
@@ -59,6 +70,11 @@ export function reportError(category: string, error: unknown): void {
 
   // Always log to console for DevTools visibility
   console.error(`[${category}]`, error)
+
+  // Forward to external transport if configured
+  if (externalTransport) {
+    try { externalTransport(entry) } catch { /* avoid recursive error reporting */ }
+  }
 }
 
 /**

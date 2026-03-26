@@ -6,6 +6,7 @@ import { CallState, CallType, CallErrorCode } from 'matrix-js-sdk/lib/webrtc/cal
 import { CallFeedEvent } from 'matrix-js-sdk/lib/webrtc/callFeed'
 import { CallEventHandlerEvent } from 'matrix-js-sdk/lib/webrtc/callEventHandler'
 import { getMatrixClient, getAvatarUrl } from './client'
+import { reportError } from '@/lib/error-reporter'
 import { useCallStore } from '@/stores/call-store'
 import type { CallInfo } from '@/stores/call-store'
 
@@ -18,15 +19,31 @@ let currentCall: MatrixCall | null = null
 // Tested against matrix-js-sdk 41.1.0 — peerConn is a private property.
 // If the SDK changes this internal, relay enforcement will fail loudly (see assertion below).
 const SDK_PEER_CONN_FIELD = 'peerConn'
+const SUPPORTED_SDK_VERSION = '41.1.0'
 
-function assertPeerConnAccessible(call: MatrixCall): RTCPeerConnection | null {
-  const pc = (call as any)[SDK_PEER_CONN_FIELD] as RTCPeerConnection | undefined
+/**
+ * Access the private RTCPeerConnection from a MatrixCall.
+ *
+ * matrix-js-sdk does not expose peerConn publicly, so we access it via
+ * a known private field name. A runtime version check and field-existence
+ * assertion ensure this fails loudly if the SDK internals change.
+ */
+function getPeerConnection(call: MatrixCall): RTCPeerConnection | null {
+  // Runtime SDK version check — warn if version doesn't match pinned expectation
+  try {
+    const sdkPkg = require('matrix-js-sdk/package.json')
+    if (sdkPkg.version && sdkPkg.version !== SUPPORTED_SDK_VERSION) {
+      reportError('voip', `matrix-js-sdk version ${sdkPkg.version} differs from tested ${SUPPORTED_SDK_VERSION}. Relay-only ICE and bitrate controls may not work.`)
+    }
+  } catch { /* version check is best-effort */ }
+
+  const pc = (call as Record<string, unknown>)[SDK_PEER_CONN_FIELD] as RTCPeerConnection | undefined
   if (!pc) {
-    console.error(
-      `[voip] CRITICAL: '${SDK_PEER_CONN_FIELD}' not found on MatrixCall. ` +
+    reportError('voip',
+      `CRITICAL: '${SDK_PEER_CONN_FIELD}' not found on MatrixCall. ` +
       `matrix-js-sdk may have changed its internals. ` +
       `Relay-only ICE and HD bitrate controls are BROKEN. ` +
-      `Pin matrix-js-sdk to 41.1.0 or update the field name.`
+      `Pin matrix-js-sdk to ${SUPPORTED_SDK_VERSION} or update the field name.`
     )
     return null
   }
@@ -34,10 +51,10 @@ function assertPeerConnAccessible(call: MatrixCall): RTCPeerConnection | null {
 }
 
 function enforceRelayIcePolicy(call: MatrixCall): void {
-  const pc = assertPeerConnAccessible(call)
+  const pc = getPeerConnection(call)
   if (!pc) return
   const config = pc.getConfiguration()
-  if (config.iceTransportPolicy !== 'relay') {
+  if (config?.iceTransportPolicy !== 'relay') {
     pc.setConfiguration({ ...config, iceTransportPolicy: 'relay' })
   }
 }
@@ -180,7 +197,7 @@ async function applyHdConstraints(call: MatrixCall, isVideo: boolean): Promise<v
   }
 
   // Boost max bitrate via RTCRtpSender
-  const pc = assertPeerConnAccessible(call)
+  const pc = getPeerConnection(call)
   if (!pc) return
   for (const sender of pc.getSenders()) {
     const params = sender.getParameters()
@@ -222,7 +239,7 @@ async function applyStandardConstraints(call: MatrixCall, isVideo: boolean): Pro
     }
   }
 
-  const pc = assertPeerConnAccessible(call)
+  const pc = getPeerConnection(call)
   if (!pc) return
   for (const sender of pc.getSenders()) {
     const params = sender.getParameters()
