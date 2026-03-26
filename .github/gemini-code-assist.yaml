@@ -1,0 +1,10 @@
+review:
+  auto: true
+  comment_severity: "MEDIUM"
+  language_hints:
+    - TypeScript
+    - CSS
+  ignore_paths:
+    - "package-lock.json"
+    - ".next/**"
+    - "public/**"
