@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef, useMemo, memo, lazy, Suspense
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
 import { getProfileCache } from '@/lib/profile-cache'
+import { getAccountDataContent, setAccountData } from '@/lib/matrix/sdk-compat'
 import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 
@@ -90,22 +91,42 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
     }
   }, [showProfilePopover])
 
-  const handleSaveStatus = useCallback(() => {
+  // Load saved status and presence from server on mount
+  useEffect(() => {
     const client = getMatrixClient()
     if (!client) return
-    // Set status message via presence
     try {
-      (client as unknown as { setPresence: (opts: { presence: string; status_msg?: string }) => void })
+      // Load status message from account data (persists across sessions)
+      const statusData = getAccountDataContent(client, 'im.vector.web.status') as { status_msg?: string }
+      if (statusData?.status_msg) setStatusText(statusData.status_msg)
+      // Load current presence from the SDK's user object
+      const myUser = client.getUser(client.getUserId()!)
+      if (myUser?.presence) {
+        setCurrentPresence(myUser.presence as 'online' | 'unavailable' | 'offline')
+      }
+    } catch { /* ignore — account data may not exist yet */ }
+  }, [user])
+
+  const handleSaveStatus = useCallback(async () => {
+    const client = getMatrixClient()
+    if (!client) return
+    // Persist status message to account data (survives browser close)
+    try {
+      await setAccountData(client, 'im.vector.web.status', { status_msg: statusText || '' })
+    } catch { /* ignore */ }
+    // Also set presence with status_msg for real-time visibility to other users
+    try {
+      await (client as unknown as { setPresence: (opts: { presence: string; status_msg?: string }) => Promise<void> })
         .setPresence({ presence: currentPresence, status_msg: statusText || undefined })
     } catch { /* ignore */ }
   }, [statusText, currentPresence])
 
-  const handleSetPresence = useCallback((presence: 'online' | 'unavailable' | 'offline') => {
+  const handleSetPresence = useCallback(async (presence: 'online' | 'unavailable' | 'offline') => {
     setCurrentPresence(presence)
     const client = getMatrixClient()
     if (!client) return
     try {
-      (client as unknown as { setPresence: (opts: { presence: string; status_msg?: string }) => void })
+      await (client as unknown as { setPresence: (opts: { presence: string; status_msg?: string }) => Promise<void> })
         .setPresence({ presence, status_msg: statusText || undefined })
     } catch { /* ignore */ }
   }, [statusText])
