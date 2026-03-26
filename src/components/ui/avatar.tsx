@@ -6,7 +6,7 @@ import { fetchCachedThumbnail } from '@/lib/matrix/media'
 interface AvatarProps {
   src?: string | null
   name: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   status?: 'online' | 'offline' | 'away' | null
 }
 
@@ -14,12 +14,14 @@ const sizeMap = {
   sm: 'h-7 w-7 text-xs',
   md: 'h-11 w-11 text-sm',
   lg: 'h-16 w-16 text-lg',
+  xl: 'h-24 w-24 text-2xl',
 }
 
 const statusSizeMap = {
   sm: 'h-2.5 w-2.5 right-0 bottom-0',
   md: 'h-3 w-3 right-0 bottom-0',
   lg: 'h-3.5 w-3.5 right-0.5 bottom-0.5',
+  xl: 'h-4 w-4 right-1 bottom-1',
 }
 
 const statusColorMap = {
@@ -54,7 +56,7 @@ function getAvatarColor(name: string) {
   return colors[hash % colors.length]
 }
 
-function InitialsFallback({ name, size }: { name: string; size: 'sm' | 'md' | 'lg' }) {
+function InitialsFallback({ name, size }: { name: string; size: 'sm' | 'md' | 'lg' | 'xl' }) {
   return (
     <div
       className={`${sizeMap[size]} ${getAvatarColor(name)} flex items-center justify-center rounded-full font-medium text-white`}
@@ -133,7 +135,7 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
     // If it's an MXC URL, fetch via authenticated endpoint
     if (src.startsWith('mxc://')) {
       let cancelled = false
-      fetchCachedThumbnail(src, 96, 96)
+      fetchCachedThumbnail(src, size === 'xl' ? 192 : 96, size === 'xl' ? 192 : 96)
         .then(url => {
           if (!cancelled) {
             setBlobUrl(url)

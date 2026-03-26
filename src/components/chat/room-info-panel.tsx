@@ -87,7 +87,7 @@ export function RoomInfoPanel({
           <Avatar
             src={headerAvatarUrl}
             name={roomDisplayName}
-            size="lg"
+            size="xl"
           />
           <div className="mt-4 w-full text-center">
             {editingName ? (

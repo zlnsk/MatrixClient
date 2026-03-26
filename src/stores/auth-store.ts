@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   loginWithPassword,
+  registerAccount,
   restoreSession,
   startSync,
   logout,
@@ -58,6 +59,7 @@ interface AuthState {
 
   initialize: () => Promise<void>
   signIn: (username: string, password: string, homeserverUrl: string) => Promise<void>
+  signUp: (username: string, password: string, homeserverUrl: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: { displayName?: string; avatarUrl?: string }) => void
 }
@@ -96,6 +98,23 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signIn: async (username, password, homeserverUrl) => {
     const client = await loginWithPassword(username, password, homeserverUrl)
+    await startSync()
+    const userId = getUserId()
+    const matrixUser = client.getUser(userId!)
+    set({
+      user: {
+        userId: userId!,
+        displayName: matrixUser?.displayName || userId!,
+        avatarUrl: getAvatarUrl(matrixUser?.avatarUrl),
+      },
+      isAuthenticated: true,
+      isLoading: false,
+    })
+    attachIdleListeners()
+  },
+
+  signUp: async (username, password, homeserverUrl) => {
+    const client = await registerAccount(username, password, homeserverUrl)
     await startSync()
     const userId = getUserId()
     const matrixUser = client.getUser(userId!)

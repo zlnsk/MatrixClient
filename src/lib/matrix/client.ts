@@ -600,6 +600,112 @@ export async function deleteOtherDevice(
   }
 }
 
+/**
+ * Register a new account on a Matrix homeserver.
+ * Handles the m.login.dummy interactive auth flow (open registration servers).
+ * For servers requiring captcha/email, throws with details about required flows.
+ */
+export async function registerAccount(
+  username: string,
+  password: string,
+  homeserverUrl: string
+): Promise<sdk.MatrixClient> {
+  const tmpClient = sdk.createClient({
+    baseUrl: homeserverUrl,
+    fetchFn: createProxiedFetch(homeserverUrl),
+  })
+
+  let response: { access_token: string; user_id: string; device_id: string }
+
+  try {
+    // First attempt — try registration without auth (some servers allow it)
+    const result = await tmpClient.registerRequest({
+      username,
+      password,
+      initial_device_display_name: 'szept Web',
+      auth: { type: 'm.login.dummy' },
+    })
+    response = result as { access_token: string; user_id: string; device_id: string }
+  } catch (err: any) {
+    // The server requires interactive auth — check what flows are available
+    if (err.httpStatus === 401 && err.data?.flows) {
+      const flows = err.data.flows as Array<{ stages: string[] }>
+      const session = err.data.session as string | undefined
+
+      // Check if any flow only requires m.login.dummy
+      const dummyFlow = flows.find((f: { stages: string[] }) =>
+        f.stages.length === 1 && f.stages[0] === 'm.login.dummy'
+      )
+
+      if (dummyFlow && session) {
+        // Retry with the session from the 401 response
+        const result = await tmpClient.registerRequest({
+          username,
+          password,
+          initial_device_display_name: 'szept Web',
+          auth: { type: 'm.login.dummy', session },
+        })
+        response = result as { access_token: string; user_id: string; device_id: string }
+      } else {
+        // Server requires captcha, email, or terms — can't handle in-app
+        const requiredStages = flows[0]?.stages || []
+        const needsCaptcha = requiredStages.includes('m.login.recaptcha')
+        const needsEmail = requiredStages.includes('m.login.email.identity')
+        const needsTerms = requiredStages.includes('m.login.terms')
+
+        let message = 'This server requires additional verification to register: '
+        const parts: string[] = []
+        if (needsCaptcha) parts.push('CAPTCHA')
+        if (needsEmail) parts.push('email verification')
+        if (needsTerms) parts.push('terms acceptance')
+        message += parts.join(', ') + '. '
+        message += `Please register at ${homeserverUrl} directly and then sign in here.`
+
+        throw new Error(message)
+      }
+    } else if (err.httpStatus === 403) {
+      throw new Error('Registration is disabled on this server.')
+    } else if (err.data?.errcode === 'M_USER_IN_USE') {
+      throw new Error('Username is already taken. Please choose a different one.')
+    } else if (err.data?.errcode === 'M_INVALID_USERNAME') {
+      throw new Error('Invalid username. Use only lowercase letters, numbers, dots, hyphens, and underscores.')
+    } else if (err.data?.errcode === 'M_EXCLUSIVE') {
+      throw new Error('This username is reserved and cannot be registered.')
+    } else {
+      throw err
+    }
+  }
+
+  matrixClient = sdk.createClient({
+    baseUrl: homeserverUrl,
+    accessToken: response.access_token,
+    userId: response.user_id,
+    deviceId: response.device_id,
+    logger: filteredLogger,
+    cryptoCallbacks,
+    timelineSupport: true,
+    fallbackICEServerAllowed: false,
+    iceCandidatePoolSize: 20,
+    fetchFn: createProxiedFetch(homeserverUrl),
+    scheduler: new sdk.MatrixScheduler(
+      sdk.MatrixScheduler.RETRY_BACKOFF_RATELIMIT,
+      sdk.MatrixScheduler.QUEUE_MESSAGES,
+    ),
+  })
+
+  sessionStorage.setItem(
+    'matrix_session',
+    JSON.stringify({
+      accessToken: response.access_token,
+      userId: response.user_id,
+      deviceId: response.device_id,
+      homeserverUrl,
+    })
+  )
+
+  return matrixClient
+}
+
 export async function loginWithPassword(
   username: string,
   password: string,

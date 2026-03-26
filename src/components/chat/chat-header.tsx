@@ -10,8 +10,7 @@ import {
   Archive,
   ArchiveRestore,
   LogOut,
-  Info,
-  MoreVertical,
+  Trash2,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { placeCall } from '@/lib/matrix/voip'
@@ -46,20 +45,20 @@ export function ChatHeader({
   onArchiveToggle,
   onLeave,
 }: ChatHeaderProps) {
-  const [showKebabMenu, setShowKebabMenu] = useState(false)
-  const kebabRef = useRef<HTMLDivElement>(null)
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const leaveRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (kebabRef.current && !kebabRef.current.contains(e.target as Node)) {
-        setShowKebabMenu(false)
+      if (leaveRef.current && !leaveRef.current.contains(e.target as Node)) {
+        setShowLeaveConfirm(false)
       }
     }
-    if (showKebabMenu) {
+    if (showLeaveConfirm) {
       document.addEventListener('mousedown', handleClick)
       return () => document.removeEventListener('mousedown', handleClick)
     }
-  }, [showKebabMenu])
+  }, [showLeaveConfirm])
 
   return (
     <div className="flex items-center border-b border-m3-outline-variant bg-white px-2 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4">
@@ -70,14 +69,18 @@ export function ChatHeader({
       >
         <ArrowLeft className="h-5 w-5" />
       </button>
-      <div className="flex min-w-0 flex-1 items-center gap-3 px-2">
+      {/* Clickable room info area — opens room details */}
+      <button
+        onClick={onToggleRoomInfo}
+        className="flex min-w-0 flex-1 items-center gap-3 px-2 rounded-xl transition-colors hover:bg-m3-surface-container cursor-pointer"
+      >
         <Avatar
           src={headerAvatarUrl}
           name={roomDisplayName}
           size="md"
           status={isSmallOrBridged ? (otherMemberPresence === 'online' ? 'online' : otherMemberPresence === 'unavailable' ? 'away' : 'offline') : null}
         />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 text-left">
           <h2 className="truncate text-base font-medium text-m3-on-surface">{roomDisplayName}</h2>
           <div className="flex items-center gap-1.5">
             {typingUsers.length > 0 ? (
@@ -92,9 +95,17 @@ export function ChatHeader({
             )}
           </div>
         </div>
-      </div>
+      </button>
 
-      <div className="flex items-center">
+      {/* Inline action icons */}
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={onToggleSearch}
+          className="rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
+          title="Search in conversation"
+        >
+          <Search className="h-5 w-5" />
+        </button>
         {!activeRoom.isBridged && (
           <>
             <button
@@ -113,62 +124,30 @@ export function ChatHeader({
             </button>
           </>
         )}
-        {/* Kebab menu (3 dots) */}
-        <div className="relative" ref={kebabRef}>
+        <button
+          onClick={onArchiveToggle}
+          className="rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
+          title={activeRoom.isArchived ? 'Unarchive' : 'Archive'}
+        >
+          {activeRoom.isArchived ? <ArchiveRestore className="h-5 w-5" /> : <Archive className="h-5 w-5" />}
+        </button>
+        {/* Leave with confirmation */}
+        <div className="relative" ref={leaveRef}>
           <button
-            onClick={() => setShowKebabMenu(!showKebabMenu)}
-            className="rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
-            aria-label="More options"
+            onClick={() => setShowLeaveConfirm(!showLeaveConfirm)}
+            className="rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-error-container hover:text-m3-error"
+            title="Leave room"
           >
-            <MoreVertical className="h-5 w-5" />
+            <LogOut className="h-5 w-5" />
           </button>
-          {showKebabMenu && (
-            <div className="absolute right-0 top-full z-50 mt-1 w-60 rounded-2xl border border-m3-outline-variant bg-white py-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+          {showLeaveConfirm && (
+            <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-2xl border border-m3-outline-variant bg-white py-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+              <p className="px-4 py-2 text-xs text-m3-on-surface-variant">Leave this room?</p>
               <button
-                onClick={() => { onToggleRoomInfo(); setShowKebabMenu(false) }}
-                className="flex w-full items-center gap-4 px-5 py-3 text-sm whitespace-nowrap text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                onClick={() => { onLeave(); setShowLeaveConfirm(false) }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-m3-error transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
               >
-                <Info className="h-5 w-5 flex-shrink-0 text-m3-on-surface-variant" />
-                Room details
-              </button>
-              <button
-                onClick={() => { onToggleSearch(); setShowKebabMenu(false) }}
-                className="flex w-full items-center gap-4 px-5 py-3 text-sm whitespace-nowrap text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
-              >
-                <Search className="h-5 w-5 flex-shrink-0 text-m3-on-surface-variant" />
-                Search in conversation
-              </button>
-              {!activeRoom.isBridged && (
-                <>
-                  <button
-                    onClick={() => { placeCall(activeRoom.roomId, false); setShowKebabMenu(false) }}
-                    className="flex w-full items-center gap-4 px-5 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high sm:hidden"
-                  >
-                    <Phone className="h-5 w-5 text-m3-on-surface-variant" />
-                    Voice call
-                  </button>
-                  <button
-                    onClick={() => { placeCall(activeRoom.roomId, true); setShowKebabMenu(false) }}
-                    className="flex w-full items-center gap-4 px-5 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
-                  >
-                    <Video className="h-5 w-5 text-m3-on-surface-variant" />
-                    Video call
-                  </button>
-                </>
-              )}
-              <div className="my-1 border-t border-m3-outline-variant" />
-              <button
-                onClick={() => { onArchiveToggle(); setShowKebabMenu(false) }}
-                className="flex w-full items-center gap-4 px-5 py-3 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
-              >
-                {activeRoom.isArchived ? <ArchiveRestore className="h-5 w-5 text-m3-on-surface-variant" /> : <Archive className="h-5 w-5 text-m3-on-surface-variant" />}
-                {activeRoom.isArchived ? 'Unarchive' : 'Archive'}
-              </button>
-              <button
-                onClick={() => { onLeave(); setShowKebabMenu(false) }}
-                className="flex w-full items-center gap-4 px-5 py-3 text-sm text-m3-error transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
-              >
-                <LogOut className="h-5 w-5" />
+                <LogOut className="h-4 w-4" />
                 Leave room
               </button>
             </div>

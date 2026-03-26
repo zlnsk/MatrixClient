@@ -220,7 +220,7 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
             <div>
               {/* User card at top */}
               <div className="flex items-center gap-4 px-6 py-5 border-b border-m3-outline-variant dark:border-m3-outline-variant">
-                <Avatar src={user?.avatarUrl} name={user?.displayName || 'U'} size="lg" />
+                <Avatar src={user?.avatarUrl} name={user?.displayName || 'U'} size="xl" />
                 <div className="min-w-0 flex-1">
                   <p className="text-base font-medium text-m3-on-surface dark:text-m3-on-surface">{user?.displayName}</p>
                   <p className="text-sm text-m3-on-surface-variant dark:text-m3-outline">{user?.userId}</p>
@@ -279,7 +279,7 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
               {/* Avatar hero */}
               <div className="flex flex-col items-center px-6 py-8 border-b border-m3-outline-variant dark:border-m3-outline-variant">
                 <div className="relative">
-                  <Avatar src={user?.avatarUrl} name={user?.displayName || 'U'} size="lg" />
+                  <Avatar src={user?.avatarUrl} name={user?.displayName || 'U'} size="xl" />
                   <button
                     onClick={() => avatarInputRef.current?.click()}
                     disabled={isUploadingAvatar}

@@ -23,8 +23,15 @@ function setRateLimitState(failedAttempts: number, lockoutUntil: number): void {
   } catch { /* ignore */ }
 }
 
-function mapLoginError(err: unknown): string {
+function mapAuthError(err: unknown, isRegister: boolean): string {
   const msg = err instanceof Error ? err.message : String(err)
+  // Registration-specific errors (pass through our custom messages)
+  if (msg.includes('Username is already taken')) return msg
+  if (msg.includes('Invalid username')) return msg
+  if (msg.includes('This username is reserved')) return msg
+  if (msg.includes('Registration is disabled')) return msg
+  if (msg.includes('This server requires additional verification')) return msg
+  // Login errors
   if (msg.includes('M_FORBIDDEN') || msg.includes('Invalid password') || msg.includes('403'))
     return 'Incorrect username or password'
   if (msg.includes('M_USER_DEACTIVATED'))
@@ -37,7 +44,9 @@ function mapLoginError(err: unknown): string {
     return 'Session expired — please sign in again'
   if (msg.includes('ENOTFOUND') || msg.includes('ECONNREFUSED'))
     return 'Homeserver not found — check the address'
-  return 'Sign-in failed. Please check your credentials and try again.'
+  return isRegister
+    ? 'Registration failed. Please check your details and try again.'
+    : 'Sign-in failed. Please check your credentials and try again.'
 }
 
 const MAX_INPUT_LENGTH = 512
@@ -54,17 +63,20 @@ const STEP_LABELS: Record<LoginStep, string> = {
 }
 
 export default function LoginPage() {
+  const [mode, setMode] = useState<'login' | 'register'>('login')
   const [server, setServer] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loginStep, setLoginStep] = useState<LoginStep>('idle')
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
   const [isResolving, setIsResolving] = useState(false)
-  const { signIn } = useAuthStore()
+  const { signIn, signUp } = useAuthStore()
   const router = useRouter()
 
+  const isRegister = mode === 'register'
   const isLoading = loginStep !== 'idle' && loginStep !== 'error'
 
   // Auto-focus the server input on mount
@@ -109,14 +121,28 @@ export default function LoginPage() {
       return
     }
 
+    if (isRegister && password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    if (isRegister && password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+
     try {
       // Step 1: Resolve homeserver
       setLoginStep('resolving')
       const homeserverUrl = resolvedUrl || await resolveHomeserver(s)
 
-      // Step 2: Authenticate
+      // Step 2: Authenticate or Register
       setLoginStep('authenticating')
-      await signIn(username, password, homeserverUrl)
+      if (isRegister) {
+        await signUp(username, password, homeserverUrl)
+      } else {
+        await signIn(username, password, homeserverUrl)
+      }
       setRateLimitState(0, 0)
 
       // Step 3: Sync
@@ -135,7 +161,7 @@ export default function LoginPage() {
       }
       setRateLimitState(newAttempts, newLockout)
       setLoginStep('error')
-      setError(mapLoginError(err))
+      setError(mapAuthError(err, isRegister))
       // Reset to idle after showing error
       setTimeout(() => setLoginStep('idle'), 100)
     }
@@ -225,16 +251,18 @@ export default function LoginPage() {
 
           {/* Desktop heading */}
           <div className="mb-8 hidden lg:block">
-            <h1 className="text-3xl font-extrabold tracking-tight text-m3-on-surface">Sign in</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight text-m3-on-surface">
+              {isRegister ? 'Create account' : 'Sign in'}
+            </h1>
             <p className="mt-2 text-sm text-m3-on-surface-variant">
-              Connect to your Matrix homeserver
+              {isRegister ? 'Register on any Matrix homeserver' : 'Connect to your Matrix homeserver'}
             </p>
           </div>
 
           {/* Mobile heading */}
           <div className="mb-6 lg:hidden text-center">
             <p className="text-sm text-m3-on-surface-variant">
-              Sign in to any Matrix homeserver
+              {isRegister ? 'Register on any Matrix homeserver' : 'Sign in to any Matrix homeserver'}
             </p>
           </div>
 
@@ -327,7 +355,28 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Sign in button */}
+            {/* Confirm password (register only) */}
+            {isRegister && (
+              <div>
+                <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-m3-on-surface-variant">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value.slice(0, MAX_INPUT_LENGTH))}
+                    placeholder="Confirm your password"
+                    maxLength={MAX_INPUT_LENGTH}
+                    required
+                    autoComplete="new-password"
+                    className="w-full rounded-2xl border border-m3-outline-variant bg-m3-surface-container-low px-4 py-3.5 pr-12 text-sm text-m3-on-surface placeholder-m3-outline transition-all focus:border-m3-primary focus:outline-none focus:ring-2 focus:ring-m3-primary/20 dark:border-m3-outline-variant dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:placeholder-m3-outline"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Submit button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -339,7 +388,7 @@ export default function LoginPage() {
                   {STEP_LABELS[loginStep]}
                 </>
               ) : (
-                'Sign in'
+                isRegister ? 'Create account' : 'Sign in'
               )}
             </button>
 
@@ -355,8 +404,25 @@ export default function LoginPage() {
             )}
           </form>
 
+          {/* Mode toggle */}
+          <p className="mt-6 text-center text-sm text-m3-on-surface-variant">
+            {isRegister ? (
+              <>Already have an account?{' '}
+                <button type="button" onClick={() => { setMode('login'); setError(''); setConfirmPassword('') }} className="font-medium text-m3-primary hover:underline">
+                  Sign in
+                </button>
+              </>
+            ) : (
+              <>Don&apos;t have an account?{' '}
+                <button type="button" onClick={() => { setMode('register'); setError('') }} className="font-medium text-m3-primary hover:underline">
+                  Create one
+                </button>
+              </>
+            )}
+          </p>
+
           {/* Security badge & version (mobile) */}
-          <div className="mt-8 flex flex-col items-center gap-2 lg:hidden">
+          <div className="mt-4 flex flex-col items-center gap-2 lg:hidden">
             <p className="text-[10px] text-m3-outline select-all">
               v{process.env.NEXT_PUBLIC_BUILD_VERSION}
             </p>
