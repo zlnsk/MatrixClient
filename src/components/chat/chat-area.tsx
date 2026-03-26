@@ -284,14 +284,17 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="flex min-w-0 flex-1 items-center gap-3 px-2">
+        <button
+          onClick={() => setShowRoomInfo(!showRoomInfo)}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high"
+        >
           <Avatar
             src={activeRoom.isDirect ? otherMember?.avatarUrl : activeRoom.avatarUrl}
             name={roomDisplayName}
             size="md"
             status={activeRoom.isDirect ? (otherMember?.presence === 'online' ? 'online' : otherMember?.presence === 'unavailable' ? 'away' : 'offline') : null}
           />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 text-left">
             <h2 className="truncate text-base font-medium text-m3-on-surface">{roomDisplayName}</h2>
             <div className="flex items-center gap-1.5">
               {typingUsers.length > 0 ? (
@@ -306,7 +309,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
               )}
             </div>
           </div>
-        </div>
+        </button>
 
         <div className="flex items-center">
           {!activeRoom.isBridged && (
