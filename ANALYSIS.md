@@ -1,166 +1,237 @@
-# MatrixClient (szept) — Code Analysis & Recommendations
+# szept Matrix Client — Premium UI/UX & Smoothness Audit
 
-## Overview
+## Scope & Method
 
-**Stack:** Next.js 16 · React 19 · TypeScript (strict) · Zustand · matrix-js-sdk · matrix-sdk-crypto-wasm (Rust E2EE)
-**Size:** ~10,400 LOC across 32 TypeScript/TSX files
-**Architecture:** App Router (Next.js 16) with Zustand stores, Matrix SDK wrapper layer, and PWA support
+This audit focuses on:
+- **Navigation clarity** (findability, hierarchy, wayfinding)
+- **Experience quality** (premium feel, interaction polish, perceived quality)
+- **Smoothness/performance** (scrolling, transitions, responsiveness)
+- **Safety/security alignment** (UI decisions that reduce risk and trust gaps)
 
-## Strengths
+The review is based on the current implementation of the chat shell, sidebar/navigation model, message surface, visual system, and security posture.
 
-- **Security-first design** — SSRF protection on homeserver resolution, DOMPurify for XSS, HSTS with preload, relay-only ICE for VoIP privacy, idle session timeout (8h)
-- **Full end-to-end encryption** via Rust WASM backend with cross-signing, SSSS, key backup, and encrypted media decryption with SHA-256 hash verification
-- **Clean separation of concerns** — UI components, Zustand state stores (`auth-store`, `chat-store`, `call-store`), and Matrix SDK integration layer (`lib/matrix/`)
-- **Optimistic UI** — Messages appear instantly with retry queue via MatrixScheduler and exponential backoff
-- **PWA with offline support** — Service worker caches app shell, installable on mobile and desktop
-- **Type safety** — Full TypeScript strict mode, explicit interfaces for all data models
+---
 
-## Recommendations
+## What is already strong
 
-### Critical
+1. **Good desktop/mobile adaptation foundation**
+   - Desktop has resizable sidebar and mobile has back-navigation handling.
+   - Keyboard switching (Alt+1..9) is already implemented for power users.
 
-#### 1. Add Test Coverage
+2. **Modern baseline visual language**
+   - Material 3-inspired tokens and consistent surface layering are in place.
+   - Avatar/presence, unread chips, and empty states are already coherent.
 
-**Current state:** Zero test files exist — no Jest, Vitest, or any test runner configured.
+3. **Performance-minded choices already present**
+   - Lazy-loaded heavy panels/modals.
+   - Sticky-bottom logic for message flow and ResizeObserver for layout shifts.
 
-**Risk:** High probability of silent regressions in E2EE crypto flows, Matrix sync processing, session restore logic, and SSRF protection.
+4. **Security groundwork is good**
+   - Nonce-based CSP in middleware and multiple hardening controls documented.
 
-**Recommended actions:**
-- Add Vitest (or Jest) with React Testing Library
-- **Priority 1:** Unit tests for `lib/matrix/client.ts` — login, session restore, crypto init, logout
-- **Priority 2:** Unit tests for `lib/matrix/media.ts` — decryption, LRU cache eviction, thumbnail fallback
-- **Priority 3:** Integration tests for API routes — matrix-proxy SSRF validation, homeserver resolution
-- **Priority 4:** Component tests for `message-input.tsx`, `message-bubble.tsx`, `sidebar.tsx`
+---
 
-#### 2. Fix localStorage vs sessionStorage Discrepancy
+## High-impact recommendations (priority order)
 
-**Current state:** `SECURITY.md` claims session tokens use `sessionStorage`, but the code stores them in `localStorage['matrix_session']` as plaintext JSON.
+## P0 — Navigation & Information Architecture (highest user impact)
 
-**Risk:** Any XSS bypass could exfiltrate access tokens from localStorage (persists across tabs/sessions).
+### 1) Introduce a **single, explicit app-level nav model**
+Current behavior mixes header menu, profile avatar, sidebar affordances, and room-level actions. This can feel "feature-rich but mentally fragmented," especially for new users.
 
-**Recommended actions:**
-- Either update the code to use `sessionStorage` (more secure, but requires re-login on tab close)
-- Or encrypt tokens at rest and update `SECURITY.md` to accurately reflect the implementation
+**Recommendation**
+- Define top-level destinations with stable placement:
+  - **Chats**
+  - **People/Contacts** (future-safe)
+  - **Calls** (optional now, but reserve)
+  - **Settings**
+- On desktop: keep these as compact left rail icons above the room list.
+- On mobile: expose same destinations in bottom navigation (4 tabs max).
 
-#### 3. Add CSP Nonce Middleware
+**Why it feels premium**
+Premium apps feel predictable. Users always know where they are and where to go next.
 
-**Current state:** `next.config.ts` and `SECURITY.md` reference per-request CSP nonces, but no `middleware.ts` exists to generate them.
+---
 
-**Recommended action:** Create a Next.js middleware that generates a cryptographic nonce per request and injects it into the `Content-Security-Policy` `script-src` directive.
+### 2) Add **clear room-list segmentation and quick filters**
+Right now active, archived, and invites are available but mentally blended.
 
-### High Priority
+**Recommendation**
+- Add compact segmented control above list:
+  - **All / Unread / Direct / Groups / Archived**
+- Keep invites as separate high-contrast card with actionable count.
+- Persist filter state per device session.
 
-#### 4. Remove SDK Internal Access
+**Why it feels premium**
+A "calm inbox" pattern reduces scanning fatigue and makes large accounts manageable.
 
-**File:** `src/lib/matrix/voip.ts`
+---
 
-**Current state:** Uses `@ts-expect-error` to access the private `peerConn` property on `MatrixCall` for relay-only ICE policy and HD bitrate control.
+### 3) Make search explicitly dual-mode
+Search currently combines room filtering + message results. This is powerful but ambiguous.
 
-**Risk:** Silent breakage on matrix-js-sdk upgrades.
+**Recommendation**
+- Use a tabbed search surface:
+  - **Conversations**
+  - **Messages**
+- Add loading skeletons and empty-state guidance per tab.
+- Keep highlight behavior, but add jump-to-message context preview in room.
 
-**Recommended actions:**
-- Pin `matrix-js-sdk` to exact version in `package.json`
-- Add a runtime assertion that `peerConn` exists (fail loudly instead of silently)
-- File upstream issue/PR for public API access to RTCPeerConnection
+**Why it feels premium**
+Users understand result type instantly; faster cognition equals perceived speed.
 
-#### 5. Reduce Suppressed Logging
+---
 
-**File:** `src/lib/matrix/client.ts`
+## P1 — Premium interaction quality
 
-**Current state:** 40+ regex patterns suppress console warnings/errors. This hides legitimate crypto errors alongside expected SDK noise.
+### 4) Upgrade motion system from utility animations to **intentional choreography**
+Current animations are functional but mostly generic fade/slide timings.
 
-**Recommended actions:**
-- Move suppression behind a `SUPPRESS_CRYPTO_NOISE` env flag (enabled by default in production)
-- Log suppressed messages at `debug` level instead of discarding entirely
-- Periodically review patterns — some may no longer be relevant
+**Recommendation**
+- Define motion tokens:
+  - **x-fast (120ms), fast (180ms), standard (240ms), slow (320ms)**
+  - Distinct easing curves for enter/exit/emphasis
+- Animate hierarchy, not everything:
+  - Room selection ripple + subtle scale
+  - Message arrival micro-lift only when user is at bottom
+  - Sidebar/resizer interactions with spring-like easing
+- Respect `prefers-reduced-motion` globally.
 
-#### 6. Refactor Realtime Provider
+**Why it feels premium**
+Premium motion communicates structure and confidence without visual noise.
 
-**File:** `src/components/providers/realtime-provider.tsx`
+---
 
-**Current state:** Single ~300+ LOC `useEffect` attaching 15+ event listeners. Difficult to maintain, debug, and test.
+### 5) Improve tactile affordance and depth
+A lot of controls are flat hover color changes. Good, but not yet "premium hardware-like".
 
-**Recommended actions:**
-- Extract into composable hooks: `useTimelineSync()`, `useTypingIndicators()`, `useCallSetup()`, `useReadReceipts()`
-- Each hook manages its own listener lifecycle
-- Compose hooks in the provider component
+**Recommendation**
+- Add 1-level elevation ramps for key interactive components:
+  - Active chat row
+  - Header action cluster
+  - Context menus/dropdowns
+- Use subtle border + inner highlight pairing on dark mode surfaces.
+- Standardize corner radii by component tier (chips/buttons/cards/panels).
 
-### Medium Priority
+---
 
-#### 7. Server-Side Rate Limiting
+### 6) Strengthen typography rhythm and density control
+List and chat typography is readable, but premium products tune information density to user preference.
 
-**File:** `src/app/login/page.tsx`
+**Recommendation**
+- Add **Density setting** (Comfortable / Compact) affecting:
+  - Room row height
+  - Message bubble spacing
+  - Header vertical padding
+- Tighten hierarchy:
+  - Room name stronger weight, metadata lighter and slightly smaller
+  - Timestamp contrast lowered for reduced visual competition
 
-**Current state:** Login rate limiting uses module-scope variables (`failedAttempts`, `lockoutUntil`). A page refresh resets the counter.
+---
 
-**Recommended actions:**
-- Move rate limiting to `sessionStorage` at minimum
-- Better: implement server-side rate limiting in the API proxy (per-IP throttling)
+## P1 — Smoothness/perceived performance
 
-#### 8. Add Error Monitoring
+### 7) Virtualize long room/message lists
+As account size grows, UI cost rises quickly.
 
-**Current state:** No error reporting service (Sentry, LogRocket, etc.). Silent production failures — especially crypto init errors and sync failures — go unnoticed.
+**Recommendation**
+- Virtualize sidebar room list and message list rendering.
+- Keep sticky-bottom behavior + date separators compatible with virtualization.
+- Defer non-visible avatar/presence updates via idle callbacks.
 
-**Recommended action:** Integrate Sentry (or equivalent) with focus on:
-- Crypto initialization failures
-- Sync errors and connection drops
-- Unhandled promise rejections
+**Expected result**
+More stable frame times on lower-end mobile devices and large rooms.
 
-#### 9. Validate Proxy Path Segments
+---
 
-**File:** `src/app/api/matrix-proxy/[...path]/route.ts`
+### 8) Use optimistic/skeleton loading systematically
+Some states show spinners; premium feel benefits from contextual placeholders.
 
-**Current state:** Homeserver URLs are validated against SSRF, but proxied path segments are not validated against an allowlist.
+**Recommendation**
+- Skeletons for:
+  - Room rows on initial load
+  - Message bubbles during room switch
+  - Search results while querying
+- Keep skeleton geometry close to final layout to reduce jank.
 
-**Recommended action:** Add allowlist for Matrix API path prefixes (`/_matrix/client/`, `/_matrix/media/`, `/_matrix/key/`).
+---
 
-#### 10. Docker Improvements
+### 9) Reduce avoidable re-render pressure
+Memoization exists in places, but room list and chat surfaces can still churn.
 
-**File:** `Dockerfile`
+**Recommendation**
+- Normalize store selectors by UI slice and avoid broad subscriptions.
+- Precompute derived room metadata in store layer (not per render).
+- Add performance marks around room switch/search to track p95 interactions.
 
-**Current state:** Multi-stage build with non-root user (good), but missing health check and `.dockerignore`.
+---
 
-**Recommended actions:**
-- Add `HEALTHCHECK CMD curl -f http://localhost:3000/ || exit 1`
-- Add `.dockerignore` excluding `.git/`, `node_modules/`, `.next/`, `*.md`
+## P2 — UX trust and secure-by-design improvements
 
-## Architecture Diagram
+### 10) Add visible **security context cues** in high-risk flows
+Security features exist, but users need clear in-UI confidence signals.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Browser / PWA                         │
-│  Next.js 16 App Router + React 19                       │
-├─────────────────────────────────────────────────────────┤
-│  Providers                                               │
-│  ├── ThemeProvider (dark theme)                          │
-│  ├── AuthProvider (session restore)                     │
-│  └── RealtimeProvider (Matrix sync + events)            │
-├─────────────────────────────────────────────────────────┤
-│  Zustand Stores                                          │
-│  ├── useAuthStore (session, idle timeout)                │
-│  ├── useChatStore (rooms, messages, typing)              │
-│  └── useCallStore (WebRTC state)                        │
-├─────────────────────────────────────────────────────────┤
-│  Matrix Integration (lib/matrix/)                        │
-│  ├── client.ts (SDK wrapper, crypto, sync)              │
-│  ├── media.ts (authenticated media, LRU cache)          │
-│  └── voip.ts (WebRTC calls, relay-only ICE)             │
-├─────────────────────────────────────────────────────────┤
-│  API Routes (server-side)                                │
-│  ├── /api/matrix-proxy/[...path] (CORS proxy)           │
-│  └── /api/resolve-homeserver (discovery + SSRF check)   │
-└─────────────────────────────────────────────────────────┘
-```
+**Recommendation**
+- Add compact trust indicators:
+  - "Encrypted" badge + verified state in header/profile sheet
+  - Media origin hint for remote links/previews
+- For destructive actions (leave/delete), require intent confirmation with room name and short consequence text (already partly present; standardize everywhere).
 
-## File Reference
+---
 
-| Module | Path | LOC | Responsibility |
-|--------|------|-----|----------------|
-| Matrix Client | `src/lib/matrix/client.ts` | ~720 | SDK wrapper, auth, crypto, sync |
-| VoIP | `src/lib/matrix/voip.ts` | ~430 | WebRTC calls, ICE policy, HD quality |
-| Media | `src/lib/matrix/media.ts` | ~265 | Authenticated media, LRU cache, decryption |
-| Auth Store | `src/stores/auth-store.ts` | ~200 | Session lifecycle, idle timeout |
-| Chat Store | `src/stores/chat-store.ts` | ~600 | Rooms, messages, invites, typing |
-| Realtime | `src/components/providers/realtime-provider.tsx` | ~350 | Event listeners, sync, notifications |
-| CORS Proxy | `src/app/api/matrix-proxy/[...path]/route.ts` | ~200 | Server-side proxy with SSRF protection |
-| Audio Convert | `src/lib/audio/webm-to-ogg.ts` | ~300 | WebM→OGG remuxing (no re-encoding) |
+### 11) Harden link/media interaction UX
+To align with best practices and reduce phishing/social engineering risk:
+
+**Recommendation**
+- Confirm external-link opening for unknown domains (remember choice per domain).
+- Add explicit "Open in browser" vs "Copy link" actions.
+- For file/media previews, show file type + size before opening/downloading.
+
+---
+
+### 12) Accessibility polish that also increases premium feel
+Accessibility and premium quality strongly correlate.
+
+**Recommendation**
+- Ensure all icon-only buttons have consistent tooltip + `aria-label` patterns.
+- Improve keyboard focus ring consistency across all interactive surfaces.
+- Add command palette (`Cmd/Ctrl+K`) for room switch, settings, and actions.
+
+---
+
+## Suggested execution roadmap
+
+### Phase 1 (1–2 weeks)
+- App-level nav model + room filter chips
+- Dual-mode search UI
+- Motion token system and reduced-motion support
+
+### Phase 2 (1–2 weeks)
+- Virtualized room list
+- Skeleton loading pass
+- Density settings
+
+### Phase 3 (1 week)
+- Security/trust UI cues
+- External link and media preview UX hardening
+- Accessibility and keyboard command palette
+
+---
+
+## Security implementation guardrails for UI changes
+
+When implementing these recommendations, keep the existing secure baseline intact:
+- Keep CSP nonce flow and avoid introducing inline dynamic script patterns.
+- Preserve sanitizer boundaries for rendered message content.
+- Keep external navigation explicit and guarded.
+- Avoid storing sensitive new UI state in insecure locations unless necessary.
+
+---
+
+## Definition of done (premium bar)
+
+A release qualifies as "premium uplift" when:
+1. New users can navigate primary destinations without hunting.
+2. Room switch and scroll interactions remain smooth on mid-tier mobile hardware.
+3. Search intent is clear (conversation vs message) with low cognitive load.
+4. Security-sensitive actions are understandable and confidence-inspiring.
+5. Motion, spacing, and typography feel consistent across surfaces.
