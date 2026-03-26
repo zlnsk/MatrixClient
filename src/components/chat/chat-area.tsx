@@ -344,7 +344,11 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
 /** Compact upload progress indicators shown above the message input. */
 function UploadProgress({ roomId }: { roomId: string }) {
-  const tasks = useUploadStore(s => s.tasks.filter(t => t.roomId === roomId))
+  // Subscribe to the full tasks array, then filter in render.
+  // Using .filter() inside the selector creates a new array reference every time,
+  // which causes Zustand to think state changed → infinite re-render loop.
+  const allTasks = useUploadStore(s => s.tasks)
+  const tasks = allTasks.filter(t => t.roomId === roomId)
 
   if (tasks.length === 0) return null
 
