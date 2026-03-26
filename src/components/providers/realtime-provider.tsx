@@ -56,7 +56,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   useReadReceipts(user?.userId)
   useRoomMembership(user?.userId)
   useCallSetup(user?.userId)
-  useAutoArchive(user?.userId)
+  // Auto-archive temporarily disabled — investigating render loop
+  // useAutoArchive(user?.userId)
 
   // Verification request listener + cross-signing check
   useEffect(() => {

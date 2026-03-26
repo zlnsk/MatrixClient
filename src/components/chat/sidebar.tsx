@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo, memo, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
-import { resolveRoomAvatarFromSDK } from '@/lib/matrix/client'
 import { getProfileCache } from '@/lib/profile-cache'
 import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
@@ -110,8 +109,8 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
     room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
   ), [rooms, searchFilter])
 
-  // Memoize avatar resolution per room to avoid calling resolveRoomAvatarFromSDK
-  // on every render (which accesses SDK internals and profile cache).
+  // Memoize avatar resolution per room.
+  // Uses only profile cache + store data — no SDK calls during render.
   const avatarMap = useMemo(() => {
     const map = new Map<string, string | null>()
     for (const room of rooms) {
@@ -126,10 +125,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
           if (cached) { found = cached; break }
         }
 
-        // 2. Try SDK live data
-        if (!found) found = resolveRoomAvatarFromSDK(room.roomId)
-
-        // 3. Fall back to store member/room avatar
+        // 2. Fall back to store member/room avatar
         if (!found) {
           const other = others.find(m => m.avatarUrl) || others[0]
           found = other?.avatarUrl || room.avatarUrl || null
@@ -137,7 +133,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
 
         map.set(room.roomId, found)
       } else {
-        map.set(room.roomId, room.avatarUrl || resolveRoomAvatarFromSDK(room.roomId))
+        map.set(room.roomId, room.avatarUrl || null)
       }
     }
     return map
