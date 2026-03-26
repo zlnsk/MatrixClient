@@ -178,7 +178,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   ).pop()
 
   // Use decrypted content for last message preview
-  const lastClear = lastEvent ? getClearContent(lastEvent) : null
+  const lastClear = lastEvent ? getClearContent(lastEvent) as Record<string, any> | null : null
   const lastContent = lastClear || lastEvent?.getContent()
   let lastMessage: string | null = null
   if (lastContent) {
@@ -368,7 +368,8 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   // We check both to handle all SDK code paths (JS crypto vs Rust crypto).
   const rawContent = event.getContent()
   const clearContent = getClearContent(event)
-  const content = (clearContent?.msgtype ? clearContent : null) || (rawContent?.msgtype ? rawContent : null) || clearContent || rawContent
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const content: Record<string, any> = (clearContent?.msgtype ? clearContent : null) || (rawContent?.msgtype ? rawContent : null) || clearContent || rawContent
 
   // If this is an encrypted event that hasn't been decrypted,
   // content will have {algorithm, ciphertext, ...} instead of {body, msgtype, ...}.
@@ -378,7 +379,8 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
 
   // Check for reply
   let replyToEvent = null
-  const relatesTo = content['m.relates_to']
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const relatesTo = content['m.relates_to'] as Record<string, any> | undefined
 
   // Skip edit events — they are folded into the original by replacingEvent()
   if (relatesTo?.rel_type === 'm.replace') return null
@@ -388,7 +390,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     if (replyEvt) {
       const replySender = replyEvt.getSender()!
       const replyMember = room.getMember(replySender)
-      const replyClear = getClearContent(replyEvt)
+      const replyClear = getClearContent(replyEvt) as Record<string, any> | null
       const replyContent = replyClear || replyEvt.getContent()
       let replyBody = replyContent?.body || ''
       // Strip Matrix reply fallback (> <@user:server> prefix lines)
@@ -427,7 +429,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   if (content['m.new_content']) {
     displayContent = content['m.new_content']
   } else if (replacingEvt) {
-    const replaceClear = getClearContent(replacingEvt)
+    const replaceClear = getClearContent(replacingEvt) as Record<string, any> | null
     const replaceContent = replaceClear || replacingEvt.getContent()
     if (replaceContent?.['m.new_content']) {
       displayContent = replaceContent['m.new_content']
@@ -1483,8 +1485,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const event = room.findEventById(eventId)
       if (!event) return
 
-      const clearContent = getClearContent(event)
-      const content = clearContent || event.getContent()
+      const clearFwd = getClearContent(event) as Record<string, any> | null
+      const content = clearFwd || event.getContent()
       const msgtype = content.msgtype || 'm.text'
 
       if (msgtype === 'm.image' || msgtype === 'm.video' || msgtype === 'm.audio' || msgtype === 'm.file') {
