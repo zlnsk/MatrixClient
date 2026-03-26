@@ -2,6 +2,7 @@
 
 import * as sdk from 'matrix-js-sdk'
 import type { Logger } from 'matrix-js-sdk/lib/logger'
+import { logger as sdkGlobalLogger } from 'matrix-js-sdk/lib/logger'
 import type { CryptoCallbacks } from 'matrix-js-sdk/lib/crypto-api'
 import { reportError } from '@/lib/error-reporter'
 
@@ -131,6 +132,7 @@ const SUPPRESSED_PATTERNS = [
   'matrix_sdk_crypto',
   "Can't find the room key",
   'Failed to decrypt a room event',
+  'Error decrypting event',
   'WARN matrix_sdk',
   'ERROR matrix_sdk',
   // to-device decryption errors (expected after crypto store reset / new device)
@@ -143,6 +145,8 @@ const SUPPRESSED_PATTERNS = [
   'Failed to get TURN URIs',
   'getPushRules',
   'pushrules',
+  'Missing default global',
+  'Missing default',
 ]
 
 function isSuppressed(args: any[]): boolean {
@@ -176,6 +180,14 @@ const filteredLogger: Logger = {
   error(...msg: any[]) { if (!isSuppressed(msg)) console.error(...msg); else console.debug('[suppressed:error]', ...msg) },
 }
 
+// Wrap the SDK's global logger warn/error methods (used by MatrixEvent for
+// decryption errors) to apply suppression. We wrap the methods directly instead
+// of using methodFactory + rebuild() which breaks loglevel's prefix chain.
+const _origWarn = (sdkGlobalLogger as any).warn
+const _origError = (sdkGlobalLogger as any).error
+;(sdkGlobalLogger as any).warn = (...args: any[]) => { if (!isSuppressed(args)) _origWarn.apply(sdkGlobalLogger, args) }
+;(sdkGlobalLogger as any).error = (...args: any[]) => { if (!isSuppressed(args)) _origError.apply(sdkGlobalLogger, args) }
+
 export function getMatrixClient(): sdk.MatrixClient | null {
   return matrixClient
 }
@@ -202,6 +214,17 @@ function createProxiedFetch(homeserverUrl: string): typeof globalThis.fetch {
     // Only proxy requests going to the Matrix homeserver
     if (url.startsWith(hsOrigin + '/_matrix/')) {
       const matrixPath = url.slice(hsOrigin.length) // e.g. /_matrix/client/v3/sync?...
+
+      // Intercept TURN server polling — returns empty to avoid 404 console noise
+      // on servers that don't support VoIP. The SDK's checkTurnServers runs
+      // inside startClient before we can disable it.
+      if (matrixPath.startsWith('/_matrix/client/v3/voip/turnServer')) {
+        return Promise.resolve(new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }))
+      }
+
       const proxyUrl = `/api/matrix-proxy${matrixPath}`
 
       const newInit: RequestInit = { ...init }
@@ -664,6 +687,14 @@ export async function startSync(): Promise<void> {
     pendingEventOrdering: sdk.PendingEventOrdering.Detached,
   })
 
+  // Stop the SDK's periodic TURN server polling — our VoIP module handles
+  // ICE servers independently, and the polling causes 404 errors on servers
+  // that don't support the /voip/turnServer endpoint.
+  if ((matrixClient as any).checkTurnServersIntervalID) {
+    clearInterval((matrixClient as any).checkTurnServersIntervalID)
+    ;(matrixClient as any).checkTurnServersIntervalID = undefined
+  }
+
   // Wait for initial sync (with timeout to avoid infinite "Connecting..." spinner)
   await new Promise<void>((resolve, reject) => {
     const SYNC_TIMEOUT_MS = 60_000
@@ -725,5 +756,40 @@ export function getAvatarUrl(
 
 export function getUserId(): string | null {
   return matrixClient?.getUserId() || null
+}
+
+/**
+ * Resolve the "other member" avatar for a room directly from the SDK.
+ * Used as a fallback when the store's room data has stale/missing avatars.
+ */
+export function resolveRoomAvatarFromSDK(roomId: string): string | null {
+  if (!matrixClient) return null
+  const room = matrixClient.getRoom(roomId)
+  if (!room) return null
+
+  const myUserId = matrixClient.getUserId()
+
+  // Try all members (not just getJoinedMembers which may be incomplete with lazy loading)
+  const members = room.getMembers()
+  const others = members.filter(m => m.userId !== myUserId && m.membership === 'join')
+
+  // Find a member with an avatar
+  for (const m of others) {
+    const mxc = m.getMxcAvatarUrl()
+    if (mxc) return mxc
+  }
+
+  // Try fallback member (from room heroes)
+  const fallback = room.getAvatarFallbackMember()
+  if (fallback) {
+    const mxc = fallback.getMxcAvatarUrl()
+    if (mxc) return mxc
+  }
+
+  // Try the room's own avatar
+  const roomMxc = room.getMxcAvatarUrl()
+  if (roomMxc) return roomMxc
+
+  return null
 }
 

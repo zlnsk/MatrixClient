@@ -14,6 +14,9 @@ const previewCache = new Map<string, {
   siteName?: string
 } | null>()
 
+// If the server returns 403 (url previews disabled), stop requesting entirely
+let serverSupportsPreview = true
+
 interface LinkPreviewProps {
   url: string
 }
@@ -41,7 +44,7 @@ export function LinkPreview({ url }: LinkPreviewProps) {
     async function fetchPreview() {
       try {
         const client = getMatrixClient()
-        if (!client) return
+        if (!client || !serverSupportsPreview) return
 
         // Matrix provides a URL preview API
         const data = await client.getUrlPreview(url, Date.now())
@@ -69,7 +72,11 @@ export function LinkPreview({ url }: LinkPreviewProps) {
         } else {
           previewCache.set(url, null)
         }
-      } catch {
+      } catch (err: any) {
+        // If server returns 403, it doesn't support URL previews — stop all future requests
+        if (err?.httpStatus === 403 || err?.errcode === 'M_FORBIDDEN') {
+          serverSupportsPreview = false
+        }
         previewCache.set(url, null)
         if (!cancelled) setError(true)
       }

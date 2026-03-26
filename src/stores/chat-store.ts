@@ -171,7 +171,9 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const members = joinedMembers.map((m: RoomMember) => ({
     userId: m.userId,
     displayName: m.name || m.userId,
-    avatarUrl: getAvatarUrl(m.getMxcAvatarUrl() || profileAvatarCache.get(m.userId)),
+    // Prefer profile cache (has real avatar) over room member avatar (may be bridge default like Signal logo)
+    // Empty string in cache means "no avatar" (negative cache) — skip it
+    avatarUrl: getAvatarUrl(profileAvatarCache.get(m.userId) || m.getMxcAvatarUrl() || null),
     membership: m.membership || 'join',
     presence: (client?.getUser(m.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
   }))
@@ -184,7 +186,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     members.push({
       userId: fallbackMember.userId,
       displayName: fallbackMember.name || fallbackMember.userId,
-      avatarUrl: getAvatarUrl(fallbackMember.getMxcAvatarUrl() || profileAvatarCache.get(fallbackMember.userId)),
+      avatarUrl: getAvatarUrl(profileAvatarCache.get(fallbackMember.userId) || fallbackMember.getMxcAvatarUrl()),
       membership: fallbackMember.membership || 'join',
       presence: (client?.getUser(fallbackMember.userId)?.presence as 'online' | 'offline' | 'unavailable') || null,
     })
@@ -204,15 +206,23 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
   const tags = room.tags || {}
   const isArchived = 'm.lowpriority' in tags
 
-  // For DM rooms (or small rooms without an explicit avatar), prefer the other
-  // member's avatar over the room avatar. Bridges like mautrix-signal often don't
-  // set room avatars for DMs, and after delete-all-portals the m.direct account
-  // data may not be repopulated — so also check rooms with ≤2 members.
+  // For DM rooms (or small rooms), prefer the other member's profile avatar
+  // over the room avatar. Bridges like mautrix-signal set the Signal logo as
+  // the room avatar — the real face is in the user's global profile.
+  // Threshold is ≤3 to cover bridge DMs that include an appservice bot.
   let roomAvatarMxc = room.getMxcAvatarUrl()
   const joinedCount = room.getJoinedMembers().length
-  if (client && (isDirect || (!roomAvatarMxc && joinedCount <= 2 && joinedCount > 0))) {
-    const otherMember = room.getJoinedMembers().find((m: RoomMember) => m.userId !== client.getUserId())
-    const memberAvatar = otherMember?.getMxcAvatarUrl() || (otherMember ? profileAvatarCache.get(otherMember.userId) : undefined)
+  const summaryCount = room.currentState?.getJoinedMemberCount?.() || joinedCount
+  const isBridgedRoom = members.some(m => /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId))
+  const isSmallRoom = (joinedCount <= 3 || summaryCount <= 3) && (joinedCount > 0 || summaryCount > 0)
+  if (client && (isDirect || isSmallRoom || isBridgedRoom)) {
+    const otherMembers = room.getJoinedMembers().filter((m: RoomMember) => m.userId !== client.getUserId())
+    // Prefer the member that has an avatar (puppet > bot)
+    const otherMember = otherMembers.find((m: RoomMember) => {
+      return profileAvatarCache.get(m.userId) || m.getMxcAvatarUrl()
+    }) || otherMembers[0]
+    // Prefer profile cache (real avatar) over room member avatar (may be bridge default like Signal logo)
+    const memberAvatar = (otherMember ? profileAvatarCache.get(otherMember.userId) : undefined) || otherMember?.getMxcAvatarUrl()
     if (memberAvatar) {
       roomAvatarMxc = memberAvatar
     } else {
@@ -220,7 +230,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
       // bridged user yet. getAvatarFallbackMember() uses room summary heroes
       // which are available even before full member loading completes.
       const fallbackMember = room.getAvatarFallbackMember()
-      const fallbackAvatar = fallbackMember?.getMxcAvatarUrl() || (fallbackMember ? profileAvatarCache.get(fallbackMember.userId) : undefined)
+      const fallbackAvatar = (fallbackMember ? profileAvatarCache.get(fallbackMember.userId) : undefined) || fallbackMember?.getMxcAvatarUrl()
       if (fallbackAvatar) {
         roomAvatarMxc = fallbackAvatar
       }
@@ -300,7 +310,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
       roomId: room.roomId,
       senderId: sender,
       senderName,
-      senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
+      senderAvatar: getAvatarUrl((member ? profileAvatarCache.get(member.userId) : undefined) || member?.getMxcAvatarUrl()),
       type: 'm.text',
       msgtype: 'm.text',
       content: stateContent,
@@ -341,6 +351,10 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
   // Check for reply
   let replyToEvent = null
   const relatesTo = content['m.relates_to']
+
+  // Skip edit events — they are folded into the original by replacingEvent()
+  if (relatesTo?.rel_type === 'm.replace') return null
+
   if (relatesTo?.['m.in_reply_to']?.event_id) {
     const replyEvt = room.findEventById(relatesTo['m.in_reply_to'].event_id)
     if (replyEvt) {
@@ -437,7 +451,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
       readBy.push({
         userId: receipt.userId,
         displayName: receiptMember?.name || receipt.userId,
-        avatarUrl: getAvatarUrl(receiptMember?.getMxcAvatarUrl()),
+        avatarUrl: getAvatarUrl((receiptMember ? profileAvatarCache.get(receiptMember.userId) : undefined) || receiptMember?.getMxcAvatarUrl()),
         ts: receipt.data?.ts || 0,
       })
     }
@@ -465,7 +479,7 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     roomId: room.roomId,
     senderId: sender,
     senderName: cleanDisplayName(member?.name || sender),
-    senderAvatar: getAvatarUrl(member?.getMxcAvatarUrl()),
+    senderAvatar: getAvatarUrl((member ? profileAvatarCache.get(member.userId) : undefined) || member?.getMxcAvatarUrl()),
     type: displayContent.msgtype || 'm.text',
     msgtype: displayContent.msgtype || 'm.text',
     content: body,
@@ -550,6 +564,47 @@ export const useChatStore = create<ChatState>((set, get) => ({
         isBridged: false,
       } satisfies MatrixRoom))
 
+    // Preserve avatar data from current state when the fresh SDK build doesn't
+    // have it yet (lazy loading may not have completed for all rooms).
+    const currentRooms = get().rooms
+    if (currentRooms.length > 0) {
+      const currentByRoomId = new Map(currentRooms.map(r => [r.roomId, r]))
+      for (let i = 0; i < rooms.length; i++) {
+        const prev = currentByRoomId.get(rooms[i].roomId)
+        if (!prev) continue
+        // Preserve room avatar if fresh build lost it
+        if (!rooms[i].avatarUrl && prev.avatarUrl) {
+          rooms[i] = { ...rooms[i], avatarUrl: prev.avatarUrl }
+        }
+        // Preserve member avatars if fresh build has fewer or lost them
+        if (prev.members.length > rooms[i].members.length ||
+            prev.members.some(pm => pm.avatarUrl && !rooms[i].members.find(m => m.userId === pm.userId)?.avatarUrl)) {
+          const prevMemberMap = new Map(prev.members.map(m => [m.userId, m]))
+          const mergedMembers = rooms[i].members.map(m => {
+            const pm = prevMemberMap.get(m.userId)
+            if (!m.avatarUrl && pm?.avatarUrl) return { ...m, avatarUrl: pm.avatarUrl }
+            return m
+          })
+          // Add members that exist in prev but not in fresh build (lazy loading gap)
+          for (const pm of prev.members) {
+            if (!mergedMembers.some(m => m.userId === pm.userId)) {
+              mergedMembers.push(pm)
+            }
+          }
+          rooms[i] = { ...rooms[i], members: mergedMembers }
+          // Re-derive room avatar from merged members for small/bridged rooms
+          if (!rooms[i].avatarUrl && (rooms[i].isDirect || rooms[i].isBridged || mergedMembers.length <= 3)) {
+            const myId = getUserId()
+            const others = mergedMembers.filter(m => m.userId !== myId)
+            const other = others.find(m => m.avatarUrl) || others[0]
+            if (other?.avatarUrl) {
+              rooms[i] = { ...rooms[i], avatarUrl: other.avatarUrl }
+            }
+          }
+        }
+      }
+    }
+
     set({ rooms, pendingInvites })
 
     // With lazyLoadMembers, room member state events (including avatars) aren't
@@ -563,11 +618,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Load members for DM rooms, or any small room without an avatar
       // (after bridge delete-all-portals, m.direct may not be repopulated
       // so we can't rely solely on isDirect).
+      const summaryMemberCount = sdkRoom.currentState?.getJoinedMemberCount?.() || sdkRoom.getJoinedMembers().length
+      // Always resolve avatars for DMs, small rooms, and bridged rooms — the
+      // existing avatar may be a bridge default while the real face is in the profile.
+      // Threshold is ≤3 to cover bridge DMs that include an appservice bot.
       const needsAvatar = matrixRoom?.isDirect
-        || (!matrixRoom?.avatarUrl && sdkRoom.getJoinedMembers().length <= 2)
+        || matrixRoom?.isBridged
+        || (sdkRoom.getJoinedMembers().length <= 3 || summaryMemberCount <= 3)
       if (needsAvatar) {
         const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
-        if (!otherMember || !otherMember.getMxcAvatarUrl()) {
+        // Load members if the other member isn't resolved yet, or if we haven't
+        // fetched their profile yet. Skip if profile was already fetched (even with
+        // negative result — empty string sentinel).
+        if (!otherMember || !profileAvatarCache.has(otherMember.userId)) {
           roomsNeedingMembers.push(sdkRoom)
         }
       }
@@ -590,18 +653,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
             : null,
         }))
 
-        // With lazyLoadMembers, even after loadMembersIfNeeded() the member's
-        // avatar_url may still be null (the member state event doesn't always
-        // include it). For rooms where the other member still lacks an avatar,
-        // fetch their profile directly from the server to get the avatar.
+        // Fetch the global profile for each DM partner. The room member avatar
+        // may be a bridge default (e.g. Signal logo) while the user's actual
+        // profile has their real face. Always fetch to get the best avatar.
         const profileFetches: Promise<void>[] = []
         for (const sdkRoom of roomsNeedingMembers) {
-          const matrixRoom = updatedRooms.find(r => r.roomId === sdkRoom.roomId)
-          if (!matrixRoom?.isDirect && matrixRoom?.avatarUrl) continue
-
-          const otherMember = sdkRoom.getJoinedMembers().find((m: RoomMember) => m.userId !== client!.getUserId())
+          const otherMembers = sdkRoom.getJoinedMembers().filter((m: RoomMember) => m.userId !== client!.getUserId())
+          // Prefer member with avatar (puppet > bot), then fallback hero
+          const otherMember = otherMembers.find((m: RoomMember) => m.getMxcAvatarUrl()) || otherMembers[0]
             || sdkRoom.getAvatarFallbackMember()
-          if (!otherMember || otherMember.getMxcAvatarUrl()) continue
+          if (!otherMember) continue
 
           profileFetches.push(
             client!.getProfileInfo(otherMember.userId).then((profile) => {
@@ -632,13 +693,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         if (profileFetches.length > 0) {
           await Promise.allSettled(profileFetches)
-          // Re-set rooms with the fetched profile avatars
-          set((state) => ({
-            rooms: [...updatedRooms].sort((a, b) => b.lastMessageTs - a.lastMessageTs),
-            activeRoom: state.activeRoom
-              ? updatedRooms.find(r => r.roomId === state.activeRoom!.roomId) || state.activeRoom
-              : null,
-          }))
+          // Apply profile cache to CURRENT store state (not stale local variable)
+          // to avoid race conditions with concurrent loadRooms() calls
+          set((state) => {
+            const myUserId = getUserId()
+            const updated = state.rooms.map(room => {
+              let hasUpdate = false
+              const updatedMembers = room.members.map(m => {
+                const cached = profileAvatarCache.get(m.userId)
+                if (cached && m.avatarUrl !== getAvatarUrl(cached)) {
+                  hasUpdate = true
+                  return { ...m, avatarUrl: getAvatarUrl(cached) }
+                }
+                return m
+              })
+              let roomAvatar = room.avatarUrl
+              if ((room.isDirect || room.isBridged || room.members.length <= 3) && !roomAvatar) {
+                const others = updatedMembers.filter(m => m.userId !== myUserId)
+                const other = others.find(m => m.avatarUrl) || others[0]
+                if (other?.avatarUrl) {
+                  roomAvatar = other.avatarUrl
+                  hasUpdate = true
+                }
+              }
+              return hasUpdate ? { ...room, members: updatedMembers, avatarUrl: roomAvatar } : room
+            })
+            return {
+              rooms: updated,
+              activeRoom: state.activeRoom
+                ? updated.find(r => r.roomId === state.activeRoom!.roomId) || state.activeRoom
+                : null,
+            }
+          })
         }
       })
     }
@@ -671,6 +757,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     try {
+      // Ensure full member list is loaded (lazy loading may have deferred this)
+      await room.loadMembersIfNeeded().catch(() => {})
+
       // Paginate backwards to load more history if the timeline is small.
       // Only do this on initial load — not on every refresh triggered by sync/send.
       const timelineSet = room.getLiveTimeline()
@@ -780,6 +869,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set({ messages: newMessages, isLoadingMessages: false })
       } else {
         set({ isLoadingMessages: false })
+      }
+
+      // Rebuild room data from SDK now that timeline loading has resolved
+      // member state. With lazy-loaded members, the room list is often built
+      // before member data (including avatars) is available.
+      const updatedRoom = roomToMatrixRoom(room)
+      const currentRooms = get().rooms
+      const roomIdx = currentRooms.findIndex(r => r.roomId === roomId)
+      if (roomIdx !== -1) {
+        const currentRoom = currentRooms[roomIdx]
+        // Preserve fields that roomToMatrixRoom doesn't track
+        const mergedRoom = {
+          ...updatedRoom,
+          isArchived: currentRoom.isArchived,
+        }
+        if (
+          mergedRoom.avatarUrl !== currentRoom.avatarUrl ||
+          mergedRoom.members.length !== currentRoom.members.length ||
+          mergedRoom.members.some((m, i) => m.avatarUrl !== currentRoom.members[i]?.avatarUrl)
+        ) {
+          const updated = [...currentRooms]
+          updated[roomIdx] = mergedRoom
+          set((state) => ({
+            rooms: updated,
+            activeRoom: state.activeRoom?.roomId === roomId ? mergedRoom : state.activeRoom,
+          }))
+        }
       }
     } catch (err) {
       console.error('Failed to load messages for room', roomId, err)
@@ -1046,16 +1162,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const updatedRoom = roomToMatrixRoom(room)
 
-    set((state) => ({
-      rooms: state.rooms.map((r) =>
+    set((state) => {
+      const oldRoom = state.rooms.find(r => r.roomId === roomId)
+      let updatedRooms = state.rooms.map((r) =>
         r.roomId === roomId ? updatedRoom : r
-      ).sort((a, b) => b.lastMessageTs - a.lastMessageTs),
-      activeRoom: state.activeRoom?.roomId === roomId ? updatedRoom : state.activeRoom,
-    }))
+      )
+      // Only re-sort if the timestamp actually changed (new message arrived)
+      if (oldRoom && updatedRoom.lastMessageTs !== oldRoom.lastMessageTs) {
+        updatedRooms = updatedRooms.sort((a, b) => b.lastMessageTs - a.lastMessageTs)
+      }
+      return {
+        rooms: updatedRooms,
+        activeRoom: state.activeRoom?.roomId === roomId ? updatedRoom : state.activeRoom,
+      }
+    })
 
-    if (get().activeRoom?.roomId === roomId) {
-      get().loadMessages(roomId)
-    }
   },
 
   archiveRoom: async (roomId) => {

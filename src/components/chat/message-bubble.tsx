@@ -114,6 +114,15 @@ function renderRichContent(content: string, formattedContent: string | null): st
   return DOMPurify.sanitize(html, PURIFY_CONFIG_PLAIN)
 }
 
+// Matches strings that contain only emoji (including skin tone modifiers, ZWJ sequences, keycap sequences, flags)
+const EMOJI_ONLY_RE = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Regional_Indicator}{2}|[\u200d\uFE0F]|\d\uFE0F?\u20E3)+$/u
+
+function isEmojiOnly(text: string): boolean {
+  const trimmed = text.trim()
+  // Up to ~12 emoji characters to avoid huge text on long strings
+  return trimmed.length > 0 && trimmed.length <= 30 && EMOJI_ONLY_RE.test(trimmed)
+}
+
 function extractFirstUrl(text: string): string | null {
   const match = text.match(/https?:\/\/[^\s<]+/)
   return match ? match[0] : null
@@ -265,13 +274,17 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   const actionsRef = useRef<HTMLDivElement>(null)
   const bubbleRef = useRef<HTMLDivElement>(null)
   const touchMenuRef = useRef<HTMLDivElement>(null)
+  const emojiPickerPortalRef = useRef<HTMLDivElement>(null)
+  const contextMenuPortalRef = useRef<HTMLDivElement>(null)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchMoved = useRef(false)
 
   // Compute portal positions for emoji picker and context menu
+  // Use the vertical midpoint of the bubble (where action buttons sit) to keep menus near the buttons
   const getMenuPosition = useCallback(() => {
-    if (!bubbleRef.current) return { top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 }
-    return bubbleRef.current.getBoundingClientRect()
+    if (!bubbleRef.current) return { top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0, midY: 0 }
+    const rect = bubbleRef.current.getBoundingClientRect()
+    return { ...rect.toJSON(), midY: rect.top + rect.height / 2 }
   }, [])
 
   // Fetch all media via authenticated endpoint (handles both encrypted and unencrypted)
@@ -318,8 +331,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   useEffect(() => {
     function handleClickOutside(e: MouseEvent | TouchEvent) {
       const target = e.target as Node
-      // Don't close desktop menus if click is inside actions area
-      if (actionsRef.current && !actionsRef.current.contains(target)) {
+      // Don't close desktop menus if click is inside actions area or portal menus
+      const insideActions = actionsRef.current?.contains(target)
+      const insideEmojiPortal = emojiPickerPortalRef.current?.contains(target)
+      const insideContextPortal = contextMenuPortalRef.current?.contains(target)
+      if (!insideActions && !insideEmojiPortal && !insideContextPortal) {
         setShowActions(false)
         setShowEmojiPicker(false)
         setShowContextMenu(false)
@@ -521,14 +537,16 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 setEditContent(message.content)
               }
             }}
-            className={`rounded-[20px] overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'w-fit border border-m3-outline-variant/30 dark:border-m3-outline-variant/20' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
-              isOwn
-                ? message.status === 'failed'
-                  ? 'bg-m3-primary/70 text-white ring-2 ring-red-400/50'
-                  : message.status === 'sending'
-                    ? 'bg-m3-primary/85 text-white'
-                    : 'bg-m3-primary text-white'
-                : 'border border-m3-outline-variant/50 bg-m3-surface-container-lowest text-m3-on-surface dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high dark:text-m3-on-surface'
+            className={`rounded-[20px] overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'w-fit border border-m3-outline-variant/30 dark:border-m3-outline-variant/20' : isEmojiOnly(message.content) && !message.replyToEvent ? 'px-1 py-0.5' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
+              isEmojiOnly(message.content) && !message.replyToEvent
+                ? ''
+                : isOwn
+                  ? message.status === 'failed'
+                    ? 'bg-m3-primary/70 text-white ring-2 ring-red-400/50'
+                    : message.status === 'sending'
+                      ? 'bg-m3-primary/85 text-white'
+                      : 'bg-m3-primary text-white'
+                  : 'bg-m3-surface-container text-m3-on-surface dark:bg-m3-surface-container-high dark:text-m3-on-surface'
             }`}
           >
             {/* Inline reply quote */}
@@ -575,10 +593,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                       <img
                         src={effectiveMediaUrl}
                         alt={message.content || 'Shared image'}
-                        className="block min-w-[200px] max-w-full object-contain cursor-pointer transition-opacity hover:opacity-90"
+                        className="block max-w-full cursor-pointer transition-opacity hover:opacity-90"
                         style={{
                           maxHeight: 480,
-                          width: message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
+                          width: message.mediaInfo?.w && message.mediaInfo?.h
+                            ? Math.min(message.mediaInfo.w, 400, Math.round((message.mediaInfo.w / message.mediaInfo.h) * 480))
+                            : message.mediaInfo?.w ? Math.min(message.mediaInfo.w, 400) : undefined,
                         }}
                         onClick={() => setLightboxOpen(true)}
                       />
@@ -628,7 +648,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 )}
               </div>
             ) : message.msgtype === 'm.emote' ? (
-              <div className="rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words italic">
+              <div className={`rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words italic ${isOwn ? 'own-bubble' : ''}`}>
                 <span className="font-medium not-italic">{message.senderName}</span>{' '}
                 <span
                   dangerouslySetInnerHTML={{
@@ -638,7 +658,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               </div>
             ) : (
               <div
-                className={`rich-content text-[15px] leading-relaxed whitespace-pre-wrap break-words ${message.msgtype === 'm.notice' ? 'italic opacity-70' : ''}`}
+                className={`rich-content leading-relaxed whitespace-pre-wrap break-words ${isEmojiOnly(message.content) ? 'text-4xl' : 'text-[15px]'} ${message.msgtype === 'm.notice' ? 'italic opacity-70' : ''} ${isOwn ? 'own-bubble' : ''}`}
                 dangerouslySetInnerHTML={{
                   __html: applySearchHighlight(renderRichContent(message.content, message.formattedContent), searchHighlight || ''),
                 }}
@@ -649,19 +669,6 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               const url = extractFirstUrl(message.content)
               return url ? <LinkPreview url={url} /> : null
             })()}
-
-            {/* Timestamp + status */}
-            <div className={`mt-1 flex items-center gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-              <span className={`text-xs ${isOwn ? 'text-white/70' : 'text-m3-outline dark:text-m3-on-surface-variant'}`}>
-                {format(new Date(message.timestamp), 'HH:mm')}
-              </span>
-              {message.isEdited && (
-                <span className={`text-xs ${isOwn ? 'text-white/70' : 'text-m3-outline dark:text-m3-on-surface-variant'}`}>
-                  (edited)
-                </span>
-              )}
-              <StatusIcon />
-            </div>
 
             {/* Failed to send indicator with retry */}
             {message.status === 'failed' && (
@@ -682,32 +689,32 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             )}
           </div>
 
-          {/* Action buttons — right side of bubble (desktop only, hidden on touch) */}
-          <div className={`absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center gap-0.5 rounded-xl border border-m3-outline-variant/80 bg-m3-surface-container-lowest p-0.5 shadow-lg dark:border-m3-outline-variant dark:bg-m3-surface-container-high transition-all duration-150 ${isOwn ? 'right-full mr-1' : 'left-full ml-1'} ${showActions && !isEditing ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none ' + (isOwn ? 'translate-x-1' : '-translate-x-1')}`}>
+          {/* Action buttons — aligned to bubble (desktop only, hidden on touch) */}
+          <div className={`absolute top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center gap-0.5 rounded-2xl border border-m3-outline-variant/80 bg-m3-surface-container-lowest p-1 shadow-lg dark:border-m3-outline-variant dark:bg-m3-surface-container-high transition-all duration-150 ${isOwn ? 'right-full mr-1.5' : 'left-full ml-1.5'} ${showActions && !isEditing ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none ' + (isOwn ? 'translate-x-1' : '-translate-x-1')}`}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
+                className="rounded-xl p-2.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
                 title="React"
                 aria-label="Add reaction"
               >
-                <Smile className="h-3.5 w-3.5" />
+                <Smile className="h-5 w-5" />
               </button>
               <button
                 onClick={onReply}
-                className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
+                className="rounded-xl p-2.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
                 title="Reply"
                 aria-label="Reply to message"
               >
-                <Reply className="h-3.5 w-3.5" />
+                <Reply className="h-5 w-5" />
               </button>
               <button
                 onClick={() => setShowContextMenu(!showContextMenu)}
-                className="rounded-lg p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
+                className="rounded-xl p-2.5 text-m3-outline transition-colors hover:bg-m3-surface-container hover:text-m3-on-surface-variant active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
                 title="More"
                 aria-label="More actions"
                 aria-haspopup="menu"
               >
-                <MoreHorizontal className="h-3.5 w-3.5" />
+                <MoreHorizontal className="h-5 w-5" />
               </button>
             </div>
 
@@ -716,13 +723,14 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             const rect = getMenuPosition()
             const pickerStyle: React.CSSProperties = {
               position: 'fixed',
-              top: Math.max(8, rect.top - 8),
+              top: Math.max(8, (rect as any).midY - 8),
               transform: 'translateY(-100%)',
               zIndex: 9999,
               ...(isOwn ? { right: window.innerWidth - rect.right } : { left: rect.left }),
             }
             return createPortal(
               <div
+                ref={emojiPickerPortalRef}
                 className="hidden md:grid grid-cols-5 gap-1 rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest p-2.5 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high"
                 style={pickerStyle}
               >
@@ -745,14 +753,15 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
             const rect = getMenuPosition()
             const menuStyle: React.CSSProperties = {
               position: 'fixed',
-              top: rect.top,
+              top: (rect as any).midY,
+              transform: 'translateY(-50%)',
               zIndex: 9999,
               ...(isOwn ? { right: window.innerWidth - rect.left + 4 } : { left: rect.right + 4 }),
             }
             return createPortal(
               <>
                 <div className="fixed inset-0 z-[9998]" onClick={() => { setShowContextMenu(false); setShowActions(false) }} />
-                <div className="hidden md:block min-w-[160px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high" style={menuStyle}>
+                <div ref={contextMenuPortalRef} className="hidden md:block min-w-[160px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high" style={menuStyle}>
                   <button
                     onClick={handleCopy}
                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
@@ -948,9 +957,22 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           )}
           </div>{/* end bubble wrapper */}
 
-          {/* Reactions — overlapping bottom edge of bubble like Google Messages */}
+          {/* Timestamp + status — outside bubble, Google Messages style */}
+          <div className={`mt-1 px-1 flex items-center gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <span className="text-xs text-m3-outline dark:text-m3-on-surface-variant">
+              {format(new Date(message.timestamp), 'HH:mm')}
+            </span>
+            {message.isEdited && (
+              <span className="text-xs text-m3-outline dark:text-m3-on-surface-variant">
+                (edited)
+              </span>
+            )}
+            <StatusIcon />
+          </div>
+
+          {/* Reactions */}
           {message.reactions.size > 0 && (
-            <div className={`relative z-10 -mt-2.5 mb-0.5 flex flex-wrap gap-1 px-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <div className={`relative z-10 mt-0.5 mb-0.5 flex flex-wrap gap-1 px-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
               {Array.from(message.reactions.entries()).map(([emoji, data]) => (
                 <div key={emoji} className="group/reaction relative">
                   <button

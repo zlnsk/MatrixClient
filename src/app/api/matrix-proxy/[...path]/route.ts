@@ -117,7 +117,7 @@ async function handler(
   } catch (err) {
     console.error('Matrix proxy error:', err)
     return NextResponse.json(
-      { error: 'Failed to reach homeserver', details: String(err) },
+      { error: 'Failed to reach homeserver' },
       { status: 502 }
     )
   }

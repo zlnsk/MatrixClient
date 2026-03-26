@@ -66,16 +66,13 @@ function InitialsFallback({ name, size }: { name: string; size: 'sm' | 'md' | 'l
 
 /**
  * Detect simple placeholder/icon avatars like Signal's default dashed-circle.
- * Very strict: only flags images with ≤2 distinct color buckets (real photos
- * always have many more, even at 16x16). Also detects very small images
- * (< 5x5 pixels) which are often transparent placeholders.
- *
- * Previous threshold of 4 was too aggressive — real avatars with limited palettes
- * (cartoon-style, logos, dark photos) could be incorrectly flagged as placeholders.
+ * Uses two heuristics:
+ * 1. Color bucket count — placeholders have very few distinct colors
+ * 2. Dominant color ratio — placeholders are mostly one color (background)
+ * Also detects very small or mostly-transparent images.
  */
 function isPlaceholderImage(img: HTMLImageElement): boolean {
   try {
-    // Very small images are likely placeholders
     if (img.naturalWidth < 5 || img.naturalHeight < 5) return true
 
     const canvas = document.createElement('canvas')
@@ -87,22 +84,37 @@ function isPlaceholderImage(img: HTMLImageElement): boolean {
     ctx.drawImage(img, 0, 0, s, s)
     const { data } = ctx.getImageData(0, 0, s, s)
 
-    // Check if mostly transparent (alpha < 50 for > 90% of pixels)
-    let transparentPixels = 0
     const totalPixels = s * s
+    let transparentPixels = 0
     for (let i = 3; i < data.length; i += 4) {
       if (data[i] < 50) transparentPixels++
     }
     if (transparentPixels > totalPixels * 0.9) return true
 
     // Bucket each pixel's RGB into a 4x4x4 grid (64 possible buckets)
-    const buckets = new Set<number>()
+    // and track the most common bucket
+    const bucketCounts = new Map<number, number>()
+    let opaquePixels = 0
     for (let i = 0; i < data.length; i += 4) {
-      if (data[i + 3] < 50) continue // skip transparent
-      buckets.add(((data[i] >> 6) << 4) | ((data[i + 1] >> 6) << 2) | (data[i + 2] >> 6))
-      if (buckets.size > 2) return false // real photo — bail early
+      if (data[i + 3] < 50) continue
+      opaquePixels++
+      const bucket = ((data[i] >> 6) << 4) | ((data[i + 1] >> 6) << 2) | (data[i + 2] >> 6)
+      bucketCounts.set(bucket, (bucketCounts.get(bucket) || 0) + 1)
     }
-    return true
+
+    // Very few colors — definitely a placeholder
+    if (bucketCounts.size <= 3) return true
+
+    // If one color dominates 85%+ of pixels, it's likely a simple icon/placeholder
+    if (opaquePixels > 0) {
+      let maxCount = 0
+      for (const count of bucketCounts.values()) {
+        if (count > maxCount) maxCount = count
+      }
+      if (maxCount / opaquePixels > 0.85 && bucketCounts.size <= 8) return true
+    }
+
+    return false
   } catch {
     return false
   }
@@ -128,7 +140,8 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
             setImgError(false)
           }
         })
-        .catch(() => {
+        .catch((err) => {
+          console.debug('[Avatar] fetch failed:', src, err?.message || err)
           if (!cancelled) setImgError(true)
         })
       return () => { cancelled = true }
@@ -141,9 +154,10 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
 
   const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     if (isPlaceholderImage(e.currentTarget)) {
+      console.debug('[Avatar] placeholder detected, falling back to initials:', src)
       setImgError(true)
     }
-  }, [])
+  }, [src])
 
   const displayUrl = blobUrl
 

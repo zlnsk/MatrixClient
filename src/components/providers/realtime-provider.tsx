@@ -34,6 +34,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const client = getMatrixClient()
     if (!client) return
 
+    // Listen for incoming verification requests
     const onVerificationRequest = (request: VerificationRequest) => {
       console.log('Verification request received:', request.otherUserId, 'phase:', request.phase)
       setVerificationRequest(request)

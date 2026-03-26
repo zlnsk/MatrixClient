@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo, memo, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
+import { resolveRoomAvatarFromSDK } from '@/lib/matrix/client'
 import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 
@@ -27,6 +28,7 @@ import {
   MessageSquareDashed,
   Menu,
   MessageCircle,
+  Plus,
   ChevronRight,
   Trash2,
 } from 'lucide-react'
@@ -108,16 +110,18 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   ), [rooms, searchFilter])
 
   const getOtherMemberAvatar = (room: MatrixRoom) => {
-    // For DMs or small rooms without an explicit room avatar, use the other
-    // member's avatar. After bridge room recreation, m.direct may not be set
-    // so we also check member count as a heuristic.
-    const usesMemberAvatar = room.isDirect
-      || (!room.avatarUrl && room.members.length > 0 && room.members.length <= 2)
-    if (usesMemberAvatar && room.members.length > 0) {
-      const other = room.members.find(m => m.userId !== user?.userId)
-      return other?.avatarUrl || room.avatarUrl
+    // For DMs or small rooms (≤3 to cover bridge bot), prefer the other member's avatar.
+    const isSmallRoom = room.members.length > 0 && room.members.length <= 3
+    if ((room.isDirect || isSmallRoom || room.isBridged) && room.members.length > 0) {
+      const others = room.members.filter(m => m.userId !== user?.userId)
+      const other = others.find(m => m.avatarUrl) || others[0]
+      const storeResult = other?.avatarUrl || room.avatarUrl
+      if (storeResult) return storeResult
     }
-    return room.avatarUrl
+    if (room.avatarUrl) return room.avatarUrl
+
+    // Fallback: query the SDK directly (store may have stale data from lazy loading)
+    return resolveRoomAvatarFromSDK(room.roomId)
   }
 
   const getOtherMemberPresence = (room: MatrixRoom): 'online' | 'offline' | 'away' | null => {
@@ -203,6 +207,14 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
         <h1 className="flex-1 text-xl text-m3-on-surface"><span className="font-light">szept</span> <span className="font-bold">matrix</span></h1>
 
         <button
+          onClick={() => setShowNewChat(true)}
+          className="rounded-full p-1.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high"
+          aria-label="Start new chat"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+
+        <button
           onClick={onProfileClick}
           className="rounded-full transition-opacity hover:opacity-80"
           aria-label="Profile settings"
@@ -213,17 +225,6 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
             size="sm"
             status="online"
           />
-        </button>
-      </div>
-
-      {/* FAB — Start chat (Google Messages style) */}
-      <div className="px-4 pb-3">
-        <button
-          onClick={() => setShowNewChat(true)}
-          className="flex items-center gap-3 rounded-2xl bg-m3-primary-container px-5 py-3.5 text-base font-medium text-m3-on-primary-container shadow-sm transition-all hover:shadow-md active:shadow-sm md:text-sm"
-        >
-          <MessageCircle className="h-5 w-5" />
-          Start chat
         </button>
       </div>
 
@@ -523,10 +524,10 @@ const RoomListItem = memo(function RoomListItem({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className={`group flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors duration-100 ${
+      className={`group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors duration-75 ${
         isActive
           ? 'bg-m3-primary-container/50 dark:bg-m3-surface-container-high'
-          : 'hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high/60'
+          : 'hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high/60 dark:active:bg-m3-surface-container-highest'
       }`}
     >
       <Avatar
@@ -563,8 +564,8 @@ const RoomListItem = memo(function RoomListItem({
           </div>
         </div>
       </div>
-      {/* Archive & Delete buttons on hover */}
-      <div className="flex flex-shrink-0 items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
+      {/* Archive & Delete buttons on hover (desktop only) */}
+      <div className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 items-center gap-0.5 rounded-lg bg-white/90 dark:bg-m3-surface-container/90 px-1 opacity-0 transition-all group-hover:opacity-100">
         <button
           onClick={onArchive}
           className="rounded-full p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
