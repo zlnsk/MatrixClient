@@ -313,3 +313,12 @@ body {
 .message-bubble-container {
   contain: layout style;
 }
+
+/* ---- Interactive elements ---- */
+/* Ensure all clickable elements show pointer cursor */
+button,
+[role="button"],
+summary,
+a[href] {
+  cursor: pointer;
+}
