@@ -12,39 +12,9 @@ import {
   sendStateEvent,
   searchRoomEvents,
 } from '@/lib/matrix/sdk-compat'
+import { setProfileCache, getProfileCache, hasProfileCache, clearProfileCache } from '@/lib/profile-cache'
 import type { Room, MatrixEvent, RoomMember } from 'matrix-js-sdk'
 import { EventStatus } from 'matrix-js-sdk/lib/models/event-status'
-
-// Cache for profile avatars fetched via getProfileInfo(). Keyed by userId → MXC URL.
-// Consulted by roomToMatrixRoom so avatars survive room list rebuilds without re-fetching.
-// Empty string means "fetched but no avatar" (negative cache to avoid repeated lookups).
-// Bounded to 2000 entries to prevent unbounded memory growth.
-const PROFILE_CACHE_MAX = 2000
-const profileAvatarCache = new Map<string, string>()
-
-function setProfileCache(userId: string, value: string) {
-  // True LRU: delete-then-reinsert moves the key to the end of Map iteration
-  // order, so the oldest-accessed entry is always first (evicted on overflow).
-  if (profileAvatarCache.has(userId)) {
-    profileAvatarCache.delete(userId)
-  }
-  profileAvatarCache.set(userId, value)
-  if (profileAvatarCache.size > PROFILE_CACHE_MAX) {
-    const firstKey = profileAvatarCache.keys().next().value!
-    profileAvatarCache.delete(firstKey)
-  }
-}
-
-/** Read from profile cache with LRU promotion. Exported for use by resolveRoomAvatarFromSDK. */
-export function getProfileCache(userId: string): string | undefined {
-  const value = profileAvatarCache.get(userId)
-  if (value !== undefined) {
-    // Promote to most-recently-used
-    profileAvatarCache.delete(userId)
-    profileAvatarCache.set(userId, value)
-  }
-  return value
-}
 
 /**
  * Strip Matrix ID disambiguation from display names.
@@ -660,7 +630,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // Load members if the other member isn't resolved yet, or if we haven't
         // fetched their profile yet. Skip if profile was already fetched (even with
         // negative result — empty string sentinel).
-        if (!otherMember || !profileAvatarCache.has(otherMember.userId)) {
+        if (!otherMember || !hasProfileCache(otherMember.userId)) {
           roomsNeedingMembers.push(sdkRoom)
         }
       }
@@ -1514,7 +1484,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   resetState: () => {
-    profileAvatarCache.clear()
+    clearProfileCache()
     set({
       rooms: [],
       pendingInvites: [],

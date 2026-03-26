@@ -6,6 +6,7 @@ import { logger as sdkGlobalLogger } from 'matrix-js-sdk/lib/logger'
 import type { CryptoCallbacks } from 'matrix-js-sdk/lib/crypto-api'
 import { reportError } from '@/lib/error-reporter'
 import { clearTurnServerPolling } from './sdk-compat'
+import { getProfileCache } from '@/lib/profile-cache'
 
 let matrixClient: sdk.MatrixClient | null = null
 
@@ -895,9 +896,6 @@ export function resolveRoomAvatarFromSDK(roomId: string): string | null {
   if (!matrixClient) return null
   const room = matrixClient.getRoom(roomId)
   if (!room) return null
-
-  // Lazy import to avoid circular dependency at module init time
-  const { getProfileCache } = require('@/stores/chat-store')
 
   const myUserId = matrixClient.getUserId()
 

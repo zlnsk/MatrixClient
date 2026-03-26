@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef, useMemo, memo, lazy, Suspense
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
 import { resolveRoomAvatarFromSDK } from '@/lib/matrix/client'
+import { getProfileCache } from '@/lib/profile-cache'
 import { useTheme } from '@/components/providers/theme-provider'
 import { Avatar } from '@/components/ui/avatar'
 
@@ -111,14 +112,23 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
 
   const getOtherMemberAvatar = (room: MatrixRoom) => {
     // For DMs, small rooms, and bridged rooms, prefer the real profile avatar
-    // over the room/member avatar which may be a bridge default (e.g. Signal logo).
+    // (fetched via getProfileInfo) over the room-level member avatar which
+    // may be a bridge default (e.g. Signal logo).
     const isSmallRoom = room.members.length > 0 && room.members.length <= 3
     if ((room.isDirect || isSmallRoom || room.isBridged) && room.members.length > 0) {
-      // First try the SDK's live member data (profile cache has real photos)
+      const others = room.members.filter(m => m.userId !== user?.userId)
+
+      // 1. Check profile cache first — has real photos from getProfileInfo()
+      for (const m of others) {
+        const cached = getProfileCache(m.userId)
+        if (cached) return cached
+      }
+
+      // 2. Try SDK live data (also checks profile cache internally)
       const sdkAvatar = resolveRoomAvatarFromSDK(room.roomId)
       if (sdkAvatar) return sdkAvatar
 
-      const others = room.members.filter(m => m.userId !== user?.userId)
+      // 3. Fall back to store member/room avatar
       const other = others.find(m => m.avatarUrl) || others[0]
       const storeResult = other?.avatarUrl || room.avatarUrl
       if (storeResult) return storeResult
