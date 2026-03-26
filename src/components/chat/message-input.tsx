@@ -562,14 +562,14 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
                 <Smile className="h-5 w-5" />
               </button>
               {showEmoji && (
-                <div className="absolute bottom-12 left-0 z-20 w-80 rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest p-3 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high">
+                <div className="absolute bottom-12 left-0 z-20 w-[340px] rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest p-3 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container-high">
                   {/* Category tabs */}
                   <div className="mb-2 flex gap-1 overflow-x-auto border-b border-m3-outline-variant pb-2 dark:border-m3-outline-variant">
                     {Object.keys(EMOJI_CATEGORIES).map(cat => (
                       <button
                         key={cat}
                         onClick={() => setEmojiCategory(cat)}
-                        className={`whitespace-nowrap rounded-md px-2 py-1 text-xs transition-colors ${
+                        className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm transition-colors ${
                           emojiCategory === cat
                             ? 'bg-m3-primary-container text-m3-primary dark:bg-m3-primary-container/30 dark:text-m3-primary'
                             : 'text-m3-on-surface-variant hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest'
@@ -580,12 +580,12 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
                     ))}
                   </div>
                   {/* Emoji grid */}
-                  <div className="grid max-h-48 grid-cols-8 gap-0.5 overflow-y-auto">
+                  <div className="grid max-h-56 grid-cols-7 gap-0.5 overflow-y-auto">
                     {EMOJI_CATEGORIES[emojiCategory].map(emoji => (
                       <button
                         key={emoji}
                         onClick={() => handleEmojiClick(emoji)}
-                        className="rounded-lg p-1.5 text-xl transition-transform hover:scale-110 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
+                        className="flex items-center justify-center rounded-lg p-2 text-2xl transition-transform hover:scale-110 hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-highest"
                       >
                         {emoji}
                       </button>

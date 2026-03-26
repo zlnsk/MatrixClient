@@ -230,15 +230,6 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
 
               {/* Navigation items */}
               <div className="divide-y divide-m3-outline-variant dark:divide-m3-outline-variant">
-                <button onClick={() => setActiveSection('profile')} className="flex w-full items-center gap-4 px-6 py-4 text-left transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
-                  <User className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
-                  <div className="flex-1">
-                    <p className="text-sm text-m3-on-surface dark:text-m3-on-surface">Profile</p>
-                    <p className="text-xs text-m3-on-surface-variant dark:text-m3-outline">Name, avatar, homeserver</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-m3-outline" />
-                </button>
-
                 <button onClick={() => setActiveSection('security')} className="flex w-full items-center gap-4 px-6 py-4 text-left transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
                   <Shield className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
                   <div className="flex-1">

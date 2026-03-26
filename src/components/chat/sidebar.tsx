@@ -223,7 +223,10 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
           )}
         </div>
 
-        <h1 className="flex-1 text-xl text-m3-on-surface"><span className="font-light">szept</span> <span className="font-bold">matrix</span></h1>
+        <h1
+          onClick={() => { setActiveRoom(null); onChatSelect() }}
+          className="flex-1 cursor-pointer text-xl text-m3-on-surface transition-opacity hover:opacity-70"
+        ><span className="font-light">szept</span> <span className="font-bold">matrix</span></h1>
 
         <button
           onClick={() => setShowNewChat(true)}

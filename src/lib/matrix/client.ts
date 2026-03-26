@@ -901,8 +901,8 @@ export function resolveRoomAvatarFromSDK(roomId: string): string | null {
   // 1. Room avatar (m.room.avatar state event) — bridges set this
   const roomMxc = room.getMxcAvatarUrl()
 
-  // 2. Check if this is a DM room
-  const dmMap = matrixClient.getAccountData('m.direct')?.getContent() || {}
+  // 2. Check if this is a DM room (use sdk-compat wrapper to avoid strict typing)
+  const dmMap = (matrixClient as unknown as { getAccountData: (type: string) => { getContent: () => Record<string, unknown> } | null }).getAccountData('m.direct')?.getContent() || {}
   let isDm = false
   for (const userRooms of Object.values(dmMap) as string[][]) {
     if (userRooms.includes(roomId)) { isDm = true; break }

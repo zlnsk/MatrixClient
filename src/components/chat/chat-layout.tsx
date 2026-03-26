@@ -160,10 +160,7 @@ export function ChatLayout() {
         </div>
       )}
 
-      {/* Build version */}
-      <span className="fixed bottom-1 right-2 text-[9px] text-m3-outline/50 pointer-events-none select-none z-10">
-        v{process.env.NEXT_PUBLIC_BUILD_VERSION}
-      </span>
+      {/* Build version removed — visible in Settings > About only */}
 
       {/* Settings overlay — lazy loaded */}
       {showSettings && (
