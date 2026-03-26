@@ -887,12 +887,17 @@ export function getUserId(): string | null {
 
 /**
  * Resolve the "other member" avatar for a room directly from the SDK.
- * Used as a fallback when the store's room data has stale/missing avatars.
+ * Prefers the global profile avatar (from profileAvatarCache) over the
+ * room-level member avatar, which for bridge puppets is often a generic
+ * logo (e.g. Signal's default silhouette) rather than the real face.
  */
 export function resolveRoomAvatarFromSDK(roomId: string): string | null {
   if (!matrixClient) return null
   const room = matrixClient.getRoom(roomId)
   if (!room) return null
+
+  // Lazy import to avoid circular dependency at module init time
+  const { getProfileCache } = require('@/stores/chat-store')
 
   const myUserId = matrixClient.getUserId()
 
@@ -900,7 +905,13 @@ export function resolveRoomAvatarFromSDK(roomId: string): string | null {
   const members = room.getMembers()
   const others = members.filter(m => m.userId !== myUserId && m.membership === 'join')
 
-  // Find a member with an avatar
+  // First pass: check profile cache (real photos fetched via getProfileInfo)
+  for (const m of others) {
+    const cached = getProfileCache(m.userId)
+    if (cached) return cached
+  }
+
+  // Second pass: fall back to room-level member avatar
   for (const m of others) {
     const mxc = m.getMxcAvatarUrl()
     if (mxc) return mxc
@@ -909,6 +920,8 @@ export function resolveRoomAvatarFromSDK(roomId: string): string | null {
   // Try fallback member (from room heroes)
   const fallback = room.getAvatarFallbackMember()
   if (fallback) {
+    const cached = getProfileCache(fallback.userId)
+    if (cached) return cached
     const mxc = fallback.getMxcAvatarUrl()
     if (mxc) return mxc
   }

@@ -35,8 +35,8 @@ function setProfileCache(userId: string, value: string) {
   }
 }
 
-/** Read from profile cache with LRU promotion. */
-function getProfileCache(userId: string): string | undefined {
+/** Read from profile cache with LRU promotion. Exported for use by resolveRoomAvatarFromSDK. */
+export function getProfileCache(userId: string): string | undefined {
   const value = profileAvatarCache.get(userId)
   if (value !== undefined) {
     // Promote to most-recently-used

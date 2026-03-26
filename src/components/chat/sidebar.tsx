@@ -110,9 +110,14 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   ), [rooms, searchFilter])
 
   const getOtherMemberAvatar = (room: MatrixRoom) => {
-    // For DMs or small rooms (≤3 to cover bridge bot), prefer the other member's avatar.
+    // For DMs, small rooms, and bridged rooms, prefer the real profile avatar
+    // over the room/member avatar which may be a bridge default (e.g. Signal logo).
     const isSmallRoom = room.members.length > 0 && room.members.length <= 3
     if ((room.isDirect || isSmallRoom || room.isBridged) && room.members.length > 0) {
+      // First try the SDK's live member data (profile cache has real photos)
+      const sdkAvatar = resolveRoomAvatarFromSDK(room.roomId)
+      if (sdkAvatar) return sdkAvatar
+
       const others = room.members.filter(m => m.userId !== user?.userId)
       const other = others.find(m => m.avatarUrl) || others[0]
       const storeResult = other?.avatarUrl || room.avatarUrl
@@ -120,7 +125,6 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
     }
     if (room.avatarUrl) return room.avatarUrl
 
-    // Fallback: query the SDK directly (store may have stale data from lazy loading)
     return resolveRoomAvatarFromSDK(room.roomId)
   }
 
@@ -222,7 +226,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
           <Avatar
             src={user?.avatarUrl}
             name={user?.displayName || 'U'}
-            size="sm"
+            size="md"
             status="online"
           />
         </button>
