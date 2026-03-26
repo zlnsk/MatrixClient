@@ -38,6 +38,7 @@ import { placeCall } from '@/lib/matrix/voip'
 
 function MediaThumbnail({ message }: { message: MatrixMessage }) {
   const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null)
+  const blobUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!message.mediaUrl) return
@@ -55,7 +56,12 @@ function MediaThumbnail({ message }: { message: MatrixMessage }) {
         } else {
           url = await fetchAuthenticatedMedia(message.mediaUrl!, message.mediaInfo?.mimetype)
         }
-        if (!cancelled) setDecryptedUrl(url)
+        if (!cancelled) {
+          blobUrlRef.current = url
+          setDecryptedUrl(url)
+        } else if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url)
+        }
       } catch (err) {
         console.error('Failed to load media thumbnail:', err)
       }
@@ -64,7 +70,8 @@ function MediaThumbnail({ message }: { message: MatrixMessage }) {
 
     return () => {
       cancelled = true
-      if (decryptedUrl && decryptedUrl.startsWith('blob:')) URL.revokeObjectURL(decryptedUrl)
+      if (blobUrlRef.current?.startsWith('blob:')) URL.revokeObjectURL(blobUrlRef.current)
+      blobUrlRef.current = null
     }
   }, [message.eventId]) // eslint-disable-line react-hooks/exhaustive-deps
 

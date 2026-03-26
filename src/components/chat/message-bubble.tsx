@@ -275,6 +275,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   }, [])
 
   // Fetch all media via authenticated endpoint (handles both encrypted and unencrypted)
+  const mediaBlobUrlRef = useRef<string | null>(null)
   useEffect(() => {
     if (!message.mediaUrl) return
     let cancelled = false
@@ -283,17 +284,20 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
       try {
         let url: string
         if (message.encryptedFile) {
-          // Encrypted media: fetch with auth, then decrypt
           url = await decryptMediaAttachment(
             message.encryptedFile.url,
             message.encryptedFile,
             message.mediaInfo?.mimetype
           )
         } else {
-          // Unencrypted media: fetch with auth, return blob URL
           url = await fetchAuthenticatedMedia(message.mediaUrl!, message.mediaInfo?.mimetype)
         }
-        if (!cancelled) setMediaBlobUrl(url)
+        if (!cancelled) {
+          mediaBlobUrlRef.current = url
+          setMediaBlobUrl(url)
+        } else if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url)
+        }
       } catch (err) {
         console.error('Failed to load media:', err)
       }
@@ -302,10 +306,10 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
     return () => {
       cancelled = true
-      // Revoke blob URL to free memory when component unmounts or media changes
-      if (mediaBlobUrl && mediaBlobUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(mediaBlobUrl)
+      if (mediaBlobUrlRef.current?.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaBlobUrlRef.current)
       }
+      mediaBlobUrlRef.current = null
     }
   }, [message.eventId, message.encryptedFile, message.mediaUrl]) // eslint-disable-line react-hooks/exhaustive-deps
 

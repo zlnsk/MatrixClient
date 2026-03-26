@@ -1,5 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+function isPrivateHost(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
+    hostname === '[::1]' ||
+    hostname.startsWith('10.') ||
+    hostname.startsWith('192.168.') ||
+    (hostname.startsWith('172.') && (() => { const b = parseInt(hostname.split('.')[1], 10); return b >= 16 && b <= 31 })()) ||
+    hostname.startsWith('169.254.') ||
+    hostname.endsWith('.local') ||
+    hostname.endsWith('.internal')
+  )
+}
+
 /**
  * Server-side Matrix homeserver resolution.
  * Performs .well-known discovery server-side to avoid browser CORS issues
@@ -20,19 +35,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Block internal/private network addresses (SSRF protection)
-  const hostname = cleaned.split(':')[0].toLowerCase()
-  if (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '0.0.0.0' ||
-    hostname === '[::1]' ||
-    hostname.startsWith('10.') ||
-    hostname.startsWith('192.168.') ||
-    hostname.startsWith('172.') && (() => { const b = parseInt(hostname.split('.')[1], 10); return b >= 16 && b <= 31 })() ||
-    hostname.startsWith('169.254.') ||
-    hostname.endsWith('.local') ||
-    hostname.endsWith('.internal')
-  ) {
+  if (isPrivateHost(cleaned.split(':')[0].toLowerCase())) {
     return NextResponse.json({ error: 'Private/internal addresses are not allowed' }, { status: 400 })
   }
 
@@ -85,6 +88,12 @@ async function discoverWellKnown(url: string): Promise<{ homeserverUrl: string; 
 
     const cleanUrl = base.replace(/\/+$/, '')
     if (!cleanUrl.startsWith('https://') && !cleanUrl.startsWith('http://')) return null
+
+    // SSRF protection: validate resolved URL doesn't point to private networks
+    try {
+      const resolvedHostname = new URL(cleanUrl).hostname.toLowerCase()
+      if (isPrivateHost(resolvedHostname)) return null
+    } catch { return null }
 
     // Quick validation that the resolved URL serves Matrix API
     try {
