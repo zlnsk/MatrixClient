@@ -13,7 +13,7 @@ export function MessageReactions({ message, isOwn, onReaction }: MessageReaction
   if (message.reactions.size === 0) return null
 
   return (
-    <div className={`relative z-10 mt-0.5 mb-0.5 flex flex-wrap gap-1 px-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+    <div className="relative z-10 flex flex-wrap gap-1">
       {Array.from(message.reactions.entries()).map(([emoji, data]) => (
         <div key={emoji} className="group/reaction relative">
           <button
