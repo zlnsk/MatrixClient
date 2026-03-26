@@ -40,9 +40,9 @@ export function useRoomMembership(userId: string | undefined) {
     client.on(sdk.RoomMemberEvent.Name as any, onRoomMemberChange)
     client.on(sdk.RoomStateEvent.Events as any, onRoomMemberChange)
 
-    // Auto-archive inactive conversations every 5 minutes
-    const AUTO_ARCHIVE_INACTIVITY_MS = 1 * 60 * 60 * 1000 // 1 hour
-    const AUTO_ARCHIVE_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
+    // Auto-archive inactive conversations periodically
+    const AUTO_ARCHIVE_INACTIVITY_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+    const AUTO_ARCHIVE_CHECK_INTERVAL = 30 * 60 * 1000 // 30 minutes
     const autoArchiveInterval = setInterval(() => {
       const { rooms, activeRoom, archiveRoom } = useChatStore.getState()
       const now = Date.now()

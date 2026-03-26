@@ -5,7 +5,18 @@ import { EventStatus } from 'matrix-js-sdk/lib/models/event-status'
 
 // Cache for profile avatars fetched via getProfileInfo(). Keyed by userId → MXC URL.
 // Consulted by roomToMatrixRoom so avatars survive room list rebuilds without re-fetching.
+// Empty string means "fetched but no avatar" (negative cache to avoid repeated lookups).
+// Bounded to 2000 entries to prevent unbounded memory growth.
+const PROFILE_CACHE_MAX = 2000
 const profileAvatarCache = new Map<string, string>()
+
+function setProfileCache(userId: string, value: string) {
+  profileAvatarCache.set(userId, value)
+  if (profileAvatarCache.size > PROFILE_CACHE_MAX) {
+    const firstKey = profileAvatarCache.keys().next().value!
+    profileAvatarCache.delete(firstKey)
+  }
+}
 
 /**
  * Strip Matrix ID disambiguation from display names.
@@ -607,7 +618,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             client!.getProfileInfo(otherMember.userId).then((profile) => {
               if (profile.avatar_url) {
                 // Cache the fetched avatar so roomToMatrixRoom picks it up on subsequent rebuilds
-                profileAvatarCache.set(otherMember.userId, profile.avatar_url)
+                setProfileCache(otherMember.userId, profile.avatar_url)
                 // Update our room data directly
                 const roomIdx = updatedRooms.findIndex(r => r.roomId === sdkRoom.roomId)
                 if (roomIdx !== -1) {
@@ -621,9 +632,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
                     ),
                   }
                 }
+              } else {
+                setProfileCache(otherMember.userId, '')
               }
             }).catch(() => {
-              // Profile fetch failed (user may not exist or server unreachable) — ignore
+              setProfileCache(otherMember.userId, '')
             })
           )
         }
