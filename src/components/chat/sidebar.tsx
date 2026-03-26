@@ -110,32 +110,41 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
     room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
   ), [rooms, searchFilter])
 
-  const getOtherMemberAvatar = (room: MatrixRoom) => {
-    // For DMs, small rooms, and bridged rooms, prefer the real profile avatar
-    // (fetched via getProfileInfo) over the room-level member avatar which
-    // may be a bridge default (e.g. Signal logo).
-    const isSmallRoom = room.members.length > 0 && room.members.length <= 3
-    if ((room.isDirect || isSmallRoom || room.isBridged) && room.members.length > 0) {
-      const others = room.members.filter(m => m.userId !== user?.userId)
+  // Memoize avatar resolution per room to avoid calling resolveRoomAvatarFromSDK
+  // on every render (which accesses SDK internals and profile cache).
+  const avatarMap = useMemo(() => {
+    const map = new Map<string, string | null>()
+    for (const room of rooms) {
+      const isSmallRoom = room.members.length > 0 && room.members.length <= 3
+      if ((room.isDirect || isSmallRoom || room.isBridged) && room.members.length > 0) {
+        const others = room.members.filter(m => m.userId !== user?.userId)
 
-      // 1. Check profile cache first — has real photos from getProfileInfo()
-      for (const m of others) {
-        const cached = getProfileCache(m.userId)
-        if (cached) return cached
+        // 1. Check profile cache — has real photos from getProfileInfo()
+        let found: string | null = null
+        for (const m of others) {
+          const cached = getProfileCache(m.userId)
+          if (cached) { found = cached; break }
+        }
+
+        // 2. Try SDK live data
+        if (!found) found = resolveRoomAvatarFromSDK(room.roomId)
+
+        // 3. Fall back to store member/room avatar
+        if (!found) {
+          const other = others.find(m => m.avatarUrl) || others[0]
+          found = other?.avatarUrl || room.avatarUrl || null
+        }
+
+        map.set(room.roomId, found)
+      } else {
+        map.set(room.roomId, room.avatarUrl || resolveRoomAvatarFromSDK(room.roomId))
       }
-
-      // 2. Try SDK live data (also checks profile cache internally)
-      const sdkAvatar = resolveRoomAvatarFromSDK(room.roomId)
-      if (sdkAvatar) return sdkAvatar
-
-      // 3. Fall back to store member/room avatar
-      const other = others.find(m => m.avatarUrl) || others[0]
-      const storeResult = other?.avatarUrl || room.avatarUrl
-      if (storeResult) return storeResult
     }
-    if (room.avatarUrl) return room.avatarUrl
+    return map
+  }, [rooms, user?.userId])
 
-    return resolveRoomAvatarFromSDK(room.roomId)
+  const getOtherMemberAvatar = (room: MatrixRoom) => {
+    return avatarMap.get(room.roomId) || room.avatarUrl || null
   }
 
   const getOtherMemberPresence = (room: MatrixRoom): 'online' | 'offline' | 'away' | null => {

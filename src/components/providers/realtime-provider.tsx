@@ -13,6 +13,36 @@ import { useTypingIndicators } from '@/hooks/use-typing-indicators'
 import { useReadReceipts } from '@/hooks/use-read-receipts'
 import { useRoomMembership } from '@/hooks/use-room-membership'
 import { useCallSetup } from '@/hooks/use-call-setup'
+import { useChatStore } from '@/stores/chat-store'
+
+// Auto-archive rooms with no messages in the last 2 hours
+const AUTO_ARCHIVE_THRESHOLD_MS = 2 * 60 * 60 * 1000
+
+function useAutoArchive(userId: string | undefined) {
+  useEffect(() => {
+    if (!userId) return
+
+    const check = () => {
+      const { rooms, archiveRoom } = useChatStore.getState()
+      const now = Date.now()
+      for (const room of rooms) {
+        if (room.isArchived) continue
+        if (room.lastMessageTs > 0 && now - room.lastMessageTs > AUTO_ARCHIVE_THRESHOLD_MS) {
+          archiveRoom(room.roomId).catch(() => {})
+        }
+      }
+    }
+
+    // Check after initial sync settles, then every 5 minutes
+    const initial = setTimeout(check, 30_000)
+    const interval = setInterval(check, 5 * 60_000)
+
+    return () => {
+      clearTimeout(initial)
+      clearInterval(interval)
+    }
+  }, [userId])
+}
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore(s => s.user)
@@ -26,6 +56,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   useReadReceipts(user?.userId)
   useRoomMembership(user?.userId)
   useCallSetup(user?.userId)
+  useAutoArchive(user?.userId)
 
   // Verification request listener + cross-signing check
   useEffect(() => {

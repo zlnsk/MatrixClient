@@ -21,14 +21,14 @@ export function setProfileCache(userId: string, value: string): void {
   }
 }
 
-/** Read from profile cache with LRU promotion. */
+/**
+ * Read from profile cache.
+ * Does NOT do LRU promotion during reads to avoid mutating state during
+ * React render cycles (which causes infinite re-render loops — error #185).
+ * LRU promotion happens on write (setProfileCache) instead.
+ */
 export function getProfileCache(userId: string): string | undefined {
-  const value = profileAvatarCache.get(userId)
-  if (value !== undefined) {
-    profileAvatarCache.delete(userId)
-    profileAvatarCache.set(userId, value)
-  }
-  return value
+  return profileAvatarCache.get(userId)
 }
 
 /** Check if a userId exists in the cache (without promoting). */
