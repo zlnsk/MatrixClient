@@ -556,6 +556,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
                     onClick={() => handleSelectRoom(room)}
                     onArchive={(e) => handleArchive(e, room)}
                     onDelete={(e) => handleLeave(e, room)}
+                    onMarkAsRead={(e) => handleMarkAsRead(e, room)}
                     avatarUrl={getOtherMemberAvatar(room)}
                     presence={getOtherMemberPresence(room)}
                   />
