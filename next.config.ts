@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { execSync } from "child_process";
 
 // Build version from package.json + git metadata (no file mutation).
-// Format: "<version> (<short-sha> <date>)" e.g. "0.1.0 (a1b2c3d 2026-03-22)"
+// Format: "<version> build <total> (<sha> <date>) | <today-count> today"
 // CI can override via BUILD_VERSION env var.
 function getBuildVersion(): string {
   if (process.env.BUILD_VERSION) return process.env.BUILD_VERSION
@@ -12,11 +12,14 @@ function getBuildVersion(): string {
   let sha = ''
   let date = ''
   let count = ''
+  let todayCount = ''
 
   try {
     sha = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
     date = execSync('git log -1 --format=%cs', { encoding: 'utf-8' }).trim()
     count = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim()
+    const today = new Date().toISOString().slice(0, 10)
+    todayCount = execSync(`git rev-list --count --after="${today}T00:00:00" HEAD`, { encoding: 'utf-8' }).trim()
   } catch {
     // git unavailable (e.g. shallow clone or no .git directory)
     date = new Date().toISOString().slice(0, 10)
@@ -24,8 +27,9 @@ function getBuildVersion(): string {
 
   const buildNum = count ? ` build ${count}` : ''
   const gitInfo = sha ? ` (${sha} ${date})` : ''
+  const todayInfo = todayCount && todayCount !== '0' ? ` | ${todayCount} today` : ''
 
-  return `${pkg.version}${buildNum}${gitInfo}`
+  return `${pkg.version}${buildNum}${gitInfo}${todayInfo}`
 }
 
 const nextConfig: NextConfig = {

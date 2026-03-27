@@ -631,6 +631,13 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
         )}
       </nav>
 
+      {/* Status bar */}
+      <div className="flex-shrink-0 border-t border-m3-outline-variant/50 px-4 py-1.5">
+        <p className="text-[10px] font-mono text-m3-outline truncate">
+          {process.env.NEXT_PUBLIC_BUILD_VERSION || 'dev'}
+        </p>
+      </div>
+
       {/* New Chat Modal — lazy loaded */}
       {showNewChat && (
         <Suspense fallback={null}>
