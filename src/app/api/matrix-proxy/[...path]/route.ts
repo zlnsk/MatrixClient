@@ -22,7 +22,7 @@ function isRateLimited(ip: string, key: string): boolean {
   const mapKey = `${key}:${ip}`
 
   // Lazy cleanup: purge stale entries every 5 minutes instead of setInterval
-  // (setInterval with unref() doesn't run in serverless environments like Vercel)
+  // (setInterval with unref() doesn't run reliably in all environments)
   if (now - lastCleanup > 5 * 60_000) {
     lastCleanup = now
     for (const [k, entry] of rateLimitAttempts) {
