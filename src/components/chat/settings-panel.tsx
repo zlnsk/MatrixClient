@@ -553,7 +553,7 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
               <div className="px-6 py-4 space-y-3">
                 <p className="text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Build</p>
                 <InfoRow label="Version" value={`v${process.env.NEXT_PUBLIC_BUILD_VERSION || '?'}`} mono />
-                <InfoRow label="App" value="szept matrix" />
+                <InfoRow label="App" value="Messages for Matrix" />
               </div>
 
               {/* Component versions */}

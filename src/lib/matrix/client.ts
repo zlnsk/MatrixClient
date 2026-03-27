@@ -623,7 +623,7 @@ export async function registerAccount(
     const result = await tmpClient.registerRequest({
       username,
       password,
-      initial_device_display_name: 'szept Web',
+      initial_device_display_name: 'Messages Web',
       auth: { type: 'm.login.dummy' },
     })
     response = result as { access_token: string; user_id: string; device_id: string }
@@ -643,7 +643,7 @@ export async function registerAccount(
         const result = await tmpClient.registerRequest({
           username,
           password,
-          initial_device_display_name: 'szept Web',
+          initial_device_display_name: 'Messages Web',
           auth: { type: 'm.login.dummy', session },
         })
         response = result as { access_token: string; user_id: string; device_id: string }
@@ -720,7 +720,7 @@ export async function loginWithPassword(
   const response = await tmpClient.login('m.login.password', {
     user: username,
     password,
-    initial_device_display_name: 'szept Web',
+    initial_device_display_name: 'Messages Web',
   })
 
   matrixClient = sdk.createClient({
@@ -842,7 +842,7 @@ export async function startSync(): Promise<void> {
         console.warn('Sync returned 401 — token rejected, forcing logout')
         matrixClient?.stopClient()
         matrixClient = null
-        sessionStorage.removeItem('matrix_session')
+        localStorage.removeItem('matrix_session')
         window.location.href = '/matrixclient/login'
       }
     }

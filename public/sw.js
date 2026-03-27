@@ -1,8 +1,8 @@
-// szept PWA Service Worker
+// Messages PWA Service Worker
 // Provides: installability, stratified caching, offline fallback
 
-const CACHE_NAME = 'szept-v5'
-const MEDIA_CACHE = 'szept-media-v1'
+const CACHE_NAME = 'messages-v5'
+const MEDIA_CACHE = 'messages-media-v1'
 const MEDIA_CACHE_MAX = 200
 
 // App shell — cached on install for instant loads

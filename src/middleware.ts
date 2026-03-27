@@ -22,7 +22,7 @@ export default function middleware(request: NextRequest) {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "report-uri /MatrixClient/api/csp-report",
+    "report-uri /matrixclient/api/csp-report",
   ].join('; ')
 
   // Pass the nonce to the page via request header so layout.tsx can read it

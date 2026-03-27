@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'szept — Secure Messaging',
-    short_name: 'szept',
+    name: 'Messages — Secure Messaging',
+    short_name: 'Messages',
     description: 'End-to-end encrypted messaging powered by the Matrix protocol',
     start_url: '/matrixclient/',
     display: 'standalone',
