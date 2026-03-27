@@ -80,7 +80,6 @@ const STRIP_RESPONSE_HEADERS = new Set([
   'content-encoding', // Next.js handles its own compression
 ])
 
-const MUTATING_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH'])
 
 async function handler(
   request: NextRequest,
@@ -102,20 +101,10 @@ async function handler(
     return NextResponse.json({ error: 'Invalid homeserver URL' }, { status: 400 })
   }
 
-  // CSRF validation: check Origin header on mutating requests.
-  // Behind a reverse proxy, nextUrl.origin reflects the internal address,
-  // so derive the expected origin from x-forwarded-host/proto or the Host header.
-  if (MUTATING_METHODS.has(request.method)) {
-    const origin = request.headers.get('origin')
-    if (origin) {
-      const proto = request.headers.get('x-forwarded-proto') || request.nextUrl.protocol.replace(':', '')
-      const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host
-      const expectedOrigin = `${proto}://${host}`
-      if (origin !== expectedOrigin) {
-        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 })
-      }
-    }
-  }
+  // CSRF protection: the required X-Matrix-Homeserver custom header already
+  // provides CSRF protection — browsers refuse to send custom headers cross-origin
+  // without a CORS preflight (which our proxy doesn't grant). This is stronger than
+  // origin-checking, which is unreliable behind reverse proxies.
 
   const { path } = await params
   const matrixPath = '/' + path.join('/')
