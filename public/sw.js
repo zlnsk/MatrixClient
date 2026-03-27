@@ -7,11 +7,11 @@ const MEDIA_CACHE_MAX = 200
 
 // App shell — cached on install for instant loads
 const APP_SHELL = [
-  '/MatrixClient/',
-  '/MatrixClient/login',
-  '/MatrixClient/icon-192.png',
-  '/MatrixClient/icon-512.png',
-  '/MatrixClient/favicon.ico',
+  '/matrixclient/',
+  '/matrixclient/login',
+  '/matrixclient/icon-192.png',
+  '/matrixclient/icon-512.png',
+  '/matrixclient/favicon.ico',
 ]
 
 self.addEventListener('install', (event) => {
@@ -40,8 +40,8 @@ self.addEventListener('fetch', (event) => {
 
   // Never cache Matrix API requests, WebSocket, auth, or crypto endpoints
   if (
-    url.pathname.startsWith('/MatrixClient/api/matrix-proxy/') ||
-    url.pathname.startsWith('/_matrix/') ||
+    url.pathname.startsWith('/matrixclient/api/matrix-proxy/') ||
+    url.pathname.startsWith('/matrixclient/_matrix/') ||
     url.pathname.includes('/keys/') ||
     url.pathname.includes('/sync') ||
     url.protocol === 'wss:' ||
@@ -52,7 +52,7 @@ self.addEventListener('fetch', (event) => {
 
   // Cache-first for static assets (JS, CSS, fonts, WASM)
   if (
-    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.startsWith('/matrixclient/_next/static/') ||
     url.pathname.match(/\.(js|css|woff2?|wasm)$/)
   ) {
     event.respondWith(
@@ -106,7 +106,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('/MatrixClient/')).catch(() => new Response('Offline', { status: 503 })))
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('/matrixclient/')))
     )
     return
   }

@@ -58,7 +58,7 @@ export default async function RootLayout({
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator)navigator.serviceWorker.register('/MatrixClient/sw.js').catch(function(){})`,
+            __html: `if('serviceWorker' in navigator)navigator.serviceWorker.register('/matrixclient/sw.js').catch(function(){})`,
           }}
         />
       </body>

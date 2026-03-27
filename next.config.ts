@@ -33,7 +33,7 @@ function getBuildVersion(): string {
 }
 
 const nextConfig: NextConfig = {
-  basePath: '/MatrixClient',
+  basePath: '/matrixclient',
   // Expose build version to client code
   env: {
     NEXT_PUBLIC_BUILD_VERSION: getBuildVersion(),
