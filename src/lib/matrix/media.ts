@@ -108,46 +108,40 @@ export async function fetchAuthenticatedThumbnail(
 
   const authHeaders = { 'Authorization': `Bearer ${accessToken}` }
 
-  // Try both thumbnail endpoints in parallel
-  const thumbnailUrls = [
-    `${hs}/_matrix/client/v1/media/thumbnail/${server}/${media}?${qs}`,
-    `${hs}/_matrix/media/v3/thumbnail/${server}/${media}?${qs}`,
-  ]
+  // Try authenticated v1 endpoint first, fall back to legacy v3 only if needed
+  const v1ThumbnailUrl = `${hs}/_matrix/client/v1/media/thumbnail/${server}/${media}?${qs}`
+  try {
+    const res = await proxiedFetch(v1ThumbnailUrl, { headers: authHeaders })
+    if (res.ok) {
+      const blob = await res.blob()
+      if (blob.size > 0) return URL.createObjectURL(blob)
+    }
+  } catch { /* fall through to legacy */ }
 
-  const thumbnailResults = await Promise.allSettled(
-    thumbnailUrls.map(url =>
-      proxiedFetch(url, { headers: authHeaders }).then(async res => {
-        if (!res.ok) throw new Error(`${res.status}`)
-        const blob = await res.blob()
-        if (blob.size === 0) throw new Error('empty')
-        return URL.createObjectURL(blob)
-      })
-    )
-  )
+  // Legacy v3 fallback
+  const v3ThumbnailUrl = `${hs}/_matrix/media/v3/thumbnail/${server}/${media}?${qs}`
+  try {
+    const res = await proxiedFetch(v3ThumbnailUrl, { headers: authHeaders })
+    if (res.ok) {
+      const blob = await res.blob()
+      if (blob.size > 0) return URL.createObjectURL(blob)
+    }
+  } catch { /* fall through to download */ }
 
-  for (const result of thumbnailResults) {
-    if (result.status === 'fulfilled') return result.value
-  }
-
-  // Fallback: try full download endpoints in parallel
+  // Fallback: try full download endpoints sequentially
   const downloadUrls = [
     `${hs}/_matrix/client/v1/media/download/${server}/${media}`,
     `${hs}/_matrix/media/v3/download/${server}/${media}`,
   ]
 
-  const downloadResults = await Promise.allSettled(
-    downloadUrls.map(url =>
-      proxiedFetch(url, { headers: authHeaders }).then(async res => {
-        if (!res.ok) throw new Error(`${res.status}`)
+  for (const url of downloadUrls) {
+    try {
+      const res = await proxiedFetch(url, { headers: authHeaders })
+      if (res.ok) {
         const blob = await res.blob()
-        if (blob.size === 0) throw new Error('empty')
-        return URL.createObjectURL(blob)
-      })
-    )
-  )
-
-  for (const result of downloadResults) {
-    if (result.status === 'fulfilled') return result.value
+        if (blob.size > 0) return URL.createObjectURL(blob)
+      }
+    } catch { /* try next */ }
   }
 
   throw new Error(`Thumbnail fetch failed for ${mxcUrl}`)
