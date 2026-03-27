@@ -107,7 +107,10 @@ async function handler(
   // origin-checking, which is unreliable behind reverse proxies.
 
   const { path } = await params
-  const matrixPath = '/' + path.join('/')
+  // Re-encode path segments: Next.js auto-decodes %3A → : etc. in [...path],
+  // but Matrix room/user/event IDs contain special characters (!, :, @, $)
+  // that must be percent-encoded when forwarded to the homeserver.
+  const matrixPath = '/' + path.map(segment => encodeURIComponent(segment)).join('/')
   const search = request.nextUrl.search
 
   // Only allow proxying specific /_matrix/ path prefixes to prevent SSRF

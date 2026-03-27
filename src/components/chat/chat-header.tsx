@@ -4,9 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   ArrowLeft,
   Lock,
-  Phone,
-  Video,
-  Search,
+  Bell,
   MoreVertical,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
@@ -96,26 +94,14 @@ export function ChatHeader({
         </div>
       </button>
 
-      {/* Action icons + three-dot menu */}
+      {/* Notification bell + three-dot menu — Google Messages style */}
       <div className="flex items-center gap-0.5">
-        {!activeRoom.isBridged && (
-          <>
-            <button
-              onClick={() => placeCall(activeRoom.roomId, false)}
-              className="hidden sm:flex rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
-              title="Voice call"
-            >
-              <Phone className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => placeCall(activeRoom.roomId, true)}
-              className="hidden sm:flex rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
-              title="Video call"
-            >
-              <Video className="h-5 w-5" />
-            </button>
-          </>
-        )}
+        <button
+          className="rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
+          title="Notifications"
+        >
+          <Bell className="h-5 w-5" />
+        </button>
         {/* Three-dot menu */}
         <div className="relative" ref={menuRef}>
           <button
@@ -139,6 +125,22 @@ export function ChatHeader({
               >
                 Search
               </button>
+              {!activeRoom.isBridged && (
+                <>
+                  <button
+                    onClick={() => { placeCall(activeRoom.roomId, false); setShowMenu(false) }}
+                    className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                  >
+                    Voice call
+                  </button>
+                  <button
+                    onClick={() => { placeCall(activeRoom.roomId, true); setShowMenu(false) }}
+                    className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                  >
+                    Video call
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => { onArchiveToggle(); setShowMenu(false) }}
                 className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"

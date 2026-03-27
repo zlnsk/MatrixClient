@@ -541,7 +541,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
           {/* Timestamp + status + reactions (inline) */}
           <div className={`mt-1 px-1 flex items-center gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
             <span className="text-xs text-m3-outline dark:text-m3-on-surface-variant">
-              {format(new Date(message.timestamp), 'HH:mm')}
+              {format(new Date(message.timestamp), 'h:mm a')}
             </span>
             {message.isEdited && (
               <span className="text-xs text-m3-outline dark:text-m3-on-surface-variant">

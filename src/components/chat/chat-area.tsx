@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
 import { useUploadStore } from '@/stores/upload-store'
+import { format, isToday, isYesterday } from 'date-fns'
 
 interface ChatAreaProps {
   onBackClick: () => void
@@ -194,15 +195,19 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     const groups: { date: string; messages: MatrixMessage[] }[] = []
     let currentDate = ''
     for (const msg of filteredMessages) {
-      const msgDate = new Date(msg.timestamp).toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-      if (msgDate !== currentDate) {
-        currentDate = msgDate
-        groups.push({ date: msgDate, messages: [msg] })
+      const d = new Date(msg.timestamp)
+      const dateKey = d.toLocaleDateString('en-US')
+      if (dateKey !== currentDate) {
+        currentDate = dateKey
+        let label: string
+        if (isToday(d)) {
+          label = format(d, 'h:mm a')
+        } else if (isYesterday(d)) {
+          label = 'Yesterday \u00b7 ' + format(d, 'h:mm a')
+        } else {
+          label = format(d, 'EEEE') + ' \u00b7 ' + format(d, 'h:mm a')
+        }
+        groups.push({ date: label, messages: [msg] })
       } else {
         groups[groups.length - 1].messages.push(msg)
       }

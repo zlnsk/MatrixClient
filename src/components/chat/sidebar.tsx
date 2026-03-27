@@ -48,7 +48,6 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   const [showNewChat, setShowNewChat] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [showInvites, setShowInvites] = useState(true)
-  const [roomFilter, setRoomFilter] = useState<'all' | 'unread' | 'direct' | 'groups'>('all')
   const [searchTab, setSearchTab] = useState<'conversations' | 'messages'>('conversations')
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [messageResults, setMessageResults] = useState<{roomId: string, roomName: string, eventId: string, sender: string, body: string, timestamp: number}[]>([])
@@ -165,11 +164,8 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   const activeRooms = useMemo(() => rooms.filter(room => {
     if (room.isArchived) return false
     if (searchFilter && !room.name.toLowerCase().includes(searchFilter.toLowerCase())) return false
-    if (roomFilter === 'unread') return room.unreadCount > 0
-    if (roomFilter === 'direct') return room.isDirect
-    if (roomFilter === 'groups') return !room.isDirect
     return true
-  }), [rooms, searchFilter, roomFilter])
+  }), [rooms, searchFilter])
   const archivedRooms = useMemo(() => rooms.filter(room =>
     room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
   ), [rooms, searchFilter])
@@ -272,14 +268,6 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
           className="flex-1 cursor-pointer text-[22px] font-normal text-m3-on-surface transition-opacity hover:opacity-70"
         >Messages</h1>
 
-        <button
-          onClick={() => setShowNewChat(true)}
-          className="rounded-full p-1.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high"
-          aria-label="Start new chat"
-        >
-          <Plus className="h-5 w-5" />
-        </button>
-
         <div className="relative" ref={profilePopoverRef}>
           <button
             onClick={() => setShowProfilePopover(!showProfilePopover)}
@@ -380,27 +368,16 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
         </div>
       </div>
 
-      {/* Filter chips */}
+      {/* Start chat button — Google Messages style */}
       {!searchFilter && (
-        <div className="flex gap-1.5 px-4 pb-2 overflow-x-auto no-scrollbar">
-          {([
-            { key: 'all' as const, label: 'All' },
-            { key: 'unread' as const, label: 'Unread', count: unreadCount },
-            { key: 'direct' as const, label: 'Direct' },
-            { key: 'groups' as const, label: 'Groups' },
-          ]).map(f => (
-            <button
-              key={f.key}
-              onClick={() => setRoomFilter(f.key)}
-              className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                roomFilter === f.key
-                  ? 'bg-m3-primary text-white'
-                  : 'bg-m3-surface-container text-m3-on-surface-variant hover:bg-m3-surface-container-high dark:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest'
-              }`}
-            >
-              {f.label}{f.count && f.count > 0 ? ` (${f.count})` : ''}
-            </button>
-          ))}
+        <div className="px-4 pb-3">
+          <button
+            onClick={() => setShowNewChat(true)}
+            className="flex items-center gap-2 rounded-full bg-m3-primary px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-m3-primary/90 hover:shadow-lg active:scale-[0.98]"
+          >
+            <MessageCircle className="h-5 w-5" />
+            Start chat
+          </button>
         </div>
       )}
 
