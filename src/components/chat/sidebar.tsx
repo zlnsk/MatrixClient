@@ -714,7 +714,7 @@ const RoomListItem = memo(function RoomListItem({
         <Avatar
           src={avatarUrl}
           name={room.name}
-          size="lg"
+          size="md"
           status={presence}
         />
         <div className="min-w-0 flex-1">

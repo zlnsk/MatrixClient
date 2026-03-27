@@ -24,7 +24,7 @@ export function MessageReactions({ message, isOwn, onReaction }: MessageReaction
                 : 'border-m3-outline-variant bg-white text-m3-on-surface-variant hover:border-m3-outline hover:bg-m3-surface-container-low dark:border-m3-outline-variant dark:bg-m3-surface-container dark:text-m3-outline dark:hover:border-m3-outline'
             }`}
           >
-            <span>{emoji}</span>
+            <span className="text-base leading-none">{emoji}</span>
             <span>{data.count}</span>
           </button>
           {/* Hover tooltip showing who reacted */}
