@@ -184,7 +184,7 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
   const handleSignOut = async () => {
     setIsLoggingOut(true)
     await signOut()
-    router.push('/MatrixClient/login')
+    router.push('/login')
   }
 
   const homeserverDomain = getHomeserverDomain() || 'unknown'
