@@ -29,11 +29,11 @@ function getBuildVersion(): string {
 }
 
 const nextConfig: NextConfig = {
+  basePath: '/MatrixClient',
   // Expose build version to client code
   env: {
     NEXT_PUBLIC_BUILD_VERSION: getBuildVersion(),
   },
-  output: 'standalone',
   // Turbopack config (default bundler in Next.js 16)
   turbopack: {},
   images: {

@@ -1,13 +1,10 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
-import { SpeedInsights } from '@vercel/speed-insights/next'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { AuthProvider } from '@/components/providers/auth-provider'
 import { RealtimeProvider } from '@/components/providers/realtime-provider'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import './globals.css'
-
-const IS_VERCEL = !!process.env.VERCEL
 
 export const metadata: Metadata = {
   title: 'szept — Secure Messaging',
@@ -55,11 +52,10 @@ export default async function RootLayout({
             </AuthProvider>
           </ThemeProvider>
         </ErrorBoundary>
-        {IS_VERCEL && <SpeedInsights />}
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){})`,
+            __html: `if('serviceWorker' in navigator)navigator.serviceWorker.register('/MatrixClient/sw.js').catch(function(){})`,
           }}
         />
       </body>

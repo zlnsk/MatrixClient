@@ -326,7 +326,7 @@ export async function convertWebmToOgg(webmBlob: Blob): Promise<Blob> {
   if (typeof Worker !== 'undefined') {
     try {
       return await new Promise<Blob>((resolve, reject) => {
-        const worker = new Worker('/audio-worker.js')
+        const worker = new Worker('/MatrixClient/audio-worker.js')
         const timeout = setTimeout(() => { worker.terminate(); reject(new Error('Worker timeout')) }, 30_000)
         worker.onmessage = (e) => {
           clearTimeout(timeout)
