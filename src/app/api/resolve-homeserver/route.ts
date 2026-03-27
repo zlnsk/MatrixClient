@@ -8,7 +8,7 @@ function isPrivateHost(hostname: string): boolean {
     hostname === '[::1]' ||
     hostname.startsWith('10.') ||
     hostname.startsWith('192.168.') ||
-    (hostname.startsWith('172.') && (() => { const b = parseInt(hostname.split('.')[1], 10); return b >= 16 && b <= 31 })()) ||
+    (hostname.startsWith('172.') && (() => { const parts = hostname.split('.'); if (parts.length < 2) return false; const b = parseInt(parts[1], 10); return !isNaN(b) && b >= 16 && b <= 31 })()) ||
     hostname.startsWith('169.254.') ||
     hostname.endsWith('.local') ||
     hostname.endsWith('.internal')
@@ -62,12 +62,10 @@ async function checkDirect(url: string): Promise<{ homeserverUrl: string; method
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 4_000)
-    const res = await fetch(`${url}/_matrix/client/versions`, { signal: controller.signal, redirect: 'follow' })
+    const res = await fetch(`${url}/_matrix/client/versions`, { signal: controller.signal, redirect: 'manual' })
     clearTimeout(timeout)
-    // SSRF: ensure redirects didn't land on a private host
-    if (res.url) {
-      try { if (isPrivateHost(new URL(res.url).hostname.toLowerCase())) return null } catch { return null }
-    }
+    // Block redirects to prevent SSRF
+    if (res.status >= 300 && res.status < 400) return null
     if (res.ok) {
       const data = await res.json()
       if (data?.versions) {
@@ -82,12 +80,10 @@ async function discoverWellKnown(url: string): Promise<{ homeserverUrl: string; 
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 4_000)
-    const res = await fetch(`${url}/.well-known/matrix/client`, { signal: controller.signal, redirect: 'follow' })
+    const res = await fetch(`${url}/.well-known/matrix/client`, { signal: controller.signal, redirect: 'manual' })
     clearTimeout(timeout)
-    // SSRF: ensure redirects didn't land on a private host
-    if (res.url) {
-      try { if (isPrivateHost(new URL(res.url).hostname.toLowerCase())) return null } catch { return null }
-    }
+    // Block redirects to prevent SSRF
+    if (res.status >= 300 && res.status < 400) return null
     if (!res.ok) return null
 
     const data = await res.json()
@@ -107,12 +103,10 @@ async function discoverWellKnown(url: string): Promise<{ homeserverUrl: string; 
     try {
       const vc = new AbortController()
       const vt = setTimeout(() => vc.abort(), 4_000)
-      const vRes = await fetch(`${cleanUrl}/_matrix/client/versions`, { signal: vc.signal, redirect: 'follow' })
+      const vRes = await fetch(`${cleanUrl}/_matrix/client/versions`, { signal: vc.signal, redirect: 'manual' })
       clearTimeout(vt)
-      // SSRF: ensure redirects didn't land on a private host
-      if (vRes.url) {
-        try { if (isPrivateHost(new URL(vRes.url).hostname.toLowerCase())) return null } catch { /* skip */ }
-      }
+      // Block redirects to prevent SSRF
+      if (vRes.status >= 300 && vRes.status < 400) return null
       if (vRes.ok) {
         const vData = await vRes.json()
         if (vData?.versions) {

@@ -252,10 +252,12 @@ export async function fetchCachedThumbnail(mxcUrl: string, width: number = 96, h
 
   // Evict oldest entries if over limit
   if (thumbnailCache.size > THUMBNAIL_CACHE_MAX) {
-    const firstKey = thumbnailCache.keys().next().value!
-    const evicted = thumbnailCache.get(firstKey)
-    thumbnailCache.delete(firstKey)
-    if (evicted) URL.revokeObjectURL(evicted)
+    const first = thumbnailCache.keys().next()
+    if (!first.done) {
+      const evicted = thumbnailCache.get(first.value)
+      thumbnailCache.delete(first.value)
+      if (evicted) URL.revokeObjectURL(evicted)
+    }
   }
 
   return blobUrl

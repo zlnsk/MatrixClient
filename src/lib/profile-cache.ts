@@ -38,8 +38,8 @@ export function setProfileCache(userId: string, value: string): void {
   }
   profileAvatarCache.set(userId, value)
   if (profileAvatarCache.size > PROFILE_CACHE_MAX) {
-    const firstKey = profileAvatarCache.keys().next().value!
-    profileAvatarCache.delete(firstKey)
+    const first = profileAvatarCache.keys().next()
+    if (!first.done) profileAvatarCache.delete(first.value)
   }
 }
 
@@ -50,7 +50,7 @@ export function setProfileCache(userId: string, value: string): void {
  */
 export function getProfileCache(userId: string): string | undefined {
   const value = profileAvatarCache.get(userId)
-  if (value !== undefined) {
+  if (value !== undefined && pendingPromotions.length < 1000) {
     pendingPromotions.push(userId)
     schedulePromotions()
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getMatrixClient } from '@/lib/matrix/client'
 import { WifiOff, Loader2 } from 'lucide-react'
 
@@ -8,6 +8,8 @@ type ConnectionState = 'connected' | 'reconnecting' | 'offline'
 
 export function ConnectionBanner() {
   const [state, setState] = useState<ConnectionState>('connected')
+  const stateRef = useRef(state)
+  stateRef.current = state
 
   useEffect(() => {
     const client = getMatrixClient()
@@ -23,9 +25,9 @@ export function ConnectionBanner() {
       }
     }
 
-    // Listen for online/offline browser events
+    // Listen for online/offline browser events — use ref to avoid re-subscribing
     const onOnline = () => {
-      if (state === 'offline') setState('reconnecting')
+      if (stateRef.current === 'offline') setState('reconnecting')
     }
     const onOffline = () => setState('offline')
 
@@ -40,7 +42,7 @@ export function ConnectionBanner() {
       window.removeEventListener('online', onOnline)
       window.removeEventListener('offline', onOffline)
     }
-  }, [state])
+  }, []) // stable deps — stateRef avoids stale closure
 
   if (state === 'connected') return null
 

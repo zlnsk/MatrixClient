@@ -4,14 +4,13 @@ export default function middleware(request: NextRequest) {
   // Generate a random nonce for this request
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
 
-  // Build CSP with nonce — 'unsafe-inline' kept as fallback for CSP Level 2 browsers
-  // (CSP3 browsers ignore 'unsafe-inline' when a nonce is present).
+  // Build CSP with nonce for inline scripts.
   // style-src 'unsafe-inline' is required because Next.js injects inline styles at runtime
   // and there is no nonce support for style tags yet — this is an accepted trade-off.
   const isDev = process.env.NODE_ENV === 'development'
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} 'wasm-unsafe-eval'`,
+    `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ''} 'wasm-unsafe-eval'`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' https: blob: data:",
     "media-src 'self' https: blob:",

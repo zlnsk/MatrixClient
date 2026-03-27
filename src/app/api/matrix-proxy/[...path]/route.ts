@@ -79,7 +79,7 @@ async function handler(
   let hsUrl: URL
   try {
     hsUrl = new URL(homeserver)
-    if (hsUrl.protocol !== 'https:' && process.env.NODE_ENV !== 'development') {
+    if (hsUrl.protocol !== 'https:') {
       return NextResponse.json({ error: 'Homeserver must use HTTPS' }, { status: 400 })
     }
   } catch {
@@ -150,21 +150,29 @@ async function handler(
     }
   })
 
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS)
 
+  try {
     const upstreamResponse = await fetch(targetUrl, {
       method: request.method,
       headers: forwardHeaders,
       body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
       // @ts-expect-error -- duplex is required for streaming body in Node 18+
       duplex: request.method !== 'GET' && request.method !== 'HEAD' ? 'half' : undefined,
-      redirect: 'follow',
+      redirect: 'manual',
       signal: controller.signal,
     })
 
     clearTimeout(timeout)
+
+    // Block redirects — don't follow them to prevent SSRF to internal hosts
+    if (upstreamResponse.status >= 300 && upstreamResponse.status < 400) {
+      return NextResponse.json(
+        { error: 'Upstream redirect not allowed' },
+        { status: 502 }
+      )
+    }
 
     // If the server doesn't support push rules (Conduit, etc.), return empty
     // push rules instead of 404. The matrix-js-sdk retries getPushRules
@@ -209,6 +217,8 @@ async function handler(
       { error: 'Failed to reach homeserver' },
       { status: 502 }
     )
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
