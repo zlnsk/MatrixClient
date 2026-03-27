@@ -20,7 +20,6 @@ import {
   X,
   Hash,
   Archive,
-  ArchiveRestore,
   Check,
   Mail,
   Sun,
@@ -31,7 +30,6 @@ import {
   MessageCircle,
   Plus,
   ChevronRight,
-  Trash2,
   Pencil,
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
@@ -211,6 +209,11 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   const handleLeave = (e: React.MouseEvent, room: MatrixRoom) => {
     e.stopPropagation()
     setConfirmDeleteRoom(room)
+  }
+
+  const handleMarkAsRead = async (e: React.MouseEvent, room: MatrixRoom) => {
+    e.stopPropagation()
+    await markAsRead(room.roomId)
   }
 
   const confirmLeave = async () => {
@@ -524,6 +527,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
                 onClick={() => handleSelectRoom(room)}
                 onArchive={(e) => handleArchive(e, room)}
                 onDelete={(e) => handleLeave(e, room)}
+                onMarkAsRead={(e) => handleMarkAsRead(e, room)}
                 avatarUrl={getOtherMemberAvatar(room)}
                 presence={getOtherMemberPresence(room)}
               />
@@ -680,6 +684,7 @@ const RoomListItem = memo(function RoomListItem({
   onClick,
   onArchive,
   onDelete,
+  onMarkAsRead,
   avatarUrl,
   presence,
 }: {
@@ -688,81 +693,114 @@ const RoomListItem = memo(function RoomListItem({
   onClick: () => void
   onArchive: (e: React.MouseEvent) => void
   onDelete: (e: React.MouseEvent) => void
+  onMarkAsRead: (e: React.MouseEvent) => void
   avatarUrl: string | null
   presence: 'online' | 'offline' | 'away' | null
 }) {
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
   const lastMsgPreview = room.lastMessage
     ? room.lastMessage.substring(0, 60) + (room.lastMessage.length > 60 ? '...' : '')
     : 'No messages yet'
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }
+
+  useEffect(() => {
+    if (!contextMenu) return
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setContextMenu(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [contextMenu])
+
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className={`group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-all duration-150 active:scale-[0.99] ${
-        isActive
-          ? 'bg-m3-primary-container/40 dark:bg-m3-surface-container-high'
-          : 'hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high/60 dark:active:bg-m3-surface-container-highest'
-      }`}
-    >
-      <Avatar
-        src={avatarUrl}
-        name={room.name}
-        size="lg"
-        status={presence}
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between">
-          <span className={`truncate text-[16px] md:text-[15px] ${room.unreadCount > 0 ? 'font-semibold text-m3-on-surface' : 'font-normal text-m3-on-surface'}`}>
-            {room.name}
-          </span>
-          {room.lastMessageTs > 0 && (
-            <span className={`ml-2 flex-shrink-0 text-xs ${room.unreadCount > 0 ? 'font-medium text-m3-primary' : 'text-m3-on-surface-variant'}`}>
-              {formatDistanceToNow(new Date(room.lastMessageTs), { addSuffix: false })}
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onContextMenu={handleContextMenu}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
+        className={`group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-all duration-150 active:scale-[0.99] ${
+          isActive
+            ? 'bg-m3-primary-container/40 dark:bg-m3-surface-container-high'
+            : 'hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high/60 dark:active:bg-m3-surface-container-highest'
+        }`}
+      >
+        <Avatar
+          src={avatarUrl}
+          name={room.name}
+          size="lg"
+          status={presence}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between">
+            <span className={`truncate text-[16px] md:text-[15px] ${room.unreadCount > 0 ? 'font-semibold text-m3-on-surface' : 'font-normal text-m3-on-surface'}`}>
+              {room.name}
             </span>
-          )}
-        </div>
-        <div className="flex items-center justify-between mt-0.5">
-          <p className={`truncate text-[14px] md:text-[13px] ${room.unreadCount > 0 ? 'font-medium text-m3-on-surface dark:text-m3-on-surface-variant' : 'text-m3-on-surface-variant'}`}>
-            {room.lastSenderName && <span className="text-m3-on-surface-variant">{room.lastSenderName}: </span>}
-            {lastMsgPreview}
-          </p>
-          <div className="ml-2 flex items-center gap-1.5">
-            {room.encrypted && (
-              <Lock className="h-3 w-3 flex-shrink-0 text-m3-on-surface-variant" />
-            )}
-            {room.unreadCount > 0 && (
-              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary px-1.5 text-[11px] font-bold text-white">
-                {room.unreadCount > 99 ? '99+' : room.unreadCount}
+            {room.lastMessageTs > 0 && (
+              <span className={`ml-2 flex-shrink-0 text-xs ${room.unreadCount > 0 ? 'font-medium text-m3-primary' : 'text-m3-on-surface-variant'}`}>
+                {formatDistanceToNow(new Date(room.lastMessageTs), { addSuffix: false })}
               </span>
             )}
           </div>
+          <div className="flex items-center justify-between mt-0.5">
+            <p className={`truncate text-[14px] md:text-[13px] ${room.unreadCount > 0 ? 'font-medium text-m3-on-surface dark:text-m3-on-surface-variant' : 'text-m3-on-surface-variant'}`}>
+              {room.lastSenderName && <span className="text-m3-on-surface-variant">{room.lastSenderName}: </span>}
+              {lastMsgPreview}
+            </p>
+            <div className="ml-2 flex items-center gap-1.5">
+              {room.encrypted && (
+                <Lock className="h-3 w-3 flex-shrink-0 text-m3-on-surface-variant" />
+              )}
+              {room.unreadCount > 0 && (
+                <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary px-1.5 text-[11px] font-bold text-white">
+                  {room.unreadCount > 99 ? '99+' : room.unreadCount}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-      {/* Archive & Delete buttons on hover (desktop only) */}
-      <div className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 items-center gap-0.5 rounded-lg bg-white/90 dark:bg-m3-surface-container/90 px-1 opacity-0 transition-all group-hover:opacity-100">
-        <button
-          onClick={onArchive}
-          className="rounded-full p-1.5 text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
-          title={room.isArchived ? 'Unarchive' : 'Archive'}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <div
+          ref={menuRef}
+          className="fixed z-50 w-52 rounded-xl border border-m3-outline-variant bg-white py-1.5 shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
         >
-          {room.isArchived ? (
-            <ArchiveRestore className="h-4 w-4" />
-          ) : (
-            <Archive className="h-4 w-4" />
+          <button
+            onClick={(e) => { onArchive(e); setContextMenu(null) }}
+            className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+          >
+            {room.isArchived ? 'Unarchive' : 'Archive'}
+          </button>
+          <button
+            onClick={(e) => { onDelete(e); setContextMenu(null) }}
+            className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+          >
+            Delete
+          </button>
+          {room.unreadCount > 0 && (
+            <button
+              onClick={(e) => { onMarkAsRead(e); setContextMenu(null) }}
+              className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+            >
+              Mark as read
+            </button>
           )}
-        </button>
-        <button
-          onClick={onDelete}
-          className="rounded-full p-1.5 text-m3-outline transition-colors hover:bg-m3-error-container hover:text-m3-error dark:hover:bg-m3-error-container"
-          title="Leave chat"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   )
 }, (prevProps, nextProps) => {
   const prevRoom = prevProps.room

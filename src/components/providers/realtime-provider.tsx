@@ -38,9 +38,9 @@ function useAutoArchive(userId: string | undefined) {
       }
     }
 
-    // Check after initial sync settles, then every 5 minutes
+    // Check after initial sync settles, then every 30 minutes
     const initial = setTimeout(check, 30_000)
-    const interval = setInterval(check, 5 * 60_000)
+    const interval = setInterval(check, 30 * 60_000)
 
     return () => {
       clearTimeout(initial)

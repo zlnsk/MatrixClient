@@ -7,10 +7,7 @@ import {
   Phone,
   Video,
   Search,
-  Archive,
-  ArchiveRestore,
-  LogOut,
-  Trash2,
+  MoreVertical,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { placeCall } from '@/lib/matrix/voip'
@@ -45,20 +42,22 @@ export function ChatHeader({
   onArchiveToggle,
   onLeave,
 }: ChatHeaderProps) {
+  const [showMenu, setShowMenu] = useState(false)
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
-  const leaveRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (leaveRef.current && !leaveRef.current.contains(e.target as Node)) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false)
         setShowLeaveConfirm(false)
       }
     }
-    if (showLeaveConfirm) {
+    if (showMenu || showLeaveConfirm) {
       document.addEventListener('mousedown', handleClick)
       return () => document.removeEventListener('mousedown', handleClick)
     }
-  }, [showLeaveConfirm])
+  }, [showMenu, showLeaveConfirm])
 
   return (
     <div className="flex items-center border-b border-m3-outline-variant/50 bg-white px-2 py-2.5 dark:border-m3-outline-variant/50 dark:bg-m3-surface md:px-4">
@@ -97,15 +96,8 @@ export function ChatHeader({
         </div>
       </button>
 
-      {/* Inline action icons */}
+      {/* Action icons + three-dot menu */}
       <div className="flex items-center gap-0.5">
-        <button
-          onClick={onToggleSearch}
-          className="rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
-          title="Search in conversation"
-        >
-          <Search className="h-5 w-5" />
-        </button>
         {!activeRoom.isBridged && (
           <>
             <button
@@ -124,31 +116,57 @@ export function ChatHeader({
             </button>
           </>
         )}
-        <button
-          onClick={onArchiveToggle}
-          className="rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
-          title={activeRoom.isArchived ? 'Unarchive' : 'Archive'}
-        >
-          {activeRoom.isArchived ? <ArchiveRestore className="h-5 w-5" /> : <Archive className="h-5 w-5" />}
-        </button>
-        {/* Leave with confirmation */}
-        <div className="relative" ref={leaveRef}>
+        {/* Three-dot menu */}
+        <div className="relative" ref={menuRef}>
           <button
-            onClick={() => setShowLeaveConfirm(!showLeaveConfirm)}
-            className="rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-error-container hover:text-m3-error"
-            title="Leave room"
+            onClick={() => { setShowMenu(!showMenu); setShowLeaveConfirm(false) }}
+            className="rounded-full p-2.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container"
+            title="More options"
           >
-            <LogOut className="h-5 w-5" />
+            <MoreVertical className="h-5 w-5" />
           </button>
+          {showMenu && !showLeaveConfirm && (
+            <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-m3-outline-variant bg-white py-1.5 shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+              <button
+                onClick={() => { onToggleRoomInfo(); setShowMenu(false) }}
+                className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+              >
+                Details
+              </button>
+              <button
+                onClick={() => { onToggleSearch(); setShowMenu(false) }}
+                className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+              >
+                Search
+              </button>
+              <button
+                onClick={() => { onArchiveToggle(); setShowMenu(false) }}
+                className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+              >
+                {activeRoom.isArchived ? 'Unarchive' : 'Archive'}
+              </button>
+              <button
+                onClick={() => { setShowLeaveConfirm(true); setShowMenu(false) }}
+                className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+              >
+                Delete
+              </button>
+            </div>
+          )}
           {showLeaveConfirm && (
-            <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-2xl border border-m3-outline-variant bg-white py-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+            <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-m3-outline-variant bg-white py-1.5 shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
               <p className="px-4 py-2 text-xs text-m3-on-surface-variant">Leave this room?</p>
               <button
                 onClick={() => { onLeave(); setShowLeaveConfirm(false) }}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-m3-error transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                className="flex w-full items-center px-4 py-2.5 text-sm text-m3-error transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
               >
-                <LogOut className="h-4 w-4" />
                 Leave room
+              </button>
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+              >
+                Cancel
               </button>
             </div>
           )}
