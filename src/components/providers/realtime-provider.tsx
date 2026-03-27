@@ -15,8 +15,10 @@ import { useRoomMembership } from '@/hooks/use-room-membership'
 import { useCallSetup } from '@/hooks/use-call-setup'
 import { useChatStore } from '@/stores/chat-store'
 
-// Auto-archive rooms with no messages in the last 2 hours
-const AUTO_ARCHIVE_THRESHOLD_MS = 2 * 60 * 60 * 1000
+// Auto-archive rooms with no messages in the last 5 hours
+const AUTO_ARCHIVE_THRESHOLD_MS = 5 * 60 * 60 * 1000
+
+const archivingInProgress = new Set<string>()
 
 function useAutoArchive(userId: string | undefined) {
   useEffect(() => {
@@ -26,9 +28,12 @@ function useAutoArchive(userId: string | undefined) {
       const { rooms, archiveRoom } = useChatStore.getState()
       const now = Date.now()
       for (const room of rooms) {
-        if (room.isArchived) continue
+        if (room.isArchived || archivingInProgress.has(room.roomId)) continue
         if (room.lastMessageTs > 0 && now - room.lastMessageTs > AUTO_ARCHIVE_THRESHOLD_MS) {
-          archiveRoom(room.roomId).catch(() => {})
+          archivingInProgress.add(room.roomId)
+          archiveRoom(room.roomId)
+            .catch(() => {})
+            .finally(() => archivingInProgress.delete(room.roomId))
         }
       }
     }
@@ -56,8 +61,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   useReadReceipts(user?.userId)
   useRoomMembership(user?.userId)
   useCallSetup(user?.userId)
-  // Auto-archive temporarily disabled — investigating render loop
-  // useAutoArchive(user?.userId)
+  useAutoArchive(user?.userId)
 
   // Verification request listener + cross-signing check
   useEffect(() => {
