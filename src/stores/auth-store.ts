@@ -24,7 +24,7 @@ function resetIdleTimer() {
     if (state.isAuthenticated) {
       console.warn('Session idle timeout — logging out')
       state.signOut().then(() => {
-        window.location.href = '/login'
+        window.location.href = '/MatrixClient/login'
       })
     }
   }, IDLE_TIMEOUT_MS)

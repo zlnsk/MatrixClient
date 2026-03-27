@@ -52,11 +52,10 @@ export default async function RootLayout({
             </AuthProvider>
           </ThemeProvider>
         </ErrorBoundary>
-        
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator)navigator.serviceWorker.register("/MatrixClient/sw.js")`,
+            __html: `if('serviceWorker' in navigator)navigator.serviceWorker.register('/MatrixClient/sw.js').catch(function(){})`,
           }}
         />
       </body>

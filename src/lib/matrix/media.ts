@@ -31,7 +31,7 @@ function proxiedFetch(url: string, init?: RequestInit): Promise<Response> {
   const hs = getHomeserverUrl()
   if (hs && url.startsWith(hs + '/_matrix/')) {
     const matrixPath = url.slice(hs.length) // /_matrix/...
-    const proxyUrl = `/api/matrix-proxy${matrixPath}`
+    const proxyUrl = `/MatrixClient/api/matrix-proxy${matrixPath}`
     const headers = new Headers(init?.headers)
     headers.set('X-Matrix-Homeserver', hs)
     return fetch(proxyUrl, { ...init, headers })

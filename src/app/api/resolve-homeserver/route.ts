@@ -62,8 +62,12 @@ async function checkDirect(url: string): Promise<{ homeserverUrl: string; method
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 4_000)
-    const res = await fetch(`${url}/_matrix/client/versions`, { signal: controller.signal, redirect: 'error' })
+    const res = await fetch(`${url}/_matrix/client/versions`, { signal: controller.signal, redirect: 'follow' })
     clearTimeout(timeout)
+    // SSRF: ensure redirects didn't land on a private host
+    if (res.url) {
+      try { if (isPrivateHost(new URL(res.url).hostname.toLowerCase())) return null } catch { return null }
+    }
     if (res.ok) {
       const data = await res.json()
       if (data?.versions) {
@@ -78,8 +82,12 @@ async function discoverWellKnown(url: string): Promise<{ homeserverUrl: string; 
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 4_000)
-    const res = await fetch(`${url}/.well-known/matrix/client`, { signal: controller.signal, redirect: 'error' })
+    const res = await fetch(`${url}/.well-known/matrix/client`, { signal: controller.signal, redirect: 'follow' })
     clearTimeout(timeout)
+    // SSRF: ensure redirects didn't land on a private host
+    if (res.url) {
+      try { if (isPrivateHost(new URL(res.url).hostname.toLowerCase())) return null } catch { return null }
+    }
     if (!res.ok) return null
 
     const data = await res.json()
@@ -99,8 +107,12 @@ async function discoverWellKnown(url: string): Promise<{ homeserverUrl: string; 
     try {
       const vc = new AbortController()
       const vt = setTimeout(() => vc.abort(), 4_000)
-      const vRes = await fetch(`${cleanUrl}/_matrix/client/versions`, { signal: vc.signal, redirect: 'error' })
+      const vRes = await fetch(`${cleanUrl}/_matrix/client/versions`, { signal: vc.signal, redirect: 'follow' })
       clearTimeout(vt)
+      // SSRF: ensure redirects didn't land on a private host
+      if (vRes.url) {
+        try { if (isPrivateHost(new URL(vRes.url).hostname.toLowerCase())) return null } catch { /* skip */ }
+      }
       if (vRes.ok) {
         const vData = await vRes.json()
         if (vData?.versions) {

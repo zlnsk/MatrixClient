@@ -23,7 +23,7 @@ export default function middleware(request: NextRequest) {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "report-uri /api/csp-report",
+    "report-uri /MatrixClient/api/csp-report",
   ].join('; ')
 
   // Pass the nonce to the page via request header so layout.tsx can read it
@@ -41,6 +41,6 @@ export default function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all routes except static files and Next.js internals
-    { source: '/((?!_next/static|_next/image|favicon.ico|sw.js|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|woff|woff2)).*)', },
+    { source: '/((?!_next/static|_next/image|favicon.ico|sw.js|manifest\\.webmanifest|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|woff|woff2)).*)', },
   ],
 }

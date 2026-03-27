@@ -7,11 +7,11 @@ const MEDIA_CACHE_MAX = 200
 
 // App shell — cached on install for instant loads
 const APP_SHELL = [
-  '/',
-  '/login',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/favicon.ico',
+  '/MatrixClient/',
+  '/MatrixClient/login',
+  '/MatrixClient/icon-192.png',
+  '/MatrixClient/icon-512.png',
+  '/MatrixClient/favicon.ico',
 ]
 
 self.addEventListener('install', (event) => {
@@ -40,7 +40,7 @@ self.addEventListener('fetch', (event) => {
 
   // Never cache Matrix API requests, WebSocket, auth, or crypto endpoints
   if (
-    url.pathname.startsWith('/api/matrix-proxy/') ||
+    url.pathname.startsWith('/MatrixClient/api/matrix-proxy/') ||
     url.pathname.startsWith('/_matrix/') ||
     url.pathname.includes('/keys/') ||
     url.pathname.includes('/sync') ||
@@ -106,7 +106,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('/')))
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('/MatrixClient/')))
     )
     return
   }
