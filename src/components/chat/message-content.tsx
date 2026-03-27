@@ -58,16 +58,46 @@ export function renderRichContent(content: string, formattedContent: string | nu
   return DOMPurify.sanitize(html, PURIFY_CONFIG_PLAIN)
 }
 
-/** Highlight search term in HTML string — only highlights text outside of tags */
+/** Highlight search term in HTML string — DOM-based to avoid corrupting tag attributes (XSS safe) */
 export function applySearchHighlight(html: string, term: string): string {
   if (!term || term.length < 2) return html
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const regex = new RegExp(`(${escaped})`, 'gi')
-  // Split by HTML tags to avoid highlighting inside tags/attributes
-  return html.replace(/(<[^>]*>)|([^<]+)/g, (match, tag, text) => {
-    if (tag) return tag
-    return text.replace(regex, '<mark class="rounded-sm bg-yellow-300/80 text-inherit dark:bg-yellow-500/40">$1</mark>')
-  })
+  const regex = new RegExp(escaped, 'gi')
+
+  const container = document.createElement('div')
+  container.innerHTML = html
+
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  const textNodes: Text[] = []
+  while (walker.nextNode()) {
+    textNodes.push(walker.currentNode as Text)
+  }
+
+  for (const node of textNodes) {
+    const text = node.textContent || ''
+    if (!regex.test(text)) continue
+    regex.lastIndex = 0
+
+    const frag = document.createDocumentFragment()
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)))
+      }
+      const mark = document.createElement('mark')
+      mark.className = 'rounded-sm bg-yellow-300/80 text-inherit dark:bg-yellow-500/40'
+      mark.textContent = match[0]
+      frag.appendChild(mark)
+      lastIndex = regex.lastIndex
+    }
+    if (lastIndex < text.length) {
+      frag.appendChild(document.createTextNode(text.slice(lastIndex)))
+    }
+    node.parentNode!.replaceChild(frag, node)
+  }
+
+  return container.innerHTML
 }
 
 // Matches strings that contain only emoji (including skin tone modifiers, ZWJ sequences, keycap sequences, flags)

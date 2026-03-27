@@ -360,6 +360,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                       <img
                         src={effectiveMediaUrl}
                         alt={message.content || 'Shared image'}
+                        loading="lazy"
+                        decoding="async"
                         className="block max-w-full cursor-pointer transition-opacity hover:opacity-90"
                         style={{
                           maxHeight: 480,

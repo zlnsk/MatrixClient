@@ -9,6 +9,28 @@
 const PROFILE_CACHE_MAX = 2000
 const profileAvatarCache = new Map<string, string>()
 
+// Batch LRU promotions to avoid mutating during React render
+let pendingPromotions: string[] = []
+let promotionScheduled = false
+
+function schedulePromotions(): void {
+  if (promotionScheduled) return
+  promotionScheduled = true
+  const schedule = typeof requestIdleCallback === 'function' ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 0)
+  schedule(() => {
+    promotionScheduled = false
+    const batch = pendingPromotions
+    pendingPromotions = []
+    for (const userId of batch) {
+      const value = profileAvatarCache.get(userId)
+      if (value !== undefined) {
+        profileAvatarCache.delete(userId)
+        profileAvatarCache.set(userId, value)
+      }
+    }
+  })
+}
+
 /** Write to profile cache with LRU eviction. */
 export function setProfileCache(userId: string, value: string): void {
   if (profileAvatarCache.has(userId)) {
@@ -23,12 +45,16 @@ export function setProfileCache(userId: string, value: string): void {
 
 /**
  * Read from profile cache.
- * Does NOT do LRU promotion during reads to avoid mutating state during
+ * Schedules deferred LRU promotion to avoid mutating state during
  * React render cycles (which causes infinite re-render loops — error #185).
- * LRU promotion happens on write (setProfileCache) instead.
  */
 export function getProfileCache(userId: string): string | undefined {
-  return profileAvatarCache.get(userId)
+  const value = profileAvatarCache.get(userId)
+  if (value !== undefined) {
+    pendingPromotions.push(userId)
+    schedulePromotions()
+  }
+  return value
 }
 
 /** Check if a userId exists in the cache (without promoting). */
@@ -39,4 +65,5 @@ export function hasProfileCache(userId: string): boolean {
 /** Clear the entire cache (used on logout). */
 export function clearProfileCache(): void {
   profileAvatarCache.clear()
+  pendingPromotions = []
 }

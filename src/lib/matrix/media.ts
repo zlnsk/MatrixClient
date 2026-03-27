@@ -106,52 +106,49 @@ export async function fetchAuthenticatedThumbnail(
   const media = encodeURIComponent(parsed.mediaId)
   const qs = `width=${width}&height=${height}&method=crop`
 
-  // Try authenticated v1 thumbnail endpoint first
-  try {
-    const v1Url = `${hs}/_matrix/client/v1/media/thumbnail/${server}/${media}?${qs}`
-    const res = await proxiedFetch(v1Url, {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    })
-    if (res.ok) {
-      const blob = await res.blob()
-      if (blob.size > 0) return URL.createObjectURL(blob)
-    }
-  } catch { /* fall through */ }
+  const authHeaders = { 'Authorization': `Bearer ${accessToken}` }
 
-  // Fallback: legacy thumbnail endpoint
-  try {
-    const legacyUrl = `${hs}/_matrix/media/v3/thumbnail/${server}/${media}?${qs}`
-    const res = await proxiedFetch(legacyUrl, {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    })
-    if (res.ok) {
-      const blob = await res.blob()
-      if (blob.size > 0) return URL.createObjectURL(blob)
-    }
-  } catch { /* fall through */ }
+  // Try both thumbnail endpoints in parallel
+  const thumbnailUrls = [
+    `${hs}/_matrix/client/v1/media/thumbnail/${server}/${media}?${qs}`,
+    `${hs}/_matrix/media/v3/thumbnail/${server}/${media}?${qs}`,
+  ]
 
-  // Final fallback: download the full image (some servers fail to thumbnail remote media)
-  try {
-    const downloadUrl = `${hs}/_matrix/client/v1/media/download/${server}/${media}`
-    const res = await proxiedFetch(downloadUrl, {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    })
-    if (res.ok) {
-      const blob = await res.blob()
-      if (blob.size > 0) return URL.createObjectURL(blob)
-    }
-  } catch { /* fall through */ }
+  const thumbnailResults = await Promise.allSettled(
+    thumbnailUrls.map(url =>
+      proxiedFetch(url, { headers: authHeaders }).then(async res => {
+        if (!res.ok) throw new Error(`${res.status}`)
+        const blob = await res.blob()
+        if (blob.size === 0) throw new Error('empty')
+        return URL.createObjectURL(blob)
+      })
+    )
+  )
 
-  try {
-    const legacyDownload = `${hs}/_matrix/media/v3/download/${server}/${media}`
-    const res = await proxiedFetch(legacyDownload, {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    })
-    if (res.ok) {
-      const blob = await res.blob()
-      if (blob.size > 0) return URL.createObjectURL(blob)
-    }
-  } catch { /* fall through */ }
+  for (const result of thumbnailResults) {
+    if (result.status === 'fulfilled') return result.value
+  }
+
+  // Fallback: try full download endpoints in parallel
+  const downloadUrls = [
+    `${hs}/_matrix/client/v1/media/download/${server}/${media}`,
+    `${hs}/_matrix/media/v3/download/${server}/${media}`,
+  ]
+
+  const downloadResults = await Promise.allSettled(
+    downloadUrls.map(url =>
+      proxiedFetch(url, { headers: authHeaders }).then(async res => {
+        if (!res.ok) throw new Error(`${res.status}`)
+        const blob = await res.blob()
+        if (blob.size === 0) throw new Error('empty')
+        return URL.createObjectURL(blob)
+      })
+    )
+  )
+
+  for (const result of downloadResults) {
+    if (result.status === 'fulfilled') return result.value
+  }
 
   throw new Error(`Thumbnail fetch failed for ${mxcUrl}`)
 }

@@ -13,6 +13,7 @@ import {
   Loader2,
   X,
   Pin,
+  Upload,
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
 import { useUploadStore } from '@/stores/upload-store'
@@ -33,6 +34,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const [showRoomInfo, setShowRoomInfo] = useState(false)
   const [showPinnedBanner, setShowPinnedBanner] = useState(true)
   const [externalLinkConfirm, setExternalLinkConfirm] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [newMessageCount, setNewMessageCount] = useState(0)
 
   // Intercept external link clicks in message content
   const handleContentClick = useCallback((e: React.MouseEvent) => {
@@ -141,6 +144,15 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     return () => vv.removeEventListener('resize', onResize)
   }, [scrollToBottom])
 
+  // Track new messages arriving while scrolled up
+  useEffect(() => {
+    if (!stickyRef.current && messages.length > 0) {
+      setNewMessageCount(prev => prev + 1)
+    } else {
+      setNewMessageCount(0)
+    }
+  }, [messages.length])
+
   if (!activeRoom || !user) return null
 
   const isSmallOrBridged = activeRoom.isDirect || activeRoom.isBridged || activeRoom.members.length <= 3
@@ -199,7 +211,18 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   }, [filteredMessages])
 
   return (
-    <div className="relative flex flex-1 flex-col min-h-0 bg-white dark:bg-m3-surface">
+    <div
+      className="relative flex flex-1 flex-col min-h-0 bg-white dark:bg-m3-surface"
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }}
+      onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false) }}
+      onDrop={(e) => {
+        e.preventDefault(); e.stopPropagation(); setIsDragging(false)
+        const files = Array.from(e.dataTransfer.files)
+        if (files.length > 0 && activeRoom) {
+          files.forEach(file => useChatStore.getState().uploadFile(activeRoom.roomId, file))
+        }
+      }}
+    >
       {/* Header */}
       <ChatHeader
         activeRoom={activeRoom}
@@ -398,6 +421,27 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Drag-and-drop overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-m3-primary/10 backdrop-blur-sm animate-fade-in">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-m3-primary bg-white/80 px-12 py-8 dark:bg-m3-surface-container/80">
+            <Upload className="h-12 w-12 text-m3-primary" />
+            <p className="text-lg font-medium text-m3-primary">Drop files here</p>
+            <p className="text-sm text-m3-on-surface-variant">Files will be uploaded to this conversation</p>
+          </div>
+        </div>
+      )}
+
+      {/* Jump to unread pill */}
+      {newMessageCount > 0 && !stickyRef.current && (
+        <button
+          onClick={() => { scrollToBottom(); setNewMessageCount(0) }}
+          className="absolute bottom-24 left-1/2 z-30 -translate-x-1/2 animate-slide-in rounded-full bg-m3-primary px-4 py-2 text-sm font-medium text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+        >
+          {newMessageCount} new {newMessageCount === 1 ? 'message' : 'messages'}
+        </button>
       )}
 
       {/* Message Input */}

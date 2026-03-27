@@ -5,7 +5,9 @@ export default function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
 
   // Build CSP with nonce — 'unsafe-inline' kept as fallback for CSP Level 2 browsers
-  // (CSP3 browsers ignore 'unsafe-inline' when a nonce is present)
+  // (CSP3 browsers ignore 'unsafe-inline' when a nonce is present).
+  // style-src 'unsafe-inline' is required because Next.js injects inline styles at runtime
+  // and there is no nonce support for style tags yet — this is an accepted trade-off.
   const isDev = process.env.NODE_ENV === 'development'
   const csp = [
     "default-src 'self'",
@@ -21,6 +23,7 @@ export default function middleware(request: NextRequest) {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
+    "report-uri /api/csp-report",
   ].join('; ')
 
   // Pass the nonce to the page via request header so layout.tsx can read it

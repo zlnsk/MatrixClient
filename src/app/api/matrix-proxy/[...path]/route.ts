@@ -13,33 +13,38 @@ import { NextRequest, NextResponse } from 'next/server'
 // ---- Per-IP rate limiting (sliding window) ----
 const RATE_LIMIT_WINDOW_MS = 60_000 // 1 minute
 const RATE_LIMIT_MAX_LOGIN = 5       // max login attempts per window
-const loginAttempts = new Map<string, { count: number; windowStart: number }>()
+const rateLimitAttempts = new Map<string, { count: number; windowStart: number }>()
 
 let lastCleanup = Date.now()
 
-function isLoginRateLimited(ip: string): boolean {
+function isRateLimited(ip: string, key: string): boolean {
   const now = Date.now()
+  const mapKey = `${key}:${ip}`
 
   // Lazy cleanup: purge stale entries every 5 minutes instead of setInterval
   // (setInterval with unref() doesn't run in serverless environments like Vercel)
   if (now - lastCleanup > 5 * 60_000) {
     lastCleanup = now
-    for (const [key, entry] of loginAttempts) {
+    for (const [k, entry] of rateLimitAttempts) {
       if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS * 2) {
-        loginAttempts.delete(key)
+        rateLimitAttempts.delete(k)
       }
     }
   }
 
-  const entry = loginAttempts.get(ip)
+  const entry = rateLimitAttempts.get(mapKey)
   if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-    loginAttempts.set(ip, { count: 1, windowStart: now })
+    rateLimitAttempts.set(mapKey, { count: 1, windowStart: now })
     return false
   }
   entry.count++
   if (entry.count > RATE_LIMIT_MAX_LOGIN) return true
   return false
 }
+
+const MAX_BODY_SIZE = 1 * 1024 * 1024         // 1 MB
+const MAX_MEDIA_BODY_SIZE = 100 * 1024 * 1024  // 100 MB
+const UPSTREAM_TIMEOUT_MS = 30_000              // 30 seconds
 
 // Headers that should NOT be forwarded to the upstream server
 const STRIP_REQUEST_HEADERS = new Set([
@@ -58,6 +63,8 @@ const STRIP_RESPONSE_HEADERS = new Set([
   'connection',
   'content-encoding', // Next.js handles its own compression
 ])
+
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH'])
 
 async function handler(
   request: NextRequest,
@@ -79,6 +86,15 @@ async function handler(
     return NextResponse.json({ error: 'Invalid homeserver URL' }, { status: 400 })
   }
 
+  // CSRF validation: check Origin header on mutating requests
+  if (MUTATING_METHODS.has(request.method)) {
+    const origin = request.headers.get('origin')
+    const expectedOrigin = request.nextUrl.origin
+    if (origin && origin !== expectedOrigin) {
+      return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 })
+    }
+  }
+
   const { path } = await params
   const matrixPath = '/' + path.join('/')
   const search = request.nextUrl.search
@@ -97,14 +113,28 @@ async function handler(
     )
   }
 
-  // Rate limit login attempts per IP to prevent brute force
-  if (matrixPath.includes('/login') && request.method === 'POST') {
+  // Request body size limit
+  const isMediaEndpoint = matrixPath.startsWith('/_matrix/media/')
+  const maxSize = isMediaEndpoint ? MAX_MEDIA_BODY_SIZE : MAX_BODY_SIZE
+  const contentLength = request.headers.get('content-length')
+  if (contentLength && parseInt(contentLength, 10) > maxSize) {
+    return NextResponse.json(
+      { errcode: 'M_TOO_LARGE', error: 'Request body too large' },
+      { status: 413 }
+    )
+  }
+
+  // Rate limit login and registration attempts per IP to prevent brute force
+  const isLogin = matrixPath.includes('/login') && request.method === 'POST'
+  const isRegister = matrixPath.includes('/register') && request.method === 'POST'
+  if (isLogin || isRegister) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
       || request.headers.get('x-real-ip')
       || 'unknown'
-    if (isLoginRateLimited(ip)) {
+    const limitKey = isLogin ? 'login' : 'register'
+    if (isRateLimited(ip, limitKey)) {
       return NextResponse.json(
-        { errcode: 'M_LIMIT_EXCEEDED', error: 'Too many login attempts. Please wait before trying again.' },
+        { errcode: 'M_LIMIT_EXCEEDED', error: 'Too many attempts. Please wait before trying again.' },
         { status: 429 }
       )
     }
@@ -121,6 +151,9 @@ async function handler(
   })
 
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS)
+
     const upstreamResponse = await fetch(targetUrl, {
       method: request.method,
       headers: forwardHeaders,
@@ -128,7 +161,10 @@ async function handler(
       // @ts-expect-error -- duplex is required for streaming body in Node 18+
       duplex: request.method !== 'GET' && request.method !== 'HEAD' ? 'half' : undefined,
       redirect: 'follow',
+      signal: controller.signal,
     })
+
+    clearTimeout(timeout)
 
     // If the server doesn't support push rules (Conduit, etc.), return empty
     // push rules instead of 404. The matrix-js-sdk retries getPushRules
@@ -153,13 +189,22 @@ async function handler(
       }
     })
 
+    responseHeaders.set('x-content-type-options', 'nosniff')
+
+    const isMediaDownload = matrixPath.startsWith('/_matrix/media/') && matrixPath.includes('/download')
+    const isSyncOrAuth = matrixPath.includes('/sync') || matrixPath.includes('/login') || matrixPath.includes('/register') || matrixPath.includes('/logout')
+    if (isMediaDownload) {
+      responseHeaders.set('cache-control', 'public, max-age=31536000, immutable')
+    } else if (isSyncOrAuth) {
+      responseHeaders.set('cache-control', 'private, no-store')
+    }
+
     return new NextResponse(upstreamResponse.body, {
       status: upstreamResponse.status,
       statusText: upstreamResponse.statusText,
       headers: responseHeaders,
     })
-  } catch (err) {
-    console.error('Matrix proxy error:', err)
+  } catch {
     return NextResponse.json(
       { error: 'Failed to reach homeserver' },
       { status: 502 }

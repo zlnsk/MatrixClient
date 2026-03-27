@@ -33,7 +33,8 @@ function resetIdleTimer() {
 function attachIdleListeners() {
   if (idleListenersAttached || typeof window === 'undefined') return
   idleListenersAttached = true
-  const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'] as const
+  // Only reset on active user intent — mousemove/scroll are passive and should not extend the session
+  const events = ['mousedown', 'keydown', 'touchstart', 'click'] as const
   events.forEach(evt => window.addEventListener(evt, resetIdleTimer, { passive: true }))
   resetIdleTimer()
 }
@@ -42,7 +43,7 @@ function detachIdleListeners() {
   if (!idleListenersAttached || typeof window === 'undefined') return
   idleListenersAttached = false
   if (idleTimer) { clearTimeout(idleTimer); idleTimer = null }
-  const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'] as const
+  const events = ['mousedown', 'keydown', 'touchstart', 'click'] as const
   events.forEach(evt => window.removeEventListener(evt, resetIdleTimer))
 }
 

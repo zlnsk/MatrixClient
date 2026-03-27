@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Sidebar } from './sidebar'
 import { ChatArea } from './chat-area'
 import { useChatStore } from '@/stores/chat-store'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, X } from 'lucide-react'
+import { ConnectionBanner } from '@/components/ui/connection-banner'
 
 // Lazy load heavy modal components — only fetched when opened
 // Retry with full page reload on chunk load failure (stale deployment)
@@ -27,6 +28,7 @@ export function ChatLayout() {
   const [settingsSection, setSettingsSection] = useState<'main' | 'profile' | 'security' | 'about'>('main')
   const [showMobileSidebar, setShowMobileSidebar] = useState(true)
   const [showCommandPalette, setShowCommandPalette] = useState(false)
+  const [showShortcuts, setShowShortcuts] = useState(false)
   const activeRoom = useChatStore(s => s.activeRoom)
   const rooms = useChatStore(s => s.rooms)
 
@@ -119,6 +121,20 @@ export function ChatLayout() {
     return () => window.removeEventListener('keydown', handleCmdK)
   }, [])
 
+  // ? to toggle keyboard shortcuts overlay
+  useEffect(() => {
+    const handleShortcutKey = (e: KeyboardEvent) => {
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        const target = e.target as HTMLElement
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+        e.preventDefault()
+        setShowShortcuts(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleShortcutKey)
+    return () => window.removeEventListener('keydown', handleShortcutKey)
+  }, [])
+
   // Alt+1-9 to switch between chats (Alt avoids overriding browser/OS shortcuts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -144,7 +160,9 @@ export function ChatLayout() {
   }, [])
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-white dark:bg-m3-surface">
+    <div className="flex h-dvh flex-col overflow-hidden bg-white dark:bg-m3-surface">
+      <ConnectionBanner />
+      <div className="flex flex-1 min-h-0">
       {/* Sidebar — full width on mobile, resizable on desktop */}
       <div
         className={`sidebar-resizable ${
@@ -177,6 +195,7 @@ export function ChatLayout() {
       )}
 
       {/* Build version removed — visible in Settings > About only */}
+      </div>
 
       {/* Settings overlay — lazy loaded */}
       {showSettings && (
@@ -200,6 +219,34 @@ export function ChatLayout() {
           />
         </Suspense>
       )}
+
+      {/* Keyboard shortcuts overlay */}
+      {showShortcuts && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in" onClick={() => setShowShortcuts(false)}>
+          <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-scale-in dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-m3-on-surface">Keyboard Shortcuts</h2>
+              <button onClick={() => setShowShortcuts(false)} className="rounded-full p-1 text-m3-on-surface-variant hover:bg-m3-surface-container">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              {[
+                ['Ctrl/⌘ + K', 'Command palette'],
+                ['Alt + 1-9', 'Switch between chats'],
+                ['?', 'Show keyboard shortcuts'],
+                ['Enter', 'Send message'],
+                ['Escape', 'Close dialog / Cancel edit'],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-sm text-m3-on-surface-variant">{desc}</span>
+                  <kbd className="rounded-lg bg-m3-surface-container px-2.5 py-1 text-xs font-mono font-medium text-m3-on-surface dark:bg-m3-surface-container-high">{key}</kbd>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -214,7 +261,11 @@ function EmptyState() {
         <span className="font-light">szept</span> <span className="font-bold">matrix</span>
       </h3>
       <p className="mt-2 max-w-sm text-center text-sm text-m3-on-surface-variant">
-        Select a conversation to start messaging
+        Select a conversation to start messaging, or create a new chat to get started.
+      </p>
+      <p className="mt-6 flex items-center gap-2 text-xs text-m3-outline">
+        <kbd className="rounded bg-m3-surface-container px-2 py-0.5 font-mono dark:bg-m3-surface-container-high">Ctrl+K</kbd>
+        <span>to open command palette</span>
       </p>
     </div>
   )

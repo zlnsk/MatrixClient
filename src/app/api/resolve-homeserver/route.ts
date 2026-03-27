@@ -62,7 +62,7 @@ async function checkDirect(url: string): Promise<{ homeserverUrl: string; method
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 4_000)
-    const res = await fetch(`${url}/_matrix/client/versions`, { signal: controller.signal })
+    const res = await fetch(`${url}/_matrix/client/versions`, { signal: controller.signal, redirect: 'error' })
     clearTimeout(timeout)
     if (res.ok) {
       const data = await res.json()
@@ -78,7 +78,7 @@ async function discoverWellKnown(url: string): Promise<{ homeserverUrl: string; 
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 4_000)
-    const res = await fetch(`${url}/.well-known/matrix/client`, { signal: controller.signal })
+    const res = await fetch(`${url}/.well-known/matrix/client`, { signal: controller.signal, redirect: 'error' })
     clearTimeout(timeout)
     if (!res.ok) return null
 
@@ -99,7 +99,7 @@ async function discoverWellKnown(url: string): Promise<{ homeserverUrl: string; 
     try {
       const vc = new AbortController()
       const vt = setTimeout(() => vc.abort(), 4_000)
-      const vRes = await fetch(`${cleanUrl}/_matrix/client/versions`, { signal: vc.signal })
+      const vRes = await fetch(`${cleanUrl}/_matrix/client/versions`, { signal: vc.signal, redirect: 'error' })
       clearTimeout(vt)
       if (vRes.ok) {
         const vData = await vRes.json()
