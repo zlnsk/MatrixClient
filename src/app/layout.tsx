@@ -7,6 +7,8 @@ import { RealtimeProvider } from '@/components/providers/realtime-provider'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import './globals.css'
 
+const IS_VERCEL = !!process.env.VERCEL
+
 export const metadata: Metadata = {
   title: 'szept — Secure Messaging',
   description: 'End-to-end encrypted messaging powered by the Matrix protocol',
@@ -53,7 +55,7 @@ export default async function RootLayout({
             </AuthProvider>
           </ThemeProvider>
         </ErrorBoundary>
-        <SpeedInsights />
+        {IS_VERCEL && <SpeedInsights />}
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
