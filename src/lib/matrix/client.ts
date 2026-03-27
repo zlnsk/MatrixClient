@@ -6,7 +6,6 @@ import { logger as sdkGlobalLogger } from 'matrix-js-sdk/lib/logger'
 import type { CryptoCallbacks } from 'matrix-js-sdk/lib/crypto-api'
 import { reportError } from '@/lib/error-reporter'
 import { clearTurnServerPolling } from './sdk-compat'
-import { getProfileCache } from '@/lib/profile-cache'
 
 let matrixClient: sdk.MatrixClient | null = null
 
@@ -96,7 +95,6 @@ export async function resolveHomeserver(server: string): Promise<string> {
 
 // Pending secret storage key for the getSecretStorageKey callback
 let pendingSecretStorageKey: Uint8Array | null = null
-let pendingSecretStorageResolve: ((key: [string, Uint8Array] | null) => void) | null = null
 
 const cryptoCallbacks: CryptoCallbacks = {
   getSecretStorageKey: async ({ keys }: { keys: Record<string, any> }, _name: string): Promise<[string, Uint8Array<ArrayBuffer>] | null> => {
@@ -315,16 +313,16 @@ async function enableKeyBackup(client: sdk.MatrixClient): Promise<void> {
     // per-session key requests against an untrusted backup (causing 404 spam).
     const backupInfo = await crypto.getKeyBackupInfo()
     if (!backupInfo) {
-      console.log('No key backup found on server')
+      console.debug('No key backup found on server')
       return
     }
-    console.log('Key backup found on server, version:', backupInfo.version)
+    console.debug('Key backup found on server, version:', backupInfo.version)
 
     const trustInfo = await crypto.isKeyBackupTrusted(backupInfo)
-    console.log('Backup trusted:', trustInfo.trusted)
+    console.debug('Backup trusted:', trustInfo.trusted)
 
     if (!trustInfo.trusted) {
-      console.log('Skipping key backup enable — backup is not trusted')
+      console.debug('Skipping key backup enable — backup is not trusted')
       return
     }
 
@@ -333,11 +331,11 @@ async function enableKeyBackup(client: sdk.MatrixClient): Promise<void> {
     if (check && pendingSecretStorageKey) {
       try {
         await crypto.loadSessionBackupPrivateKeyFromSecretStorage()
-        console.log('Loaded backup decryption key from secret storage')
+        console.debug('Loaded backup decryption key from secret storage')
         const result = await crypto.restoreKeyBackup()
-        console.log(`Auto-restored ${result.imported} of ${result.total} keys from backup`)
+        console.debug(`Auto-restored ${result.imported} of ${result.total} keys from backup`)
       } catch (err) {
-        console.log('Could not auto-restore from backup:', err)
+        console.debug('Could not auto-restore from backup:', err)
       }
     }
   } catch (err) {
@@ -398,9 +396,9 @@ export async function generateSecurityKey(password: string): Promise<string> {
   try {
     await crypto.loadSessionBackupPrivateKeyFromSecretStorage()
     const result = await crypto.restoreKeyBackup()
-    console.log(`Restored ${result.imported} of ${result.total} keys after security setup`)
+    console.debug(`Restored ${result.imported} of ${result.total} keys after security setup`)
   } catch (err) {
-    console.log('No existing key backup to restore:', err)
+    console.debug('No existing key backup to restore:', err)
   }
 
   // Re-enable key backup now that we have fresh trusted keys
@@ -504,7 +502,7 @@ export async function restoreFromRecoveryKey(input: string): Promise<void> {
     const { decodeRecoveryKey } = await import('matrix-js-sdk/lib/crypto-api/recovery-key')
     keyBytes = decodeRecoveryKey(trimmed)
   } catch {
-    console.log('Not a recovery key format, trying as passphrase...')
+    console.debug('Not a recovery key format, trying as passphrase...')
   }
 
   if (!keyBytes) {
@@ -541,7 +539,7 @@ export async function restoreFromRecoveryKey(input: string): Promise<void> {
   // (master, self-signing, user-signing) rather than creating new ones.
   try {
     await crypto.bootstrapCrossSigning({})
-    console.log('Cross-signing keys loaded from Secret Storage')
+    console.debug('Cross-signing keys loaded from Secret Storage')
   } catch (err) {
     console.warn('bootstrapCrossSigning failed:', err)
     // Continue anyway — cross-signing keys may already be cached locally
@@ -552,7 +550,7 @@ export async function restoreFromRecoveryKey(input: string): Promise<void> {
   try {
     const deviceId = matrixClient.getDeviceId()!
     await crypto.crossSignDevice(deviceId)
-    console.log('Device cross-signed successfully:', deviceId)
+    console.debug('Device cross-signed successfully:', deviceId)
   } catch (err) {
     console.warn('crossSignDevice failed (may already be signed):', err)
   }
@@ -561,15 +559,15 @@ export async function restoreFromRecoveryKey(input: string): Promise<void> {
   // Do NOT create a new backup — just restore existing keys if available.
   try {
     await crypto.loadSessionBackupPrivateKeyFromSecretStorage()
-    console.log('Loaded backup key from Secret Storage')
+    console.debug('Loaded backup key from Secret Storage')
     const result = await crypto.restoreKeyBackup({
       progressCallback: (progress: any) => {
-        console.log('Key restore progress:', progress)
+        console.debug('Key restore progress:', progress)
       },
     })
-    console.log(`Restored ${result.imported} of ${result.total} keys from backup`)
+    console.debug(`Restored ${result.imported} of ${result.total} keys from backup`)
   } catch (err) {
-    console.log('Key backup restoration skipped (no backup or failed):', err)
+    console.debug('Key backup restoration skipped (no backup or failed):', err)
   }
 
   pendingSecretStorageKey = null

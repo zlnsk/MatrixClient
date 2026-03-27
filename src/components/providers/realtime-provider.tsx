@@ -72,7 +72,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     // Listen for incoming verification requests
     const onVerificationRequest = (request: VerificationRequest) => {
-      console.log('Verification request received:', request.otherUserId, 'phase:', request.phase)
+      console.debug('Verification request received:', request.otherUserId, 'phase:', request.phase)
       setVerificationRequest(request)
     }
 

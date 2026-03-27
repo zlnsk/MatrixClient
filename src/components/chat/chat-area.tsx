@@ -10,7 +10,6 @@ import { ChatHeader } from './chat-header'
 import { RoomInfoPanel } from './room-info-panel'
 import {
   Search,
-  Loader2,
   X,
   Pin,
   Upload,

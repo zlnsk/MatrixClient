@@ -5,7 +5,6 @@ import {
   restoreSession,
   startSync,
   logout,
-  getMatrixClient,
   getAvatarUrl,
   getUserId,
 } from '@/lib/matrix/client'

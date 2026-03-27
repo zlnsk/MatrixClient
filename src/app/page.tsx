@@ -19,7 +19,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login')
+      router.push('/MatrixClient/login')
     }
   }, [isAuthenticated, isLoading, router])
 

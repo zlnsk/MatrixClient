@@ -636,7 +636,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // Always rebuild — loadMembersIfNeeded() returns false if members
         // were already loaded by a previous call (e.g. opening a chat), but
         // the room list may have been built before that load completed.
-        let updatedRooms = allRooms
+        const updatedRooms = allRooms
           .filter(r => r.getMyMembership() === 'join')
           .map(roomToMatrixRoom)
           .sort((a, b) => b.lastMessageTs - a.lastMessageTs)

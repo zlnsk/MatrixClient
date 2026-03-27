@@ -461,7 +461,7 @@ export function setupIncomingCallListener(): (() => void) | undefined {
   if (!client) return
 
   const onIncomingCall = (call: MatrixCall) => {
-    console.log('Incoming call from:', call.getOpponentMember()?.userId)
+    console.debug('Incoming call from:', call.getOpponentMember()?.userId)
     handleIncomingCall(call)
   }
 

@@ -11,7 +11,6 @@ import {
   Reply,
   Image as ImageIcon,
   FileText,
-  Loader2,
   Mic,
   Square,
 } from 'lucide-react'
