@@ -35,7 +35,7 @@ export function ChatLayout() {
   // Update document title with unread message count
   useEffect(() => {
     const totalUnread = rooms.reduce((sum, r) => sum + r.unreadCount, 0)
-    document.title = totalUnread > 0 ? `(${totalUnread}) szept matrix` : 'szept matrix'
+    document.title = totalUnread > 0 ? `(${totalUnread}) Messages` : 'Messages'
   }, [rooms])
 
   // Resizable sidebar (desktop only)
@@ -179,6 +179,7 @@ export function ChatLayout() {
           onChatSelect={handleChatSelect}
           onProfileClick={() => { setSettingsSection('profile'); setShowSettings(true) }}
         />
+        <StatusBar />
       </div>
 
       {/* Resize handle (desktop only) */}
@@ -198,7 +199,7 @@ export function ChatLayout() {
         </div>
       )}
 
-      {/* Build version removed — visible in Settings > About only */}
+      {/* Build version is shown in sidebar StatusBar */}
       </div>
 
       {/* Settings overlay — lazy loaded */}
@@ -257,20 +258,31 @@ export function ChatLayout() {
   )
 }
 
+function StatusBar() {
+  const buildVersion = process.env.NEXT_PUBLIC_BUILD_VERSION || 'dev'
+  return (
+    <div className="flex-shrink-0 border-t border-m3-outline-variant/50 bg-m3-surface-container-lowest px-4 py-1.5 dark:border-m3-outline-variant/30 dark:bg-m3-surface">
+      <p className="truncate text-[11px] font-mono text-m3-outline dark:text-m3-on-surface-variant/60">
+        {buildVersion}
+      </p>
+    </div>
+  )
+}
+
 function EmptyState() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-m3-surface-container-low p-8 dark:bg-m3-surface">
-      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-m3-primary-container/40 dark:bg-m3-primary-container/20">
-        <MessageSquare className="h-12 w-12 text-m3-primary" />
+    <div className="flex flex-1 flex-col items-center justify-center bg-[#f8f9fa] p-8 dark:bg-m3-surface">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-50 dark:bg-m3-primary-container/20">
+        <MessageSquare className="h-10 w-10 text-m3-primary" />
       </div>
-      <h3 className="mt-6 text-xl text-m3-on-surface dark:text-m3-on-surface">
-        <span className="font-light">szept</span> <span className="font-bold">matrix</span>
+      <h3 className="mt-5 text-xl font-normal text-m3-on-surface">
+        Messages for Matrix
       </h3>
-      <p className="mt-2 max-w-sm text-center text-sm text-m3-on-surface-variant">
-        Select a conversation to start messaging, or create a new chat to get started.
+      <p className="mt-2 max-w-xs text-center text-sm text-m3-on-surface-variant">
+        Send and receive messages with your Matrix contacts. Select a conversation to get started.
       </p>
       <p className="mt-6 flex items-center gap-2 text-xs text-m3-outline">
-        <kbd className="rounded bg-m3-surface-container px-2 py-0.5 font-mono dark:bg-m3-surface-container-high">Ctrl+K</kbd>
+        <kbd className="rounded-md bg-white px-2 py-0.5 font-mono shadow-sm dark:bg-m3-surface-container-high">Ctrl+K</kbd>
         <span>to open command palette</span>
       </p>
     </div>

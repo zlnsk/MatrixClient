@@ -224,8 +224,8 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
 
   return (
     <>
-      {/* Header — Google Messages style */}
-      <div className="flex items-center gap-3 px-4 py-3.5">
+      {/* Header — Google Messages Web style */}
+      <div className="flex items-center gap-3 px-4 py-3">
         <div className="relative" ref={hamburgerRef}>
           <button
             onClick={() => setShowHamburger(!showHamburger)}
@@ -240,7 +240,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
             <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-2xl border border-m3-outline-variant bg-white py-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
               {/* App title */}
               <div className="px-6 py-3 border-b border-m3-outline-variant">
-                <h2 className="text-lg text-m3-on-surface"><span className="font-light">szept</span> <span className="font-bold">matrix</span></h2>
+                <h2 className="text-lg font-normal text-m3-on-surface">Messages</h2>
                 <p className="text-xs text-m3-on-surface-variant">{user?.userId}</p>
               </div>
 
@@ -266,8 +266,8 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
 
         <h1
           onClick={() => { setActiveRoom(null); onChatSelect() }}
-          className="flex-1 cursor-pointer text-xl text-m3-on-surface transition-opacity hover:opacity-70"
-        ><span className="font-light">szept</span> <span className="font-bold">matrix</span></h1>
+          className="flex-1 cursor-pointer text-[22px] font-normal text-m3-on-surface transition-opacity hover:opacity-70"
+        >Messages</h1>
 
         <button
           onClick={() => setShowNewChat(true)}
@@ -631,13 +631,6 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
         )}
       </nav>
 
-      {/* Status bar */}
-      <div className="flex-shrink-0 border-t border-m3-outline-variant/50 px-4 py-1.5">
-        <p className="text-[10px] font-mono text-m3-outline truncate">
-          {process.env.NEXT_PUBLIC_BUILD_VERSION || 'dev'}
-        </p>
-      </div>
-
       {/* New Chat Modal — lazy loaded */}
       {showNewChat && (
         <Suspense fallback={null}>
@@ -708,32 +701,32 @@ const RoomListItem = memo(function RoomListItem({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className={`group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-all duration-150 active:scale-[0.99] ${
+      className={`group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-all duration-150 active:scale-[0.99] ${
         isActive
-          ? 'bg-m3-primary-container/50 dark:bg-m3-surface-container-high'
+          ? 'bg-m3-primary-container/40 dark:bg-m3-surface-container-high'
           : 'hover:bg-m3-surface-container active:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-high/60 dark:active:bg-m3-surface-container-highest'
       }`}
     >
       <Avatar
         src={avatarUrl}
         name={room.name}
-        size="md"
+        size="lg"
         status={presence}
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className="truncate text-[17px] font-medium text-m3-on-surface md:text-[15px]">
+          <span className={`truncate text-[16px] md:text-[15px] ${room.unreadCount > 0 ? 'font-semibold text-m3-on-surface' : 'font-normal text-m3-on-surface'}`}>
             {room.name}
           </span>
           {room.lastMessageTs > 0 && (
-            <span className="ml-2 flex-shrink-0 text-sm text-m3-on-surface-variant md:text-xs">
+            <span className={`ml-2 flex-shrink-0 text-xs ${room.unreadCount > 0 ? 'font-medium text-m3-primary' : 'text-m3-on-surface-variant'}`}>
               {formatDistanceToNow(new Date(room.lastMessageTs), { addSuffix: false })}
             </span>
           )}
         </div>
         <div className="flex items-center justify-between mt-0.5">
-          <p className="truncate text-[15px] text-m3-on-surface-variant md:text-[13px]">
-            {room.lastSenderName && <span>{room.lastSenderName}: </span>}
+          <p className={`truncate text-[14px] md:text-[13px] ${room.unreadCount > 0 ? 'font-medium text-m3-on-surface dark:text-m3-on-surface-variant' : 'text-m3-on-surface-variant'}`}>
+            {room.lastSenderName && <span className="text-m3-on-surface-variant">{room.lastSenderName}: </span>}
             {lastMsgPreview}
           </p>
           <div className="ml-2 flex items-center gap-1.5">
@@ -741,7 +734,7 @@ const RoomListItem = memo(function RoomListItem({
               <Lock className="h-3 w-3 flex-shrink-0 text-m3-on-surface-variant" />
             )}
             {room.unreadCount > 0 && (
-              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary px-1.5 text-[13px] font-medium text-white md:text-[11px]">
+              <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-m3-primary px-1.5 text-[11px] font-bold text-white">
                 {room.unreadCount > 99 ? '99+' : room.unreadCount}
               </span>
             )}

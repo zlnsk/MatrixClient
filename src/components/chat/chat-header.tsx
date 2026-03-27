@@ -61,7 +61,7 @@ export function ChatHeader({
   }, [showLeaveConfirm])
 
   return (
-    <div className="flex items-center border-b border-m3-outline-variant bg-white px-2 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4">
+    <div className="flex items-center border-b border-m3-outline-variant/50 bg-white px-2 py-2.5 dark:border-m3-outline-variant/50 dark:bg-m3-surface md:px-4">
       <button
         onClick={onBackClick}
         className="flex-shrink-0 rounded-full p-2 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container active:bg-m3-surface-container-high md:hidden"

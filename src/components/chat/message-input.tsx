@@ -426,7 +426,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const getFilePreview = (file: File) => filePreviewUrls.get(file) ?? null
 
   return (
-    <div className="bg-white px-3 py-2.5 dark:bg-m3-surface-container md:px-4 md:py-3">
+    <div className="bg-[#f8f9fa] px-3 py-2.5 dark:bg-m3-surface md:px-4 md:py-3">
       {/* Command status */}
       {commandStatus && (
         <div
@@ -551,7 +551,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
             </button>
           </div>
         ) : (
-          <div className="flex flex-1 items-center rounded-full border border-m3-outline-variant/60 bg-m3-surface-container dark:border-m3-outline-variant/40 dark:bg-m3-surface-container-high">
+          <div className="flex flex-1 items-center rounded-full border border-m3-outline-variant/40 bg-white dark:border-m3-outline-variant/40 dark:bg-m3-surface-container-high">
             {/* Emoji button — left side of input */}
             <div className="relative flex-shrink-0 pl-2" ref={emojiRef}>
               <button
