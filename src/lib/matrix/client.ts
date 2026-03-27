@@ -58,7 +58,7 @@ export async function resolveHomeserver(server: string): Promise<string> {
   // when .well-known host doesn't serve CORS headers or when a reverse
   // proxy (Pangolin) intercepts /_matrix/* requests.
   try {
-    const res = await fetch(`/matrixclient/api/resolve-homeserver?server=${encodeURIComponent(server)}`)
+    const res = await fetch(`/MatrixClient/api/resolve-homeserver?server=${encodeURIComponent(server)}`)
     if (res.ok) {
       const data = await res.json()
       if (data?.homeserverUrl) {
@@ -246,7 +246,7 @@ function createProxiedFetch(homeserverUrl: string): typeof globalThis.fetch {
         }))
       }
 
-      const proxyUrl = `/matrixclient/api/matrix-proxy${matrixPath}`
+      const proxyUrl = `/MatrixClient/api/matrix-proxy${matrixPath}`
 
       const newInit: RequestInit = { ...init }
       const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined))
@@ -841,7 +841,7 @@ export async function startSync(): Promise<void> {
         matrixClient?.stopClient()
         matrixClient = null
         localStorage.removeItem('matrix_session')
-        window.location.href = '/matrixclient/login'
+        window.location.href = '/MatrixClient/login'
       }
     }
     matrixClient?.on(sdk.ClientEvent.Sync, onSync)
