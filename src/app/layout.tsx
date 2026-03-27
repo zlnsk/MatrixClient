@@ -7,12 +7,12 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'szept — Secure Messaging',
+  title: 'Messages — Secure Messaging',
   description: 'End-to-end encrypted messaging powered by the Matrix protocol',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'szept',
+    title: 'Messages',
   },
   other: {
     'mobile-web-app-capable': 'yes',
@@ -29,7 +29,10 @@ export const viewport = {
   userScalable: true,
   interactiveWidget: 'resizes-content',
   viewportFit: 'cover',
-  themeColor: '#1f1f1f',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#1a73e8' },
+    { media: '(prefers-color-scheme: dark)', color: '#1f1f1f' },
+  ],
 }
 
 export default async function RootLayout({

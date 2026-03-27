@@ -313,7 +313,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                     : message.status === 'sending'
                       ? 'bg-m3-primary/85 text-white'
                       : 'bg-m3-primary text-white'
-                  : 'bg-m3-surface-container text-m3-on-surface dark:bg-m3-surface-container-high dark:text-m3-on-surface'
+                  : 'bg-white text-m3-on-surface shadow-[0_1px_2px_rgba(0,0,0,0.06)] dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:shadow-none'
             }`}
           >
             {/* Inline reply quote */}

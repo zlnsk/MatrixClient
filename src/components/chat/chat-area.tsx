@@ -212,7 +212,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
   return (
     <div
-      className="relative flex flex-1 flex-col min-h-0 bg-white dark:bg-m3-surface"
+      className="relative flex flex-1 flex-col min-h-0 bg-[#f8f9fa] dark:bg-m3-surface"
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }}
       onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false) }}
       onDrop={(e) => {
@@ -245,7 +245,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
       {/* Search bar */}
       {showSearch && (
-        <div className="animate-slide-in border-b border-m3-outline-variant bg-white px-4 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container">
+        <div className="animate-slide-in border-b border-m3-outline-variant/50 bg-white px-4 py-2 dark:border-m3-outline-variant/50 dark:bg-m3-surface-container">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-m3-on-surface-variant" />
             <input
@@ -310,7 +310,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       )}
 
       {/* Messages */}
-      <div ref={scrollContainerRef} onClick={handleContentClick} className="message-scroll-container min-h-0 flex-1 overflow-y-auto bg-m3-surface-container-lowest px-2 pt-4 pb-6 dark:bg-m3-surface md:px-6 lg:px-8 md:pb-8">
+      <div ref={scrollContainerRef} onClick={handleContentClick} className="message-scroll-container min-h-0 flex-1 overflow-y-auto bg-[#f8f9fa] px-2 pt-4 pb-6 dark:bg-m3-surface md:px-6 lg:px-8 md:pb-8">
         {isLoadingMessages ? (
           <div className="flex h-full flex-col justify-end space-y-4 px-4 py-6">
             {/* Skeleton messages */}
@@ -365,7 +365,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {/* Typing indicator */}
             {typingUsers.length > 0 && (
               <div className="flex items-end gap-2 animate-fade-in">
-                <div className="rounded-[20px] border border-m3-outline-variant/50 bg-m3-surface-container-lowest px-4 py-3 dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high">
+                <div className="rounded-[20px] bg-white px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.06)] dark:bg-m3-surface-container-high dark:shadow-none">
                   <div className="flex gap-1">
                     <span className="typing-dot h-2.5 w-2.5 rounded-full bg-m3-primary" />
                     <span className="typing-dot h-2.5 w-2.5 rounded-full bg-m3-primary" />
