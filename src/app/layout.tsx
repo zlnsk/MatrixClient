@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
-import { SpeedInsights } from '@vercel/speed-insights/next'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { AuthProvider } from '@/components/providers/auth-provider'
 import { RealtimeProvider } from '@/components/providers/realtime-provider'
@@ -53,11 +52,11 @@ export default async function RootLayout({
             </AuthProvider>
           </ThemeProvider>
         </ErrorBoundary>
-        <SpeedInsights />
+        
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){})`,
+            __html: `if('serviceWorker' in navigator)navigator.serviceWorker.register("/MatrixClient/sw.js")`,
           }}
         />
       </body>

@@ -33,7 +33,8 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_VERSION: getBuildVersion(),
   },
-  output: 'standalone',
+  basePath: "/MatrixClient",
+
   // Turbopack config (default bundler in Next.js 16)
   turbopack: {},
   images: {
