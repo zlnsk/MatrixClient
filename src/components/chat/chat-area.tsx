@@ -201,11 +201,11 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         currentDate = dateKey
         let label: string
         if (isToday(d)) {
-          label = format(d, 'h:mm a')
+          label = format(d, 'HH:mm')
         } else if (isYesterday(d)) {
-          label = 'Yesterday \u00b7 ' + format(d, 'h:mm a')
+          label = 'Yesterday \u00b7 ' + format(d, 'HH:mm')
         } else {
-          label = format(d, 'EEEE') + ' \u00b7 ' + format(d, 'h:mm a')
+          label = format(d, 'EEEE') + ' \u00b7 ' + format(d, 'HH:mm')
         }
         groups.push({ date: label, messages: [msg] })
       } else {
