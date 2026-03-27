@@ -1,5 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+function isPrivateHost(hostname: string): boolean {
+  const h = hostname.toLowerCase()
+  return (
+    h === 'localhost' ||
+    h === '127.0.0.1' ||
+    h === '0.0.0.0' ||
+    h === '[::1]' ||
+    h.startsWith('10.') ||
+    h.startsWith('192.168.') ||
+    (h.startsWith('172.') && (() => { const parts = h.split('.'); if (parts.length < 2) return false; const b = parseInt(parts[1], 10); return !isNaN(b) && b >= 16 && b <= 31 })()) ||
+    h.startsWith('169.254.') ||
+    h.endsWith('.local') ||
+    h.endsWith('.internal')
+  )
+}
+
 /**
  * Server-side proxy for Matrix API requests.
  * Bypasses browser CORS restrictions when the homeserver (e.g. behind Pangolin)
@@ -86,12 +102,18 @@ async function handler(
     return NextResponse.json({ error: 'Invalid homeserver URL' }, { status: 400 })
   }
 
-  // CSRF validation: check Origin header on mutating requests
+  // CSRF validation: check Origin header on mutating requests.
+  // Behind a reverse proxy, nextUrl.origin reflects the internal address,
+  // so derive the expected origin from x-forwarded-host/proto or the Host header.
   if (MUTATING_METHODS.has(request.method)) {
     const origin = request.headers.get('origin')
-    const expectedOrigin = request.nextUrl.origin
-    if (origin && origin !== expectedOrigin) {
-      return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 })
+    if (origin) {
+      const proto = request.headers.get('x-forwarded-proto') || request.nextUrl.protocol.replace(':', '')
+      const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host
+      const expectedOrigin = `${proto}://${host}`
+      if (origin !== expectedOrigin) {
+        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 })
+      }
     }
   }
 
@@ -160,18 +182,22 @@ async function handler(
       body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
       // @ts-expect-error -- duplex is required for streaming body in Node 18+
       duplex: request.method !== 'GET' && request.method !== 'HEAD' ? 'half' : undefined,
-      redirect: 'manual',
+      redirect: 'follow',
       signal: controller.signal,
     })
 
     clearTimeout(timeout)
 
-    // Block redirects — don't follow them to prevent SSRF to internal hosts
-    if (upstreamResponse.status >= 300 && upstreamResponse.status < 400) {
-      return NextResponse.json(
-        { error: 'Upstream redirect not allowed' },
-        { status: 502 }
-      )
+    // SSRF check: if fetch followed redirects, validate the final URL isn't internal
+    if (upstreamResponse.url && upstreamResponse.url !== targetUrl) {
+      try {
+        const finalHost = new URL(upstreamResponse.url).hostname
+        if (isPrivateHost(finalHost)) {
+          return NextResponse.json({ error: 'Redirect to private network blocked' }, { status: 502 })
+        }
+      } catch {
+        return NextResponse.json({ error: 'Invalid redirect destination' }, { status: 502 })
+      }
     }
 
     // If the server doesn't support push rules (Conduit, etc.), return empty
