@@ -89,7 +89,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         attachIdleListeners()
       } catch {
         // Session expired or invalid
-        sessionStorage.removeItem('matrix_session')
+        localStorage.removeItem('matrix_session')
         set({ isLoading: false })
       }
     } else {
