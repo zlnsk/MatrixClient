@@ -219,7 +219,11 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         e.preventDefault(); e.stopPropagation(); setIsDragging(false)
         const files = Array.from(e.dataTransfer.files)
         if (files.length > 0 && activeRoom) {
-          files.forEach(file => useChatStore.getState().uploadFile(activeRoom.roomId, file))
+          files.forEach(file => {
+            useChatStore.getState().uploadFile(activeRoom.roomId, file).catch(() => {
+              // Upload failure is shown via upload progress UI
+            })
+          })
         }
       }}
     >
@@ -284,7 +288,11 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           <div className="mt-2 flex gap-2">
             <button
               onClick={async () => {
-                await leaveRoom(activeRoom.roomId)
+                try {
+                  await leaveRoom(activeRoom.roomId)
+                } catch {
+                  // Room leave failed — stay in room
+                }
                 setConfirmLeave(false)
               }}
               className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-700"
@@ -410,7 +418,12 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                         }
                       } catch { /* ignore */ }
                     }
-                    window.open(externalLinkConfirm, '_blank', 'noopener,noreferrer')
+                    try {
+                      const linkUrl = new URL(externalLinkConfirm)
+                      if (linkUrl.protocol === 'http:' || linkUrl.protocol === 'https:') {
+                        window.open(externalLinkConfirm, '_blank', 'noopener,noreferrer')
+                      }
+                    } catch { /* invalid URL — don't open */ }
                     setExternalLinkConfirm(null)
                   }}
                   className="rounded-full bg-m3-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-m3-primary/90"

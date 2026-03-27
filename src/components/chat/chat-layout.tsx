@@ -86,7 +86,9 @@ export function ChatLayout() {
   // Navigate into chat: push a history entry so Android back button works
   const handleChatSelect = useCallback(() => {
     setShowMobileSidebar(false)
-    history.pushState({ view: 'chat' }, '')
+    if (history.state?.view !== 'chat') {
+      history.pushState({ view: 'chat' }, '')
+    }
   }, [])
 
   // Navigate back to sidebar
@@ -153,7 +155,9 @@ export function ChatLayout() {
       setActiveRoom(target)
       markAsRead(target.roomId)
       setShowMobileSidebar(false)
-      history.pushState({ view: 'chat' }, '')
+      if (history.state?.view !== 'chat') {
+        history.pushState({ view: 'chat' }, '')
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
@@ -213,7 +217,9 @@ export function ChatLayout() {
               useChatStore.getState().setActiveRoom(room)
               useChatStore.getState().markAsRead(room.roomId)
               setShowMobileSidebar(false)
-              history.pushState({ view: 'chat' }, '')
+              if (history.state?.view !== 'chat') {
+                history.pushState({ view: 'chat' }, '')
+              }
             }}
             onOpenSettings={() => { setSettingsSection('main'); setShowSettings(true) }}
           />

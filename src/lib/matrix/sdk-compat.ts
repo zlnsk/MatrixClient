@@ -3,6 +3,8 @@
  *
  * All `as any` access to SDK internals is centralized here so that
  * an SDK upgrade only requires updating this single file.
+ *
+ * Tested against matrix-js-sdk 41.x — verify after major SDK upgrades.
  */
 import type { MatrixClient, MatrixEvent, Room } from 'matrix-js-sdk'
 
@@ -22,7 +24,8 @@ export function getEventStatus(event: MatrixEvent): string | null {
 
 /** Get unread notification count for a room. */
 export function getUnreadNotificationCount(room: Room, type: string = 'total'): number {
-  return (room as unknown as { getUnreadNotificationCount: (type: string) => number }).getUnreadNotificationCount(type) || 0
+  const fn = (room as unknown as { getUnreadNotificationCount?: (type: string) => number }).getUnreadNotificationCount
+  return fn ? fn.call(room, type) || 0 : 0
 }
 
 /** Get/set custom reaction index attached to room (for O(1) reaction lookup). */
@@ -38,7 +41,8 @@ export function setReactionIndex(room: Room, index: Map<string, Map<string, { co
 
 /** Get account data event content (e.g. m.direct). */
 export function getAccountDataContent(client: MatrixClient, eventType: string): Record<string, unknown> {
-  return (client as unknown as { getAccountData: (type: string) => { getContent: () => Record<string, unknown> } | null }).getAccountData(eventType)?.getContent() || {}
+  const fn = (client as unknown as { getAccountData?: (type: string) => { getContent: () => Record<string, unknown> } | null }).getAccountData
+  return fn ? fn.call(client, eventType)?.getContent() || {} : {}
 }
 
 /** Set account data. */

@@ -83,9 +83,9 @@ self.addEventListener('fetch', (event) => {
               // Evict oldest entries if cache is too large
               const keys = await cache.keys()
               if (keys.length > MEDIA_CACHE_MAX) {
-                await cache.delete(keys[0])
+                await cache.delete(keys[0]).catch(() => {})
               }
-            })
+            }).catch(() => {})
           }
           return response
         }).catch(() => cached)
@@ -106,7 +106,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('/MatrixClient/')))
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('/MatrixClient/')).catch(() => new Response('Offline', { status: 503 })))
     )
     return
   }

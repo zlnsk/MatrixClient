@@ -37,16 +37,16 @@ export function renderRichContent(content: string, formattedContent: string | nu
   // Parse markdown from plain text
   let html = escapeHtml(content)
 
-  // Code blocks (```)
-  html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+  // Code blocks (```) — limit content to 50k chars to prevent backtracking
+  html = html.replace(/```(\w*)\n?([\s\S]{0,50000}?)```/g, '<pre><code>$2</code></pre>')
   // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
   // Bold (**text** or __text__)
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
   html = html.replace(/__(.+?)__/g, '<strong>$1</strong>')
-  // Italic (*text* or _text_)
-  html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
-  html = html.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '<em>$1</em>')
+  // Italic (*text* or _text_) — use [^*] and [^_] to prevent backtracking
+  html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
+  html = html.replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>')
   // Strikethrough (~~text~~)
   html = html.replace(/~~(.+?)~~/g, '<del>$1</del>')
   // Links (auto-detect URLs)
