@@ -12,20 +12,25 @@ function getBuildVersion(): string {
   let sha = ''
   let date = ''
   let count = ''
+  let todayCount = ''
 
   try {
     sha = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
     date = execSync('git log -1 --format=%cs', { encoding: 'utf-8' }).trim()
     count = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim()
+    // Count commits made today (since midnight UTC)
+    const today = new Date().toISOString().slice(0, 10)
+    todayCount = execSync(`git rev-list --count --since="${today}T00:00:00Z" HEAD`, { encoding: 'utf-8' }).trim()
   } catch {
     // git unavailable (e.g. shallow clone or no .git directory)
     date = new Date().toISOString().slice(0, 10)
   }
 
   const buildNum = count ? ` build ${count}` : ''
-  const gitInfo = sha ? ` (${sha} ${date})` : ''
+  const todayBuild = todayCount ? ` (${todayCount} today)` : ''
+  const gitInfo = sha ? ` · ${sha} · ${date}` : ''
 
-  return `${pkg.version}${buildNum}${gitInfo}`
+  return `v${pkg.version}${buildNum}${todayBuild}${gitInfo}`
 }
 
 const nextConfig: NextConfig = {

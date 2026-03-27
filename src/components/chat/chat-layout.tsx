@@ -179,6 +179,7 @@ export function ChatLayout() {
           onChatSelect={handleChatSelect}
           onProfileClick={() => { setSettingsSection('profile'); setShowSettings(true) }}
         />
+        <StatusBar />
       </div>
 
       {/* Resize handle (desktop only) */}
@@ -198,7 +199,7 @@ export function ChatLayout() {
         </div>
       )}
 
-      {/* Build version removed — visible in Settings > About only */}
+      {/* Build version is shown in sidebar StatusBar */}
       </div>
 
       {/* Settings overlay — lazy loaded */}
@@ -253,6 +254,17 @@ export function ChatLayout() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function StatusBar() {
+  const buildVersion = process.env.NEXT_PUBLIC_BUILD_VERSION || 'dev'
+  return (
+    <div className="flex-shrink-0 border-t border-m3-outline-variant/50 bg-m3-surface-container-lowest px-4 py-1.5 dark:border-m3-outline-variant/30 dark:bg-m3-surface">
+      <p className="truncate text-[11px] font-mono text-m3-outline dark:text-m3-on-surface-variant/60">
+        {buildVersion}
+      </p>
     </div>
   )
 }
