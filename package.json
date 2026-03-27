@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@matrix-org/matrix-sdk-crypto-wasm": "18.0.0",
-    "@vercel/speed-insights": "^2.0.0",
     "date-fns": "^4.1.0",
     "dompurify": "^3.3.3",
     "lucide-react": "^0.577.0",

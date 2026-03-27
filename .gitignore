@@ -44,6 +44,4 @@ android-app/javac.*.args
 # build metadata (now derived from git)
 build-meta.json
 
-# vercel
-.vercel
 CLAUDE.md
