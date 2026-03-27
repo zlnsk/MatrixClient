@@ -15,8 +15,22 @@ const RATE_LIMIT_WINDOW_MS = 60_000 // 1 minute
 const RATE_LIMIT_MAX_LOGIN = 5       // max login attempts per window
 const loginAttempts = new Map<string, { count: number; windowStart: number }>()
 
+let lastCleanup = Date.now()
+
 function isLoginRateLimited(ip: string): boolean {
   const now = Date.now()
+
+  // Lazy cleanup: purge stale entries every 5 minutes instead of setInterval
+  // (setInterval with unref() doesn't run in serverless environments like Vercel)
+  if (now - lastCleanup > 5 * 60_000) {
+    lastCleanup = now
+    for (const [key, entry] of loginAttempts) {
+      if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS * 2) {
+        loginAttempts.delete(key)
+      }
+    }
+  }
+
   const entry = loginAttempts.get(ip)
   if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
     loginAttempts.set(ip, { count: 1, windowStart: now })
@@ -25,18 +39,6 @@ function isLoginRateLimited(ip: string): boolean {
   entry.count++
   if (entry.count > RATE_LIMIT_MAX_LOGIN) return true
   return false
-}
-
-// Periodic cleanup of stale entries (every 5 minutes)
-if (typeof globalThis !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now()
-    for (const [ip, entry] of loginAttempts) {
-      if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS * 2) {
-        loginAttempts.delete(ip)
-      }
-    }
-  }, 5 * 60_000).unref?.()
 }
 
 // Headers that should NOT be forwarded to the upstream server

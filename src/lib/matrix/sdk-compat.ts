@@ -56,9 +56,9 @@ export async function sendStateEvent(client: MatrixClient, roomId: string, event
   return (client as unknown as { sendStateEvent: (roomId: string, type: string, content: Record<string, unknown>, stateKey: string) => Promise<unknown> }).sendStateEvent(roomId, eventType, content, stateKey)
 }
 
-/** Search room events. */
-export async function searchRoomEvents(client: MatrixClient, opts: { term: string }): Promise<{ results: Array<{ result: Record<string, unknown> }> }> {
-  return (client as unknown as { searchRoomEvents: (opts: { term: string }) => Promise<{ results: Array<{ result: Record<string, unknown> }> }> }).searchRoomEvents(opts)
+/** Search room events (capped to 50 results to prevent unbounded fetches). */
+export async function searchRoomEvents(client: MatrixClient, opts: { term: string; count?: number }): Promise<{ results: Array<{ result: Record<string, unknown> }> }> {
+  return (client as unknown as { searchRoomEvents: (opts: { term: string; count?: number }) => Promise<{ results: Array<{ result: Record<string, unknown> }> }> }).searchRoomEvents({ term: opts.term, count: opts.count ?? 50 })
 }
 
 /** Clear TURN server polling interval (private SDK field). */

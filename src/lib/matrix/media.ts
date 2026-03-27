@@ -5,7 +5,7 @@
 
 function getSession(): { accessToken: string; homeserverUrl: string } | null {
   if (typeof window === 'undefined') return null
-  const raw = localStorage.getItem('matrix_session')
+  const raw = sessionStorage.getItem('matrix_session')
   if (!raw) return null
   try {
     const s = JSON.parse(raw)
