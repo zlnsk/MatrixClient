@@ -232,9 +232,24 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     }
   }
 
+  // For DMs, compute the display name from the other member instead of using
+  // room.name which may include all participants (e.g. "Alice and @bot:server").
+  let displayName = room.name || 'Unnamed Room'
+  if (isDirect && client) {
+    const dmPartner = room.getAvatarFallbackMember()
+    if (dmPartner) {
+      displayName = cleanDisplayName(dmPartner.name || dmPartner.userId)
+    } else {
+      const otherMembers = room.getJoinedMembers().filter((m: RoomMember) => m.userId !== client.getUserId())
+      if (otherMembers.length === 1) {
+        displayName = cleanDisplayName(otherMembers[0].name || otherMembers[0].userId)
+      }
+    }
+  }
+
   return {
     roomId: room.roomId,
-    name: room.name || 'Unnamed Room',
+    name: displayName,
     avatarUrl: getAvatarUrl(roomAvatarMxc),
     topic: room.currentState.getStateEvents('m.room.topic', '')?.getContent()?.topic || null,
     isDirect,
