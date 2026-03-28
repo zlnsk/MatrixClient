@@ -229,7 +229,11 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
     if (activeRoom?.roomId === confirmDeleteRoom.roomId) {
       setActiveRoom(null)
     }
-    await leaveRoom(confirmDeleteRoom.roomId)
+    try {
+      await leaveRoom(confirmDeleteRoom.roomId)
+    } catch (err) {
+      console.error('Failed to leave room:', err)
+    }
     setConfirmDeleteRoom(null)
   }
 

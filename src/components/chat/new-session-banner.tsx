@@ -30,6 +30,7 @@ export function NewSessionBanner({ onVerifyWithSession, onVerifyWithKey, onDismi
     setError(null)
     try {
       await onVerifyWithKey(securityKey)
+      setIsVerifying(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid security key')
       setIsVerifying(false)

@@ -153,6 +153,19 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current)
+        recordingTimerRef.current = null
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+        typingTimeoutRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     if (replyTo) inputRef.current?.focus()
   }, [replyTo])
 
