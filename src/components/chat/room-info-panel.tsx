@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   ArrowLeft,
   Lock,
@@ -77,6 +77,19 @@ export function RoomInfoPanel({
   const [savingTopic, setSavingTopic] = useState(false)
   const [inviting, setInviting] = useState(false)
   const [memberMenu, setMemberMenu] = useState<string | null>(null)
+  const menuContainerRef = useRef<HTMLDivElement>(null)
+
+  // Close member menu on outside click
+  useEffect(() => {
+    if (!memberMenu) return
+    const handler = (e: MouseEvent) => {
+      if (menuContainerRef.current && !menuContainerRef.current.contains(e.target as Node)) {
+        setMemberMenu(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [memberMenu])
 
   const myPowerLevel = activeRoom.powerLevels[currentUserId || ''] ?? 0
   const defaultPowerLevel = 0
@@ -356,7 +369,7 @@ export function RoomInfoPanel({
                       <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">{member.userId}</p>
                     </div>
                     {!isSelf && (
-                      <div className="relative flex-shrink-0">
+                      <div className="relative flex-shrink-0" ref={showMenu ? menuContainerRef : undefined}>
                         <button
                           onClick={() => setMemberMenu(showMenu ? null : member.userId)}
                           className="rounded-full p-1.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest"
@@ -400,7 +413,7 @@ export function RoomInfoPanel({
                                 Remove role
                               </button>
                             )}
-                            {canModerate && (
+                            {canModerate && myPowerLevel >= 50 && (
                               <>
                                 <div className="my-1 border-t border-m3-outline-variant dark:border-m3-outline-variant" />
                                 <button
