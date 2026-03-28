@@ -626,6 +626,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
                           encrypted: false,
                           isArchived: false,
                           isBridged: false,
+                          powerLevels: {},
                         })
                       }
                     }}
