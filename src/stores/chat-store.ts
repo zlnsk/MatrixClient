@@ -741,6 +741,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         encrypted: r.hasEncryptionStateEvent(),
         isArchived: false,
         isBridged: false,
+        powerLevels: {},
       } satisfies MatrixRoom))
 
     // Preserve member data from current state when lazy loading hasn't completed.
