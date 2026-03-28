@@ -495,24 +495,6 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
     }
   }
 
-  const applyFormatting = (prefix: string, suffix: string) => {
-    const textarea = inputRef.current
-    if (!textarea) return
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const text = content
-    const selected = text.slice(start, end)
-    const newText = text.slice(0, start) + prefix + selected + suffix + text.slice(end)
-    setContent(newText)
-    requestAnimationFrame(() => {
-      textarea.focus()
-      textarea.setSelectionRange(
-        selected ? start + prefix.length : start + prefix.length,
-        selected ? end + prefix.length : start + prefix.length
-      )
-    })
-  }
-
   const handleEmojiClick = (emoji: string) => {
     setContent(prev => prev + emoji)
     inputRef.current?.focus()
@@ -732,52 +714,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
             </button>
           </div>
         ) : (
-          <div className="flex flex-1 flex-col rounded-[24px] border border-m3-outline-variant/40 bg-white dark:border-m3-outline-variant/40 dark:bg-m3-surface-container-high">
-            {/* Formatting toolbar */}
-            <div className="flex items-center gap-0.5 border-b border-m3-outline-variant/20 px-3 py-1">
-              <button
-                type="button"
-                onMouseDown={e => { e.preventDefault(); applyFormatting('**', '**') }}
-                className="flex h-7 w-7 items-center justify-center rounded text-xs font-bold text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
-                title="Bold"
-              >
-                B
-              </button>
-              <button
-                type="button"
-                onMouseDown={e => { e.preventDefault(); applyFormatting('*', '*') }}
-                className="flex h-7 w-7 items-center justify-center rounded text-xs italic text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
-                title="Italic"
-              >
-                I
-              </button>
-              <button
-                type="button"
-                onMouseDown={e => { e.preventDefault(); applyFormatting('~~', '~~') }}
-                className="flex h-7 w-7 items-center justify-center rounded text-xs line-through text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
-                title="Strikethrough"
-              >
-                S
-              </button>
-              <button
-                type="button"
-                onMouseDown={e => { e.preventDefault(); applyFormatting('`', '`') }}
-                className="flex h-7 w-7 items-center justify-center rounded font-mono text-xs text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
-                title="Inline code"
-              >
-                {'</>'}
-              </button>
-              <button
-                type="button"
-                onMouseDown={e => { e.preventDefault(); applyFormatting('```\n', '\n```') }}
-                className="flex h-7 w-7 items-center justify-center rounded font-mono text-xs text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
-                title="Code block"
-              >
-                {'{ }'}
-              </button>
-            </div>
-            {/* Input row */}
-            <div className="flex items-center">
+          <div className="flex flex-1 items-center rounded-full border border-m3-outline-variant/40 bg-white dark:border-m3-outline-variant/40 dark:bg-m3-surface-container-high">
             {/* Emoji button — left side of input */}
             <div className="relative flex-shrink-0 pl-2" ref={emojiRef}>
               <button
@@ -862,7 +799,6 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               >
                 <ImageIcon className="h-5 w-5" />
               </button>
-            </div>
             </div>
           </div>
         )}
