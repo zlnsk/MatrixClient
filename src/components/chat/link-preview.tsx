@@ -7,6 +7,7 @@ import { ExternalLink } from 'lucide-react'
 // Session-scoped in-memory cache for link previews — prevents redundant
 // homeserver requests when the same URL appears multiple times or the
 // component remounts during scrolling.
+const PREVIEW_CACHE_MAX = 200
 const previewCache = new Map<string, {
   title?: string
   description?: string
@@ -68,6 +69,11 @@ export function LinkPreview({ url }: LinkPreviewProps) {
             siteName: data['og:site_name'] as string | undefined,
           }
           previewCache.set(url, result)
+          // Evict oldest entries if cache exceeds limit
+          if (previewCache.size > PREVIEW_CACHE_MAX) {
+            const first = previewCache.keys().next()
+            if (!first.done) previewCache.delete(first.value)
+          }
           setPreview(result)
         } else {
           previewCache.set(url, null)

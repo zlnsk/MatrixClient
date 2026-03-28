@@ -183,8 +183,13 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
 
   const handleSignOut = async () => {
     setIsLoggingOut(true)
-    await signOut()
-    router.push('/login')
+    try {
+      await signOut()
+    } catch (err) {
+      console.error('Sign out failed:', err)
+    } finally {
+      router.push('/login')
+    }
   }
 
   const homeserverDomain = getHomeserverDomain() || 'unknown'

@@ -283,6 +283,12 @@ export async function toggleHdQuality(): Promise<void> {
 
 function endCallCleanup(): void {
   clearDurationInterval()
+
+  // Remove all listeners from the call to prevent leaks
+  if (currentCall) {
+    currentCall.removeAllListeners()
+  }
+
   const store = useCallStore.getState()
   store.setStatus('ended')
 

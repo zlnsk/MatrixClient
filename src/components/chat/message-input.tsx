@@ -64,6 +64,20 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const audioChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Clean up recording timer and typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current)
+        recordingTimerRef.current = null
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+        typingTimeoutRef.current = null
+      }
+    }
+  }, [])
+
   useEffect(() => {
     if (replyTo) inputRef.current?.focus()
   }, [replyTo])

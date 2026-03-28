@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ShieldCheck, ShieldAlert, Loader2, CheckCircle2, XCircle, ArrowLeft } from 'lucide-react'
 import type {
   VerificationRequest,
@@ -29,8 +29,12 @@ export function VerificationDialog({ request, onClose }: VerificationDialogProps
     return { step: 'waiting' }
   })
 
+  const verifierCleanupRef = useRef<(() => void) | null>(null)
+
   const attachVerifierListeners = useCallback((verifier: any) => {
     if (!verifier) return
+    // Clean up previous verifier listeners before attaching new ones
+    verifierCleanupRef.current?.()
     const onShowSas = (sas: ShowSasCallbacks) => {
       if (sas.sas.emoji) {
         setState({ step: 'sas', emojis: sas.sas.emoji, sasCallbacks: sas })
@@ -39,6 +43,10 @@ export function VerificationDialog({ request, onClose }: VerificationDialogProps
     const onCancel = () => { setState({ step: 'cancelled' }) }
     verifier.on(VerifierEvent.ShowSas, onShowSas)
     verifier.on(VerifierEvent.Cancel, onCancel)
+    verifierCleanupRef.current = () => {
+      verifier.off(VerifierEvent.ShowSas, onShowSas)
+      verifier.off(VerifierEvent.Cancel, onCancel)
+    }
     const sas = verifier.getShowSasCallbacks?.()
     if (sas?.sas?.emoji) {
       setState({ step: 'sas', emojis: sas.sas.emoji, sasCallbacks: sas })
@@ -79,7 +87,11 @@ export function VerificationDialog({ request, onClose }: VerificationDialogProps
   useEffect(() => {
     request.on(VerificationRequestEvent.Change, handleChange)
     handleChange()
-    return () => { request.off(VerificationRequestEvent.Change, handleChange) }
+    return () => {
+      request.off(VerificationRequestEvent.Change, handleChange)
+      verifierCleanupRef.current?.()
+      verifierCleanupRef.current = null
+    }
   }, [request, handleChange])
 
   useEffect(() => {

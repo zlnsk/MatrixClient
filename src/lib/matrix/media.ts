@@ -263,3 +263,14 @@ export async function fetchCachedThumbnail(mxcUrl: string, width: number = 96, h
 
   return blobUrl
 }
+
+/**
+ * Clear the thumbnail cache and revoke all blob URLs.
+ * Should be called on logout to prevent stale blob URLs from leaking memory.
+ */
+export function clearThumbnailCache(): void {
+  for (const url of thumbnailCache.values()) {
+    URL.revokeObjectURL(url)
+  }
+  thumbnailCache.clear()
+}

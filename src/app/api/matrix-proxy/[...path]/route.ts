@@ -1,5 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+function isPrivateHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '') // strip IPv6 brackets
+  return (
+    h === 'localhost' ||
+    h === '127.0.0.1' ||
+    h === '0.0.0.0' ||
+    h === '::1' ||
+    h === '[::1]' ||
+    h === '::' ||
+    h.startsWith('10.') ||
+    h.startsWith('192.168.') ||
+    (h.startsWith('172.') && (() => { const parts = h.split('.'); if (parts.length < 2) return false; const b = parseInt(parts[1], 10); return !isNaN(b) && b >= 16 && b <= 31 })()) ||
+    h.startsWith('169.254.') ||
+    h.startsWith('0.') ||
+    h.startsWith('fc00:') || h.startsWith('fd') || // IPv6 ULA
+    h.startsWith('fe80:') || // IPv6 link-local
+    h.startsWith('::ffff:10.') || h.startsWith('::ffff:192.168.') || h.startsWith('::ffff:127.') || // IPv4-mapped IPv6
+    h.endsWith('.local') ||
+    h.endsWith('.internal') ||
+    /^\d+$/.test(h) // decimal IP encoding (e.g. 2130706433 = 127.0.0.1)
+  )
+}
+
 /**
  * Server-side proxy for Matrix API requests.
  * Bypasses browser CORS restrictions when the homeserver (e.g. behind Pangolin)
@@ -77,20 +100,25 @@ async function handler(
     return NextResponse.json({ error: 'Invalid homeserver URL' }, { status: 400 })
   }
 
+  // SSRF protection: block requests to private/internal hosts
+  if (isPrivateHost(hsUrl.hostname)) {
+    return NextResponse.json({ error: 'Private/internal addresses are not allowed' }, { status: 400 })
+  }
+
   const { path } = await params
   const matrixPath = '/' + path.join('/')
   const search = request.nextUrl.search
 
   // Only allow proxying specific /_matrix/ path prefixes to prevent SSRF
+  // Federation APIs are intentionally excluded — they are server-to-server only.
   const ALLOWED_MATRIX_PREFIXES = [
     '/_matrix/client/',
     '/_matrix/media/',
     '/_matrix/key/',
-    '/_matrix/federation/',
   ]
   if (!ALLOWED_MATRIX_PREFIXES.some(prefix => matrixPath.startsWith(prefix))) {
     return NextResponse.json(
-      { error: 'Only /_matrix/client/, /_matrix/media/, /_matrix/key/, and /_matrix/federation/ paths are allowed' },
+      { error: 'Only /_matrix/client/, /_matrix/media/, and /_matrix/key/ paths are allowed' },
       { status: 403 }
     )
   }
@@ -125,44 +153,90 @@ async function handler(
       body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
       // @ts-expect-error -- duplex is required for streaming body in Node 18+
       duplex: request.method !== 'GET' && request.method !== 'HEAD' ? 'half' : undefined,
-      redirect: 'follow',
+      redirect: 'manual',
     })
 
-    // If the server doesn't support push rules (Conduit, etc.), return empty
-    // push rules instead of 404. The matrix-js-sdk retries getPushRules
-    // infinitely on failure, blocking sync from ever reaching PREPARED state.
-    if (upstreamResponse.status === 404 && matrixPath.startsWith('/_matrix/client/v3/pushrules')) {
-      return NextResponse.json({
-        global: {
-          override: [],
-          underride: [],
-          sender: [],
-          room: [],
-          content: [],
-        },
-      }, { status: 200 })
+    // Handle redirects manually to prevent SSRF via redirect to internal hosts
+    if (upstreamResponse.status >= 300 && upstreamResponse.status < 400) {
+      const location = upstreamResponse.headers.get('location')
+      if (!location) {
+        return NextResponse.json({ error: 'Redirect with no location' }, { status: 502 })
+      }
+      try {
+        const redirectUrl = new URL(location, targetUrl)
+        if (redirectUrl.protocol !== 'https:' && process.env.NODE_ENV !== 'development') {
+          return NextResponse.json({ error: 'Redirect to non-HTTPS blocked' }, { status: 502 })
+        }
+        if (isPrivateHost(redirectUrl.hostname)) {
+          return NextResponse.json({ error: 'Redirect to private network blocked' }, { status: 502 })
+        }
+        // Follow the validated redirect
+        const redirectResponse = await fetch(redirectUrl.toString(), {
+          method: request.method,
+          headers: forwardHeaders,
+          body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+          // @ts-expect-error -- duplex is required for streaming body in Node 18+
+          duplex: request.method !== 'GET' && request.method !== 'HEAD' ? 'half' : undefined,
+          redirect: 'manual',
+        })
+        // Block further redirects from the redirect target
+        if (redirectResponse.status >= 300 && redirectResponse.status < 400) {
+          return NextResponse.json({ error: 'Too many redirects' }, { status: 502 })
+        }
+        return buildResponse(redirectResponse, matrixPath)
+      } catch {
+        return NextResponse.json({ error: 'Invalid redirect destination' }, { status: 502 })
+      }
     }
 
-    // Forward response headers, stripping problematic ones
-    const responseHeaders = new Headers()
-    upstreamResponse.headers.forEach((value, key) => {
-      if (!STRIP_RESPONSE_HEADERS.has(key.toLowerCase())) {
-        responseHeaders.set(key, value)
-      }
-    })
-
-    return new NextResponse(upstreamResponse.body, {
-      status: upstreamResponse.status,
-      statusText: upstreamResponse.statusText,
-      headers: responseHeaders,
-    })
-  } catch (err) {
-    console.error('Matrix proxy error:', err)
+    return buildResponse(upstreamResponse, matrixPath)
+  } catch {
     return NextResponse.json(
       { error: 'Failed to reach homeserver' },
       { status: 502 }
     )
   }
+}
+
+function buildResponse(upstreamResponse: Response, matrixPath: string): NextResponse {
+  // If the server doesn't support push rules (Conduit, etc.), return empty
+  // push rules instead of 404. The matrix-js-sdk retries getPushRules
+  // infinitely on failure, blocking sync from ever reaching PREPARED state.
+  if (upstreamResponse.status === 404 && matrixPath.startsWith('/_matrix/client/v3/pushrules')) {
+    return NextResponse.json({
+      global: {
+        override: [],
+        underride: [],
+        sender: [],
+        room: [],
+        content: [],
+      },
+    }, { status: 200 })
+  }
+
+  // Forward response headers, stripping problematic ones
+  const responseHeaders = new Headers()
+  upstreamResponse.headers.forEach((value, key) => {
+    if (!STRIP_RESPONSE_HEADERS.has(key.toLowerCase())) {
+      responseHeaders.set(key, value)
+    }
+  })
+
+  responseHeaders.set('x-content-type-options', 'nosniff')
+
+  const isMediaDownload = matrixPath.startsWith('/_matrix/media/') && matrixPath.includes('/download')
+  const isSyncOrAuth = matrixPath.includes('/sync') || matrixPath.includes('/login') || matrixPath.includes('/register') || matrixPath.includes('/logout')
+  if (isMediaDownload) {
+    responseHeaders.set('cache-control', 'public, max-age=31536000, immutable')
+  } else if (isSyncOrAuth) {
+    responseHeaders.set('cache-control', 'private, no-store')
+  }
+
+  return new NextResponse(upstreamResponse.body, {
+    status: upstreamResponse.status,
+    statusText: upstreamResponse.statusText,
+    headers: responseHeaders,
+  })
 }
 
 export const GET = handler
