@@ -230,10 +230,11 @@ interface TouchMenuProps {
   onEdit: () => void
   onDelete: () => void
   onForward: (roomId: string) => void
+  onOpenThread?: () => void
   onClose: () => void
 }
 
-export function TouchMenu({ message, isOwn, isPinned, roomId, rooms, onReaction, onReply, onCopy, onPin, onEdit, onDelete, onForward, onClose }: TouchMenuProps) {
+export function TouchMenu({ message, isOwn, isPinned, roomId, rooms, onReaction, onReply, onCopy, onPin, onEdit, onDelete, onForward, onOpenThread, onClose }: TouchMenuProps) {
   const [showForwardPicker, setShowForwardPicker] = useState(false)
   const touchMenuRef = useRef<HTMLDivElement>(null)
 
@@ -278,6 +279,15 @@ export function TouchMenu({ message, isOwn, isPinned, roomId, rooms, onReaction,
             <Reply className="h-5 w-5 text-m3-outline" />
             Reply
           </button>
+          {onOpenThread && (
+            <button
+              onClick={() => { onOpenThread(); onClose() }}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-[15px] text-m3-on-surface active:bg-m3-surface-container dark:text-m3-on-surface dark:active:bg-m3-surface-container-highest"
+            >
+              <MessageSquareText className="h-5 w-5 text-m3-outline" />
+              Reply in thread
+            </button>
+          )}
           <button
             onClick={() => { onCopy(); onClose() }}
             className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-[15px] text-m3-on-surface active:bg-m3-surface-container dark:text-m3-on-surface dark:active:bg-m3-surface-container-highest"
