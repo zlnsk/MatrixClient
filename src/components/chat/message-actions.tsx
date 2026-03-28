@@ -13,6 +13,7 @@ import {
   Pin,
   Forward,
   X,
+  MessageSquareText,
 } from 'lucide-react'
 import type { MatrixMessage, MatrixRoom } from '@/stores/chat-store'
 
@@ -105,10 +106,11 @@ interface ContextMenuPortalProps {
   onEdit: () => void
   onDelete: () => void
   onClose: () => void
+  onOpenThread?: () => void
   portalRef: React.RefObject<HTMLDivElement | null>
 }
 
-export function ContextMenuPortal({ isOwn, isPinned, copied, menuPosition, onCopy, onPin, onForward, onEdit, onDelete, onClose, portalRef }: ContextMenuPortalProps) {
+export function ContextMenuPortal({ isOwn, isPinned, copied, menuPosition, onCopy, onPin, onForward, onEdit, onDelete, onClose, onOpenThread, portalRef }: ContextMenuPortalProps) {
   const menuStyle: React.CSSProperties = {
     position: 'fixed',
     top: menuPosition.midY,
@@ -141,6 +143,15 @@ export function ContextMenuPortal({ isOwn, isPinned, copied, menuPosition, onCop
           <Forward className="h-4 w-4" />
           Forward
         </button>
+        {onOpenThread && (
+          <button
+            onClick={() => { onOpenThread(); onClose() }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest"
+          >
+            <MessageSquareText className="h-4 w-4" />
+            Reply in thread
+          </button>
+        )}
         {isOwn && (
           <>
             <button

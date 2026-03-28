@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo, memo, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-import { useChatStore, type MatrixRoom } from '@/stores/chat-store'
+import { useChatStore, type MatrixRoom, type MatrixSpace } from '@/stores/chat-store'
 import { resolveRoomAvatarFromSDK } from '@/lib/matrix/client'
 import { getAccountDataContent, setAccountData } from '@/lib/matrix/sdk-compat'
 import { useTheme } from '@/components/providers/theme-provider'
@@ -29,6 +29,7 @@ import {
   Plus,
   ChevronRight,
   Pencil,
+  Home,
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
 
@@ -40,7 +41,7 @@ interface SidebarProps {
 
 export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: SidebarProps) {
   const user = useAuthStore(s => s.user)
-  const { rooms, pendingInvites, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom, leaveRoom, acceptInvite, rejectInvite, searchMessages } = useChatStore()
+  const { rooms, pendingInvites, loadRooms, setActiveRoom, activeRoom, markAsRead, archiveRoom, unarchiveRoom, leaveRoom, acceptInvite, rejectInvite, searchMessages, spaces, activeSpaceId, setActiveSpace } = useChatStore()
   const { theme, toggleTheme } = useTheme()
   const [searchFilter, setSearchFilter] = useState('')
   const [showNewChat, setShowNewChat] = useState(false)
@@ -159,14 +160,22 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
     onChatSelect()
   }, [setActiveRoom, markAsRead, onChatSelect])
 
-  const activeRooms = useMemo(() => rooms.filter(room => {
+  const spaceFilteredRooms = useMemo(() => {
+    if (!activeSpaceId) return rooms
+    const space = spaces.find(s => s.roomId === activeSpaceId)
+    if (!space) return rooms
+    const childIds = new Set([...space.childRoomIds, ...space.childSpaceIds])
+    return rooms.filter(r => childIds.has(r.roomId))
+  }, [rooms, spaces, activeSpaceId])
+
+  const activeRooms = useMemo(() => spaceFilteredRooms.filter(room => {
     if (room.isArchived) return false
     if (searchFilter && !room.name.toLowerCase().includes(searchFilter.toLowerCase())) return false
     return true
-  }), [rooms, searchFilter])
-  const archivedRooms = useMemo(() => rooms.filter(room =>
+  }), [spaceFilteredRooms, searchFilter])
+  const archivedRooms = useMemo(() => spaceFilteredRooms.filter(room =>
     room.isArchived && room.name.toLowerCase().includes(searchFilter.toLowerCase())
-  ), [rooms, searchFilter])
+  ), [spaceFilteredRooms, searchFilter])
   const unreadCount = useMemo(() => rooms.filter(r => !r.isArchived && r.unreadCount > 0).length, [rooms])
 
   // Avatar: roomToMatrixRoom() already computes the correct avatar via
@@ -220,7 +229,49 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   }
 
   return (
-    <>
+    <div className="flex flex-1 min-h-0">
+      {/* Space navigation strip */}
+      {spaces.length > 0 && (
+        <div className="flex flex-col items-center gap-1 border-r border-m3-outline-variant/30 bg-m3-surface-container-low py-2 px-1.5 overflow-y-auto dark:bg-m3-surface-container flex-shrink-0">
+          {/* Home (all rooms) */}
+          <button
+            onClick={() => setActiveSpace(null)}
+            className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+              !activeSpaceId
+                ? 'bg-m3-primary text-white'
+                : 'text-m3-on-surface-variant hover:bg-m3-surface-container-high'
+            }`}
+            title="Home"
+          >
+            <Home className="h-5 w-5" />
+          </button>
+
+          <div className="my-1 h-px w-6 bg-m3-outline-variant/50" />
+
+          {/* Space icons */}
+          {spaces.map(space => (
+            <button
+              key={space.roomId}
+              onClick={() => setActiveSpace(space.roomId)}
+              className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+                activeSpaceId === space.roomId
+                  ? 'bg-m3-primary-container text-m3-primary'
+                  : 'text-m3-on-surface-variant hover:bg-m3-surface-container-high'
+              }`}
+              title={space.name}
+            >
+              {space.avatarUrl ? (
+                <Avatar src={space.avatarUrl} name={space.name} size="sm" />
+              ) : (
+                <span className="text-sm font-medium">{space.name.charAt(0).toUpperCase()}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Main sidebar content */}
+      <div className="flex flex-1 flex-col min-w-0">
       {/* Header — Google Messages Web style */}
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="relative" ref={hamburgerRef}>
@@ -263,8 +314,8 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
 
         <h1
           onClick={() => { setActiveRoom(null); onChatSelect() }}
-          className="flex-1 cursor-pointer text-[22px] font-normal text-m3-on-surface transition-opacity hover:opacity-70"
-        >Messages</h1>
+          className="flex-1 cursor-pointer text-[22px] font-normal text-m3-on-surface transition-opacity hover:opacity-70 truncate"
+        >{activeSpaceId ? spaces.find(s => s.roomId === activeSpaceId)?.name || 'Space' : 'Messages'}</h1>
 
         <div className="relative" ref={profilePopoverRef}>
           <button
@@ -650,7 +701,8 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
         </div>
       )}
 
-    </>
+    </div>
+    </div>
   )
 }
 

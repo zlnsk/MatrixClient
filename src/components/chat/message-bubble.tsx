@@ -15,6 +15,7 @@ import {
   Loader2,
   AlertCircle,
   RotateCcw,
+  MessageSquareText,
 } from 'lucide-react'
 import { LinkPreview } from './link-preview'
 import { decryptMediaAttachment, fetchAuthenticatedMedia } from '@/lib/matrix/media'
@@ -31,9 +32,10 @@ interface MessageBubbleProps {
   roomId: string
   isPinned?: boolean
   searchHighlight?: string
+  onOpenThread?: (eventId: string) => void
 }
 
-export const MessageBubble = memo(function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isPinned, searchHighlight }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, isOwn, showAvatar, onReply, roomId, isPinned, searchHighlight, onOpenThread }: MessageBubbleProps) {
   const user = useAuthStore(s => s.user)
   const { sendReaction, editMessage, redactMessage, pinMessage, unpinMessage, forwardMessage, rooms } = useChatStore()
   const [showActions, setShowActions] = useState(false)
@@ -555,6 +557,21 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
 
           {/* Read receipts */}
           <ReadReceipts message={message} isOwn={isOwn} />
+
+          {/* Thread indicator */}
+          {message.threadCount > 0 && (
+            <button
+              onClick={() => onOpenThread?.(message.eventId)}
+              className={`mt-1 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                isOwn
+                  ? 'text-m3-primary hover:bg-m3-primary/10'
+                  : 'text-m3-primary hover:bg-m3-primary/10'
+              }`}
+            >
+              <MessageSquareText className="h-3.5 w-3.5" />
+              {message.threadCount} {message.threadCount === 1 ? 'reply' : 'replies'}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -575,6 +592,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
     prevProps.isOwn === nextProps.isOwn &&
     prevProps.showAvatar === nextProps.showAvatar &&
     prevProps.roomId === nextProps.roomId &&
-    prevProps.isPinned === nextProps.isPinned
+    prevProps.isPinned === nextProps.isPinned &&
+    prevMsg.threadCount === nextMsg.threadCount
   )
 })

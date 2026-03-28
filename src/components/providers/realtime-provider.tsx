@@ -63,10 +63,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   useCallSetup(user?.userId)
   useAutoArchive(user?.userId)
 
-  // Load ignored users list on startup
+  // Load ignored users list and spaces on startup
   useEffect(() => {
     if (!user) return
     useChatStore.getState().loadIgnoredUsers()
+    useChatStore.getState().loadSpaces()
   }, [user])
 
   // Verification request listener + cross-signing check

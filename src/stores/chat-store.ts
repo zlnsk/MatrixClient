@@ -32,6 +32,15 @@ function cleanDisplayName(name: string): string {
   return name
 }
 
+export interface MatrixSpace {
+  roomId: string
+  name: string
+  avatarUrl: string | null
+  topic: string | null
+  childRoomIds: string[]
+  childSpaceIds: string[]
+}
+
 export interface MatrixRoom {
   roomId: string
   name: string
@@ -90,6 +99,9 @@ export interface MatrixMessage {
   readBy: ReadReceipt[]
   status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
   isStateEvent?: boolean
+  threadRootId: string | null
+  threadCount: number
+  threadLatestReply: string | null
 }
 
 interface ChatState {
@@ -141,6 +153,16 @@ interface ChatState {
   banMember: (roomId: string, userId: string, reason?: string) => Promise<void>
   unbanMember: (roomId: string, userId: string) => Promise<void>
   setPowerLevel: (roomId: string, userId: string, level: number) => Promise<void>
+  threadMessages: MatrixMessage[]
+  isLoadingThread: boolean
+  activeThreadId: string | null
+  setActiveThread: (eventId: string | null) => void
+  loadThread: (roomId: string, threadRootId: string) => Promise<void>
+  sendThreadReply: (roomId: string, threadRootId: string, content: string) => void
+  spaces: MatrixSpace[]
+  activeSpaceId: string | null
+  loadSpaces: () => void
+  setActiveSpace: (spaceId: string | null) => void
   ignoredUsers: string[]
   loadIgnoredUsers: () => void
   ignoreUser: (userId: string) => Promise<void>
@@ -358,6 +380,9 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
       readBy: [],
       status: 'sent',
       isStateEvent: true,
+      threadRootId: null,
+      threadCount: 0,
+      threadLatestReply: null,
     }
   }
 
@@ -410,6 +435,41 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
         senderId: replySender,
         senderName: cleanDisplayName(replyMember?.name || replySender),
         content: replyBody,
+      }
+    }
+  }
+
+  // Extract thread info
+  let threadRootId: string | null = null
+  if (relatesTo?.rel_type === 'm.thread') {
+    threadRootId = relatesTo.event_id || null
+  }
+
+  // For thread root messages, count thread replies by scanning the timeline
+  let threadCount = 0
+  let threadLatestReply: string | null = null
+  try {
+    const thread = (room as any).getThread?.(event.getId()!)
+    if (thread) {
+      threadCount = thread.length || 0
+      const lastReply = thread.lastReply?.()
+      if (lastReply) {
+        const lastContent = (getClearContent(lastReply) as Record<string, any>) || lastReply.getContent()
+        threadLatestReply = lastContent?.body || null
+      }
+    }
+  } catch {
+    // getThread may not exist in this SDK version — fall back to timeline scan
+  }
+  if (threadCount === 0) {
+    const eventId = event.getId()!
+    const timeline = room.getLiveTimeline().getEvents()
+    for (const e of timeline) {
+      const rel = e.getContent()?.['m.relates_to'] || (getClearContent(e) as any)?.['m.relates_to']
+      if (rel?.rel_type === 'm.thread' && rel?.event_id === eventId) {
+        threadCount++
+        const lastContent = (getClearContent(e) as Record<string, any>) || e.getContent()
+        threadLatestReply = lastContent?.body || null
       }
     }
   }
@@ -534,6 +594,9 @@ function eventToMatrixMessage(event: MatrixEvent, room: Room): MatrixMessage | n
     encryptedFile,
     readBy,
     status,
+    threadRootId,
+    threadCount,
+    threadLatestReply,
   }
 }
 
@@ -545,6 +608,82 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoadingMessages: false,
   typingUsers: [],
   searchQuery: '',
+  threadMessages: [],
+  isLoadingThread: false,
+  activeThreadId: null,
+  spaces: [],
+  activeSpaceId: null,
+
+  setActiveThread: (eventId) => {
+    set({ activeThreadId: eventId, threadMessages: [] })
+  },
+
+  loadThread: async (roomId, threadRootId) => {
+    const client = getMatrixClient()
+    if (!client) return
+    set({ isLoadingThread: true })
+
+    try {
+      const room = client.getRoom(roomId)
+      if (!room) return
+
+      // Try SDK thread API first
+      let threadEvents: MatrixEvent[] = []
+      try {
+        const thread = (room as any).getThread?.(threadRootId)
+        if (thread) {
+          threadEvents = thread.events || []
+        }
+      } catch {
+        // getThread may not exist in this SDK version
+      }
+
+      if (threadEvents.length === 0) {
+        // Fallback: scan timeline for messages with m.thread relation to this root
+        const timeline = room.getLiveTimeline().getEvents()
+        threadEvents = timeline.filter((e: MatrixEvent) => {
+          const rel = e.getContent()?.['m.relates_to'] || (getClearContent(e) as any)?.['m.relates_to']
+          return rel?.rel_type === 'm.thread' && rel?.event_id === threadRootId
+        })
+      }
+
+      // Include the root message first
+      const rootEvent = room.findEventById(threadRootId)
+      const allEvents = rootEvent
+        ? [rootEvent, ...threadEvents.filter((e: MatrixEvent) => e.getId() !== threadRootId)]
+        : threadEvents
+
+      const msgs = allEvents
+        .map((e: MatrixEvent) => eventToMatrixMessage(e, room))
+        .filter((m): m is MatrixMessage => m !== null)
+        .sort((a, b) => a.timestamp - b.timestamp)
+
+      set({ threadMessages: msgs, isLoadingThread: false })
+    } catch (err) {
+      console.error('Failed to load thread:', err)
+      set({ isLoadingThread: false })
+    }
+  },
+
+  sendThreadReply: (roomId, threadRootId, content) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    const msgContent: Record<string, unknown> = {
+      msgtype: 'm.text',
+      body: content,
+      'm.relates_to': {
+        rel_type: 'm.thread',
+        event_id: threadRootId,
+        is_falling_back: true,
+        'm.in_reply_to': {
+          event_id: threadRootId,
+        },
+      },
+    }
+
+    sendEvent(client, roomId, 'm.room.message', msgContent)
+  },
 
   loadRooms: () => {
     const client = getMatrixClient()
@@ -774,6 +913,68 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       })
     }
+
+    // Keep spaces in sync whenever rooms are loaded
+    get().loadSpaces()
+  },
+
+  loadSpaces: () => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    const allRooms = client.getRooms()
+    const spaces: MatrixSpace[] = []
+
+    for (const room of allRooms) {
+      if (room.getMyMembership() !== 'join') continue
+      // Check if room is a space by looking at creation event
+      const createEvent = room.currentState.getStateEvents('m.room.create', '')
+      const roomType = createEvent?.getContent()?.type
+      if (roomType !== 'm.space') continue
+
+      // Get child rooms/spaces from m.space.child state events
+      const childEvents = room.currentState.getStateEvents('m.space.child')
+      const childRoomIds: string[] = []
+      const childSpaceIds: string[] = []
+
+      if (childEvents && Array.isArray(childEvents)) {
+        for (const event of childEvents) {
+          const stateKey = event.getStateKey()
+          if (!stateKey) continue
+          const content = event.getContent()
+          // Empty content means the child was removed
+          if (!content || Object.keys(content).length === 0) continue
+
+          // Check if child is also a space
+          const childRoom = client.getRoom(stateKey)
+          if (childRoom) {
+            const childCreate = childRoom.currentState.getStateEvents('m.room.create', '')
+            if (childCreate?.getContent()?.type === 'm.space') {
+              childSpaceIds.push(stateKey)
+            } else {
+              childRoomIds.push(stateKey)
+            }
+          } else {
+            childRoomIds.push(stateKey)
+          }
+        }
+      }
+
+      spaces.push({
+        roomId: room.roomId,
+        name: room.name || 'Unnamed Space',
+        avatarUrl: getAvatarUrl(room.getMxcAvatarUrl()),
+        topic: room.currentState.getStateEvents('m.room.topic', '')?.getContent()?.topic || null,
+        childRoomIds,
+        childSpaceIds,
+      })
+    }
+
+    set({ spaces })
+  },
+
+  setActiveSpace: (spaceId) => {
+    set({ activeSpaceId: spaceId })
   },
 
   setActiveRoom: (room) => {
@@ -1668,126 +1869,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     get().refreshRoom(roomId)
   },
 
-  setRoomNotificationSetting: async (roomId: string, setting: 'all' | 'mentions' | 'mute') => {
-    const client = getMatrixClient()
-    if (!client) return
-
-    try {
-      // Clean up existing rules first
-      try { await (client as any).deletePushRule('global', 'override', roomId) } catch { /* may not exist */ }
-      try { await (client as any).deletePushRule('global', 'room', roomId) } catch { /* may not exist */ }
-
-      if (setting === 'mute') {
-        await (client as any).addPushRule('global', 'override', roomId, {
-          actions: ['dont_notify'],
-          conditions: [{ kind: 'event_match', key: 'room_id', pattern: roomId }],
-        })
-      } else if (setting === 'mentions') {
-        await (client as any).addPushRule('global', 'room', roomId, {
-          actions: ['dont_notify'],
-        })
-      }
-      // 'all' = default behavior, no rules needed (already deleted above)
-    } catch (err) {
-      console.error('Failed to set room notification setting:', err)
-      throw err
-    }
-  },
-
-  getRoomNotificationSetting: (roomId: string): 'all' | 'mentions' | 'mute' => {
-    const client = getMatrixClient()
-    if (!client) return 'all'
-
-    try {
-      const pushRules = (client as any).pushRules
-      if (!pushRules?.global) return 'all'
-
-      // Check override rules for mute
-      const overrideRules = pushRules.global.override || []
-      const overrideRule = overrideRules.find((r: any) => r.rule_id === roomId)
-      if (overrideRule?.enabled !== false) {
-        const actions = overrideRule?.actions || []
-        const isDontNotify = actions.length === 0 || actions.includes('dont_notify')
-        if (overrideRule && isDontNotify) return 'mute'
-      }
-
-      // Check room rules for mentions only
-      const roomRules = pushRules.global.room || []
-      const roomRule = roomRules.find((r: any) => r.rule_id === roomId)
-      if (roomRule?.enabled !== false) {
-        const actions = roomRule?.actions || []
-        const isDontNotify = actions.length === 0 || actions.includes('dont_notify')
-        if (roomRule && isDontNotify) return 'mentions'
-      }
-
-      return 'all'
-    } catch {
-      return 'all'
-    }
-  },
-
-  kickMember: async (roomId: string, userId: string, reason?: string) => {
-    const client = getMatrixClient()
-    if (!client) return
-
-    try {
-      await (client as any).kick(roomId, userId, reason)
-      get().loadRooms()
-      get().refreshRoom(roomId)
-    } catch (err) {
-      console.error('Failed to kick member:', err)
-      throw err
-    }
-  },
-
-  banMember: async (roomId: string, userId: string, reason?: string) => {
-    const client = getMatrixClient()
-    if (!client) return
-
-    try {
-      await (client as any).ban(roomId, userId, reason)
-      get().loadRooms()
-      get().refreshRoom(roomId)
-    } catch (err) {
-      console.error('Failed to ban member:', err)
-      throw err
-    }
-  },
-
-  unbanMember: async (roomId: string, userId: string) => {
-    const client = getMatrixClient()
-    if (!client) return
-
-    try {
-      await (client as any).unban(roomId, userId)
-      get().loadRooms()
-      get().refreshRoom(roomId)
-    } catch (err) {
-      console.error('Failed to unban member:', err)
-      throw err
-    }
-  },
-
-  setPowerLevel: async (roomId: string, userId: string, level: number) => {
-    const client = getMatrixClient()
-    if (!client) return
-
-    try {
-      const room = client.getRoom(roomId)
-      if (!room) return
-      const plEvent = room.currentState.getStateEvents('m.room.power_levels', '')
-      if (!plEvent) return
-      const content = { ...plEvent.getContent() }
-      content.users = { ...(content.users as Record<string, number> || {}), [userId]: level }
-      await sendStateEvent(client, roomId, 'm.room.power_levels', content as Record<string, unknown>, '')
-      get().loadRooms()
-      get().refreshRoom(roomId)
-    } catch (err) {
-      console.error('Failed to set power level:', err)
-      throw err
-    }
-  },
-
   resetState: () => {
     clearProfileCache()
     set({
@@ -1799,6 +1880,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       typingUsers: [],
       searchQuery: '',
       ignoredUsers: [],
+      threadMessages: [],
+      isLoadingThread: false,
+      activeThreadId: null,
+      spaces: [],
+      activeSpaceId: null,
     })
   },
 }))

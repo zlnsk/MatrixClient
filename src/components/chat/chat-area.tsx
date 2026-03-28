@@ -8,6 +8,7 @@ import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
 import { ChatHeader } from './chat-header'
 import { RoomInfoPanel } from './room-info-panel'
+import { ThreadPanel } from './thread-panel'
 import {
   Search,
   X,
@@ -37,6 +38,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   const [externalLinkConfirm, setExternalLinkConfirm] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [newMessageCount, setNewMessageCount] = useState(0)
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
+  const [readMarkerEventId, setReadMarkerEventId] = useState<string | null>(null)
 
   // Intercept external link clicks in message content
   const handleContentClick = useCallback((e: React.MouseEvent) => {
@@ -104,14 +107,25 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     return () => el.removeEventListener('scroll', onScroll)
   }, [isAtBottom])
 
-  // On room switch: reset sticky, close details panel
+  // On room switch: reset sticky, close details panel, set read marker
   useEffect(() => {
     if (activeRoom && activeRoom.roomId !== prevRoomIdRef.current) {
       prevRoomIdRef.current = activeRoom.roomId
       stickyRef.current = true
       setShowRoomInfo(false)
+      // Set read marker at the boundary between read and unread messages
+      if (activeRoom.unreadCount > 0 && messages.length > 0) {
+        const unreadIdx = Math.max(0, messages.length - activeRoom.unreadCount)
+        if (unreadIdx > 0 && unreadIdx < messages.length) {
+          setReadMarkerEventId(messages[unreadIdx - 1].eventId)
+        } else {
+          setReadMarkerEventId(null)
+        }
+      } else {
+        setReadMarkerEventId(null)
+      }
     }
-  }, [activeRoom])
+  }, [activeRoom]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll when messages change
   useEffect(() => {
@@ -187,6 +201,8 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
 
   const filteredMessages = useMemo(() => {
     let msgs = messages
+    // Hide messages that belong to a thread (they appear in the thread panel)
+    msgs = msgs.filter(m => !m.threadRootId)
     // Filter out messages from ignored users
     if (ignoredUsers.length > 0) {
       const ignoredSet = new Set(ignoredUsers)
@@ -357,9 +373,17 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                   {group.messages.map((msg, idx) => {
                     const prevMsg = idx > 0 ? group.messages[idx - 1] : null
                     const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId
+                    const showReadMarker = readMarkerEventId && prevMsg?.eventId === readMarkerEventId
                     return (
+                      <div key={msg.eventId}>
+                        {showReadMarker && (
+                          <div className="my-2 flex items-center gap-3 px-4">
+                            <div className="h-px flex-1 bg-m3-primary" />
+                            <span className="text-xs font-medium text-m3-primary">New messages</span>
+                            <div className="h-px flex-1 bg-m3-primary" />
+                          </div>
+                        )}
                       <MessageBubble
-                        key={msg.eventId}
                         message={msg}
                         isOwn={msg.senderId === user.userId}
                         showAvatar={showAvatar}
@@ -367,7 +391,9 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
                         roomId={activeRoom.roomId}
                         isPinned={pinnedEventIds.includes(msg.eventId)}
                         searchHighlight={chatSearch}
+                        onOpenThread={setActiveThreadId}
                       />
+                      </div>
                     )
                   })}
                 </div>
@@ -476,6 +502,15 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
         onCancelReply={() => setReplyTo(null)}
         roomId={activeRoom.roomId}
       />
+
+      {/* Thread Panel */}
+      {activeThreadId && (
+        <ThreadPanel
+          roomId={activeRoom.roomId}
+          threadRootId={activeThreadId}
+          onClose={() => setActiveThreadId(null)}
+        />
+      )}
 
       {/* Room Info Panel */}
       {showRoomInfo && (
