@@ -77,7 +77,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     if (!room) return []
     const pinEvent = room.currentState.getStateEvents('m.room.pinned_events', '')
     return (pinEvent?.getContent()?.pinned || []) as string[]
-  }, [activeRoom, messages])
+  }, [activeRoom?.roomId])
 
   const prevRoomIdRef = useRef<string | null>(null)
   const stickyRef = useRef(true)

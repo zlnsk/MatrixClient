@@ -93,7 +93,7 @@ export function LinkPreview({ url }: LinkPreviewProps) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-2 block overflow-hidden rounded-xl border border-m3-outline-variant/40 bg-m3-surface-container-low/50 transition-colors hover:bg-m3-surface-container dark:border-m3-outline-variant/40 dark:bg-m3-surface-container-high/40 dark:hover:bg-m3-surface-container-high"
+      className="mt-2 block overflow-hidden rounded-xl border border-m3-outline-variant/30 bg-m3-surface-container-low/50 shadow-sm transition-all duration-150 hover:shadow-md hover:bg-m3-surface-container dark:border-m3-outline-variant/30 dark:bg-m3-surface-container-high/40 dark:hover:bg-m3-surface-container-high dark:shadow-none dark:hover:shadow-none"
     >
       {preview.imageUrl && (
         <img
