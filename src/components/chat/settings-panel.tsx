@@ -60,6 +60,8 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
   const [generateKeyPassword, setGenerateKeyPassword] = useState('')
   const [generateKeyError, setGenerateKeyError] = useState<string | null>(null)
   const [keyCopied, setKeyCopied] = useState(false)
+  const [showAccessToken, setShowAccessToken] = useState(false)
+  const [tokenCopied, setTokenCopied] = useState(false)
   const [serverLatency, setServerLatency] = useState<number | null>(null)
   const [serverStatus, setServerStatus] = useState<'connected' | 'error' | 'checking'>('checking')
   const [clientVersions, setClientVersions] = useState<string[]>([])
@@ -441,6 +443,46 @@ export function SettingsPanel({ onClose, initialSection = 'main' }: SettingsPane
                     {isRestoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Key className="h-3.5 w-3.5" />}
                     {isRestoring ? 'Restoring keys...' : 'Restore from Recovery Key'}
                   </button>
+                </div>
+              </div>
+
+              {/* Access Token */}
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <Key className="h-5 w-5 text-m3-on-surface-variant dark:text-m3-outline" />
+                  <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">Access Token</p>
+                </div>
+                <div className="ml-8">
+                  {showAccessToken ? (
+                    <div className="space-y-2">
+                      <code className="block break-all rounded-lg bg-m3-surface-container dark:bg-m3-surface-container-high p-3 text-xs text-m3-on-surface font-mono select-all">
+                        {(() => { try { return JSON.parse(localStorage.getItem('matrix_session') || '{}').accessToken || 'Not found' } catch { return 'Not found' } })()}
+                      </code>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            try {
+                              const token = JSON.parse(localStorage.getItem('matrix_session') || '{}').accessToken
+                              if (token) { navigator.clipboard.writeText(token); setTokenCopied(true); setTimeout(() => setTokenCopied(false), 2000) }
+                            } catch {}
+                          }}
+                          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-m3-surface-container dark:bg-m3-surface-container-high text-m3-on-surface hover:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest transition-colors"
+                        >
+                          {tokenCopied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                          {tokenCopied ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setShowAccessToken(true); setTimeout(() => setShowAccessToken(false), 5000) }}
+                      className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-m3-surface-container dark:bg-m3-surface-container-high text-m3-on-surface hover:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest transition-colors"
+                    >
+                      <Shield className="h-3.5 w-3.5" />
+                      Reveal Access Token (5s)
+                    </button>
+                  )}
+                  <p className="text-xs text-m3-on-surface-variant mt-2">Do not share this token. It grants full access to your account.</p>
                 </div>
               </div>
 
