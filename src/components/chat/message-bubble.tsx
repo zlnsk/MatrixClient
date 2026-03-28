@@ -501,6 +501,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               }}
               onDelete={handleDelete}
               onClose={() => { setShowContextMenu(false); setShowActions(false) }}
+              onOpenThread={onOpenThread ? () => { onOpenThread(message.eventId); setShowContextMenu(false); setShowActions(false) } : undefined}
               portalRef={contextMenuPortalRef}
             />
           )}
@@ -535,6 +536,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
               }}
               onDelete={handleDelete}
               onForward={handleForward}
+              onOpenThread={onOpenThread ? () => { onOpenThread(message.eventId) } : undefined}
               onClose={closeTouchMenu}
             />
           )}
