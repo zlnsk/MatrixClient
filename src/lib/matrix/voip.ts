@@ -379,6 +379,7 @@ export async function toggleScreenSharing(): Promise<void> {
 
 function endCallCleanup(): void {
   clearDurationInterval()
+  if (currentCall) { currentCall.removeAllListeners() }
   const store = useCallStore.getState()
   store.setScreenSharing(false)
   store.setStatus('ended')

@@ -124,6 +124,15 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
     }
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+        longPressTimer.current = null
+      }
+    }
+  }, [])
+
   // Long-press handlers for touch devices
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchMoved.current = false
@@ -595,6 +604,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
     prevProps.showAvatar === nextProps.showAvatar &&
     prevProps.roomId === nextProps.roomId &&
     prevProps.isPinned === nextProps.isPinned &&
-    prevMsg.threadCount === nextMsg.threadCount
+    prevMsg.threadCount === nextMsg.threadCount &&
+    prevProps.searchHighlight === nextProps.searchHighlight
   )
 })

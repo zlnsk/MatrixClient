@@ -54,9 +54,9 @@ function PipOverlay() {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream
-    }
+    const el = remoteVideoRef.current
+    if (el) el.srcObject = remoteStream ?? null
+    return () => { if (el) el.srcObject = null }
   }, [remoteStream])
 
   const isVideo = callInfo?.isVideo
@@ -218,15 +218,15 @@ export function CallOverlay() {
 
   // Attach streams to video elements
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream
-    }
+    const el = localVideoRef.current
+    if (el) el.srcObject = localStream ?? null
+    return () => { if (el) el.srcObject = null }
   }, [localStream])
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream
-    }
+    const el = remoteVideoRef.current
+    if (el) el.srcObject = remoteStream ?? null
+    return () => { if (el) el.srcObject = null }
   }, [remoteStream])
 
   // Handle fullscreen changes

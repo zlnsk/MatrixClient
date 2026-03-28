@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 function isPrivateHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '')
   return (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '0.0.0.0' ||
-    hostname === '[::1]' ||
-    hostname.startsWith('10.') ||
-    hostname.startsWith('192.168.') ||
-    (hostname.startsWith('172.') && (() => { const parts = hostname.split('.'); if (parts.length < 2) return false; const b = parseInt(parts[1], 10); return !isNaN(b) && b >= 16 && b <= 31 })()) ||
-    hostname.startsWith('169.254.') ||
-    hostname.endsWith('.local') ||
-    hostname.endsWith('.internal')
+    h === 'localhost' ||
+    h === '127.0.0.1' ||
+    h === '0.0.0.0' ||
+    h === '::1' ||
+    h === '[::1]' ||
+    h === '::' ||
+    h.startsWith('10.') ||
+    h.startsWith('192.168.') ||
+    (h.startsWith('172.') && (() => { const parts = h.split('.'); if (parts.length < 2) return false; const b = parseInt(parts[1], 10); return !isNaN(b) && b >= 16 && b <= 31 })()) ||
+    h.startsWith('169.254.') ||
+    h.startsWith('0.') ||
+    h.startsWith('fc00:') || h.startsWith('fd') ||
+    h.startsWith('fe80:') ||
+    h.startsWith('::ffff:10.') || h.startsWith('::ffff:192.168.') || h.startsWith('::ffff:127.') ||
+    h.endsWith('.local') ||
+    h.endsWith('.internal') ||
+    /^\d+$/.test(h)
   )
 }
 
