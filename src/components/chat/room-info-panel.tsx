@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   ArrowLeft,
   Lock,
@@ -94,6 +94,20 @@ export function RoomInfoPanel({
   const myPowerLevel = activeRoom.powerLevels[currentUserId || ''] ?? 0
   const defaultPowerLevel = 0
 
+  const mediaMessages = useMemo(() =>
+    messages.filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video'))
+      .slice(-30)
+      .reverse(),
+    [messages]
+  )
+
+  const fileMessages = useMemo(() =>
+    messages.filter(m => m.mediaUrl && m.type === 'm.file')
+      .slice(-10)
+      .reverse(),
+    [messages]
+  )
+
   const getPowerLevel = (userId: string) => activeRoom.powerLevels[userId] ?? defaultPowerLevel
   const getRoleBadge = (userId: string) => {
     const pl = getPowerLevel(userId)
@@ -112,9 +126,9 @@ export function RoomInfoPanel({
   }
 
   return (
-    <div className="absolute inset-0 z-40 flex flex-col bg-white dark:bg-m3-surface">
+    <div className="absolute inset-0 z-40 flex flex-col bg-m3-surface-container-lowest dark:bg-m3-surface">
       {/* Header with back arrow */}
-      <div className="flex items-center gap-3 border-b border-m3-outline-variant bg-white px-2 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4">
+      <div className="flex items-center gap-3 border-b border-m3-outline-variant bg-m3-surface-container-lowest px-2 py-2 dark:border-m3-outline-variant dark:bg-m3-surface-container md:px-4">
         <button
           onClick={onClose}
           className="rounded-full p-2 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
@@ -378,7 +392,7 @@ export function RoomInfoPanel({
                           <MoreVertical className="h-4 w-4" />
                         </button>
                         {showMenu && (
-                          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-m3-outline-variant bg-white py-1 shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+                          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1 shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
                             <button
                               onClick={async () => { isIgnored ? await onUnignoreUser(member.userId) : await onIgnoreUser(member.userId); setMemberMenu(null) }}
                               className="flex w-full items-center gap-3 px-4 py-2 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
@@ -449,28 +463,20 @@ export function RoomInfoPanel({
               <p className="text-sm font-medium text-m3-on-surface dark:text-m3-on-surface">Shared media</p>
             </div>
             <div className="grid grid-cols-5 gap-0.5 overflow-hidden rounded-xl">
-              {messages
-                .filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video'))
-                .slice(-30)
-                .reverse()
-                .map(m => (
+              {mediaMessages.map(m => (
                   <div key={m.eventId} className="aspect-square overflow-hidden bg-m3-surface-container dark:bg-m3-surface-container-high">
                     <MediaThumbnail message={m} />
                   </div>
                 ))}
-              {messages.filter(m => m.mediaUrl && (m.type === 'm.image' || m.type === 'm.video')).length === 0 && (
+              {mediaMessages.length === 0 && (
                 <p className="col-span-5 py-6 text-center text-sm text-m3-outline dark:text-m3-on-surface-variant">No shared media yet</p>
               )}
             </div>
 
-            {messages.filter(m => m.mediaUrl && m.type === 'm.file').length > 0 && (
+            {fileMessages.length > 0 && (
               <div className="mt-4 space-y-1">
                 <p className="mb-2 text-xs font-medium text-m3-on-surface-variant dark:text-m3-outline">Files</p>
-                {messages
-                  .filter(m => m.mediaUrl && m.type === 'm.file')
-                  .slice(-10)
-                  .reverse()
-                  .map(m => (
+                {fileMessages.map(m => (
                     <a key={m.eventId} href={m.mediaUrl!} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
                     >

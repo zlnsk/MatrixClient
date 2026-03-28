@@ -209,7 +209,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
   }, [forwardMessage, roomId, message.eventId])
 
   // Status icon for own messages
-  const StatusIcon = () => {
+  const statusIcon = useMemo(() => {
     if (!isOwn) return null
     const iconClass = 'h-3.5 w-3.5'
     switch (message.status) {
@@ -226,7 +226,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
       default:
         return <Send className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant`} />
     }
-  }
+  }, [isOwn, message.status])
 
   if (message.isStateEvent) {
     return (
@@ -552,7 +552,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 (edited)
               </span>
             )}
-            <StatusIcon />
+            {statusIcon}
             {/* Reactions — inline next to timestamp */}
             <MessageReactions message={message} isOwn={isOwn} onReaction={handleReaction} />
           </div>
