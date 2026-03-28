@@ -9,6 +9,7 @@ import {
   toggleAudioMute,
   toggleVideoMute,
   toggleHdQuality,
+  toggleScreenSharing,
 } from '@/lib/matrix/voip'
 import {
   Phone,
@@ -22,6 +23,7 @@ import {
   Minimize2,
   Maximize2,
   Sparkles,
+  Monitor,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 
@@ -205,6 +207,7 @@ export function CallOverlay() {
     isFullscreen,
     isMinimized,
     hdQuality,
+    screenSharing,
     setIsFullscreen,
     setIsMinimized,
   } = useCallStore()
@@ -400,6 +403,21 @@ export function CallOverlay() {
                     title={hdQuality ? 'Switch to standard quality' : 'Switch to HD quality'}
                   >
                     <Sparkles className="h-6 w-6" />
+                  </button>
+                )}
+
+                {/* Screen share toggle */}
+                {isConnected && (
+                  <button
+                    onClick={toggleScreenSharing}
+                    className={`flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 ${
+                      screenSharing
+                        ? 'bg-m3-primary text-white'
+                        : 'bg-white/20 text-white hover:bg-white/30'
+                    }`}
+                    title={screenSharing ? 'Stop sharing screen' : 'Share screen'}
+                  >
+                    <Monitor className="h-6 w-6" />
                   </button>
                 )}
 

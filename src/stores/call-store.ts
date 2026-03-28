@@ -39,6 +39,9 @@ interface CallState {
   // HD quality mode
   hdQuality: boolean
 
+  // Screen sharing
+  screenSharing: boolean
+
   // Actions
   setCallInfo: (info: CallInfo | null) => void
   setStatus: (status: CallStatus) => void
@@ -50,6 +53,7 @@ interface CallState {
   setIsFullscreen: (fullscreen: boolean) => void
   setIsMinimized: (minimized: boolean) => void
   setHdQuality: (hd: boolean) => void
+  setScreenSharing: (sharing: boolean) => void
   reset: () => void
 }
 
@@ -64,6 +68,7 @@ const initialState = {
   isFullscreen: false,
   isMinimized: false,
   hdQuality: false,
+  screenSharing: false,
 }
 
 export const useCallStore = create<CallState>((set) => ({
@@ -79,5 +84,6 @@ export const useCallStore = create<CallState>((set) => ({
   setIsFullscreen: (fullscreen) => set({ isFullscreen: fullscreen }),
   setIsMinimized: (minimized) => set({ isMinimized: minimized }),
   setHdQuality: (hd) => set({ hdQuality: hd }),
+  setScreenSharing: (sharing) => set({ screenSharing: sharing }),
   reset: () => set(initialState),
 }))

@@ -281,9 +281,106 @@ export async function toggleHdQuality(): Promise<void> {
   }
 }
 
+/**
+ * Toggle screen sharing on the current call.
+ * Replaces the local video track with screen capture, or reverts to camera.
+ */
+export async function toggleScreenSharing(): Promise<void> {
+  if (!currentCall) return
+
+  const store = useCallStore.getState()
+  const isCurrentlySharing = store.screenSharing
+
+  if (isCurrentlySharing) {
+    // Stop screen sharing — revert to camera
+    try {
+      const cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: store.callInfo?.isVideo ? { width: { ideal: 640 }, height: { ideal: 480 } } : false,
+        audio: false,
+      })
+
+      const pc = getPeerConnection(currentCall)
+      if (pc) {
+        const videoSender = pc.getSenders().find(s => s.track?.kind === 'video')
+        if (videoSender && cameraStream.getVideoTracks()[0]) {
+          await videoSender.replaceTrack(cameraStream.getVideoTracks()[0])
+        }
+      }
+
+      // Update local stream
+      const localFeed = currentCall.localUsermediaFeed
+      if (localFeed?.stream) {
+        const oldTrack = localFeed.stream.getVideoTracks()[0]
+        if (oldTrack) {
+          localFeed.stream.removeTrack(oldTrack)
+          oldTrack.stop()
+        }
+        const newTrack = cameraStream.getVideoTracks()[0]
+        if (newTrack) {
+          localFeed.stream.addTrack(newTrack)
+        }
+      }
+
+      store.setScreenSharing(false)
+      updateStreamsFromCall(currentCall)
+    } catch (err) {
+      console.error('Failed to revert to camera:', err)
+    }
+  } else {
+    // Start screen sharing
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
+        },
+        audio: false,
+      })
+
+      const screenTrack = screenStream.getVideoTracks()[0]
+      if (!screenTrack) return
+
+      // When user stops sharing via browser UI
+      screenTrack.onended = () => {
+        toggleScreenSharing() // Revert to camera
+      }
+
+      const pc = getPeerConnection(currentCall)
+      if (pc) {
+        const videoSender = pc.getSenders().find(s => s.track?.kind === 'video')
+        if (videoSender) {
+          await videoSender.replaceTrack(screenTrack)
+        } else {
+          // No video sender exists (audio-only call) — add the screen track
+          pc.addTrack(screenTrack, screenStream)
+        }
+      }
+
+      // Update local stream
+      const localFeed = currentCall.localUsermediaFeed
+      if (localFeed?.stream) {
+        const oldTrack = localFeed.stream.getVideoTracks()[0]
+        if (oldTrack) {
+          localFeed.stream.removeTrack(oldTrack)
+          oldTrack.stop()
+        }
+        localFeed.stream.addTrack(screenTrack)
+      }
+
+      store.setScreenSharing(true)
+      updateStreamsFromCall(currentCall)
+    } catch (err) {
+      // User cancelled the screen picker — not an error
+      console.log('Screen sharing cancelled or failed:', err)
+    }
+  }
+}
+
 function endCallCleanup(): void {
   clearDurationInterval()
   const store = useCallStore.getState()
+  store.setScreenSharing(false)
   store.setStatus('ended')
 
   // Brief delay to show "ended" state, then reset
@@ -353,6 +450,90 @@ export async function placeCall(roomId: string, isVideo: boolean): Promise<void>
   } catch (err) {
     console.error('Failed to place call:', err)
     endCallCleanup()
+  }
+}
+
+/**
+ * Toggle screen sharing on the current call.
+ * Replaces the local video track with screen capture, or reverts to camera.
+ */
+export async function toggleScreenSharing(): Promise<void> {
+  if (!currentCall) return
+
+  const store = useCallStore.getState()
+  const isCurrentlySharing = store.screenSharing
+
+  if (isCurrentlySharing) {
+    // Stop screen sharing — revert to camera
+    try {
+      const cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: store.callInfo?.isVideo ? { width: { ideal: 640 }, height: { ideal: 480 } } : false,
+        audio: false,
+      })
+
+      const pc = getPeerConnection(currentCall)
+      if (pc) {
+        const videoSender = pc.getSenders().find(s => s.track?.kind === 'video')
+        if (videoSender && cameraStream.getVideoTracks()[0]) {
+          await videoSender.replaceTrack(cameraStream.getVideoTracks()[0])
+        }
+      }
+
+      const localFeed = currentCall.localUsermediaFeed
+      if (localFeed?.stream) {
+        const oldTrack = localFeed.stream.getVideoTracks()[0]
+        if (oldTrack) {
+          localFeed.stream.removeTrack(oldTrack)
+          oldTrack.stop()
+        }
+        const newTrack = cameraStream.getVideoTracks()[0]
+        if (newTrack) localFeed.stream.addTrack(newTrack)
+      }
+
+      store.setScreenSharing(false)
+      updateStreamsFromCall(currentCall)
+    } catch (err) {
+      console.error('Failed to revert to camera:', err)
+    }
+  } else {
+    // Start screen sharing
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+        audio: false,
+      })
+
+      const screenTrack = screenStream.getVideoTracks()[0]
+      if (!screenTrack) return
+
+      // When user stops sharing via browser UI
+      screenTrack.onended = () => { toggleScreenSharing() }
+
+      const pc = getPeerConnection(currentCall)
+      if (pc) {
+        const videoSender = pc.getSenders().find(s => s.track?.kind === 'video')
+        if (videoSender) {
+          await videoSender.replaceTrack(screenTrack)
+        } else {
+          pc.addTrack(screenTrack, screenStream)
+        }
+      }
+
+      const localFeed = currentCall.localUsermediaFeed
+      if (localFeed?.stream) {
+        const oldTrack = localFeed.stream.getVideoTracks()[0]
+        if (oldTrack) {
+          localFeed.stream.removeTrack(oldTrack)
+          oldTrack.stop()
+        }
+        localFeed.stream.addTrack(screenTrack)
+      }
+
+      store.setScreenSharing(true)
+      updateStreamsFromCall(currentCall)
+    } catch (err) {
+      console.log('Screen sharing cancelled or failed:', err)
+    }
   }
 }
 

@@ -17,9 +17,12 @@ import {
   Image as ImageIcon,
   FileText,
   LogOut,
+  Ban,
+  MoreVertical,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { MediaThumbnail } from './media-thumbnail'
+import { useAuthStore } from '@/stores/auth-store'
 import type { MatrixMessage, MatrixRoom } from '@/stores/chat-store'
 
 interface RoomInfoPanelProps {
@@ -33,6 +36,14 @@ interface RoomInfoPanelProps {
   onInviteMember: (roomId: string, userId: string) => Promise<void>
   onEnableEncryption: (roomId: string) => Promise<void>
   onLeaveRoom: (roomId: string) => Promise<void>
+  ignoredUsers: string[]
+  onIgnoreUser: (userId: string) => Promise<void>
+  onUnignoreUser: (userId: string) => Promise<void>
+  notificationSetting: 'all' | 'mentions' | 'mute'
+  onSetNotificationSetting: (roomId: string, setting: 'all' | 'mentions' | 'mute') => Promise<void>
+  onKickMember: (roomId: string, userId: string, reason?: string) => Promise<void>
+  onBanMember: (roomId: string, userId: string, reason?: string) => Promise<void>
+  onSetPowerLevel: (roomId: string, userId: string, level: number) => Promise<void>
 }
 
 export function RoomInfoPanel({
@@ -46,7 +57,16 @@ export function RoomInfoPanel({
   onInviteMember,
   onEnableEncryption,
   onLeaveRoom,
+  ignoredUsers,
+  onIgnoreUser,
+  onUnignoreUser,
+  notificationSetting,
+  onSetNotificationSetting,
+  onKickMember,
+  onBanMember,
+  onSetPowerLevel,
 }: RoomInfoPanelProps) {
+  const currentUserId = useAuthStore(s => s.user?.userId)
   const [editingName, setEditingName] = useState(false)
   const [editingTopic, setEditingTopic] = useState(false)
   const [nameInput, setNameInput] = useState('')
@@ -56,7 +76,18 @@ export function RoomInfoPanel({
   const [savingName, setSavingName] = useState(false)
   const [savingTopic, setSavingTopic] = useState(false)
   const [inviting, setInviting] = useState(false)
-  const [notifSetting, setNotifSetting] = useState<'all' | 'mentions' | 'mute'>('all')
+  const [memberMenu, setMemberMenu] = useState<string | null>(null)
+
+  const myPowerLevel = activeRoom.powerLevels[currentUserId || ''] ?? 0
+  const defaultPowerLevel = 0
+
+  const getPowerLevel = (userId: string) => activeRoom.powerLevels[userId] ?? defaultPowerLevel
+  const getRoleBadge = (userId: string) => {
+    const pl = getPowerLevel(userId)
+    if (pl >= 100) return 'Admin'
+    if (pl >= 50) return 'Mod'
+    return null
+  }
 
   const handleInvite = async () => {
     const matrixIdRegex = /^@[a-zA-Z0-9._=\-/+]+:[a-zA-Z0-9.-]+$/
@@ -210,12 +241,12 @@ export function RoomInfoPanel({
           )}
           <div className="flex flex-col items-center gap-1">
             <button
-              onClick={() => setNotifSetting(notifSetting === 'mute' ? 'all' : 'mute')}
+              onClick={() => onSetNotificationSetting(activeRoom.roomId, notificationSetting === 'mute' ? 'all' : 'mute')}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-m3-surface-container transition-colors hover:bg-m3-surface-container-high dark:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest"
             >
-              {notifSetting === 'mute' ? <BellOff className="h-5 w-5 text-m3-error" /> : <Bell className="h-5 w-5 text-m3-on-surface-variant" />}
+              {notificationSetting === 'mute' ? <BellOff className="h-5 w-5 text-m3-error" /> : <Bell className="h-5 w-5 text-m3-on-surface-variant" />}
             </button>
-            <span className="text-xs text-m3-on-surface-variant">{notifSetting === 'mute' ? 'Muted' : 'Notifications'}</span>
+            <span className="text-xs text-m3-on-surface-variant">{notificationSetting === 'mute' ? 'Muted' : 'Notifications'}</span>
           </div>
         </div>
 
@@ -243,9 +274,9 @@ export function RoomInfoPanel({
               {(['all', 'mentions', 'mute'] as const).map(setting => (
                 <button
                   key={setting}
-                  onClick={() => setNotifSetting(setting)}
+                  onClick={() => onSetNotificationSetting(activeRoom.roomId, setting)}
                   className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
-                    notifSetting === setting
+                    notificationSetting === setting
                       ? setting === 'mute'
                         ? 'bg-m3-error-container text-m3-error dark:bg-m3-error-container/30'
                         : 'bg-m3-primary-container text-m3-on-primary-container dark:bg-m3-primary-container/30 dark:text-m3-primary'
@@ -295,20 +326,106 @@ export function RoomInfoPanel({
               </p>
             </div>
             <div className="space-y-1">
-              {activeRoom.members.map(member => (
-                <div key={member.userId} className="flex items-center gap-3 rounded-full px-3 py-2 transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
-                  <Avatar
-                    src={member.avatarUrl}
-                    name={member.displayName}
-                    size="sm"
-                    status={member.presence === 'online' ? 'online' : member.presence === 'unavailable' ? 'away' : null}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-m3-on-surface dark:text-m3-on-surface">{member.displayName}</p>
-                    <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">{member.userId}</p>
+              {activeRoom.members.map(member => {
+                const isIgnored = ignoredUsers.includes(member.userId)
+                const isSelf = member.userId === currentUserId
+                const roleBadge = getRoleBadge(member.userId)
+                const canModerate = !isSelf && myPowerLevel > getPowerLevel(member.userId)
+                const showMenu = memberMenu === member.userId
+                return (
+                  <div key={member.userId} className="relative flex items-center gap-3 rounded-full px-3 py-2 transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high">
+                    <Avatar
+                      src={member.avatarUrl}
+                      name={member.displayName}
+                      size="sm"
+                      status={member.presence === 'online' ? 'online' : member.presence === 'unavailable' ? 'away' : null}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-sm text-m3-on-surface dark:text-m3-on-surface">{member.displayName}</p>
+                        {roleBadge && (
+                          <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            roleBadge === 'Admin'
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                          }`}>
+                            {roleBadge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="truncate text-xs text-m3-on-surface-variant dark:text-m3-outline">{member.userId}</p>
+                    </div>
+                    {!isSelf && (
+                      <div className="relative flex-shrink-0">
+                        <button
+                          onClick={() => setMemberMenu(showMenu ? null : member.userId)}
+                          className="rounded-full p-1.5 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high dark:hover:bg-m3-surface-container-highest"
+                          title="Member actions"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        {showMenu && (
+                          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-m3-outline-variant bg-white py-1 shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+                            <button
+                              onClick={async () => { isIgnored ? await onUnignoreUser(member.userId) : await onIgnoreUser(member.userId); setMemberMenu(null) }}
+                              className="flex w-full items-center gap-3 px-4 py-2 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                            >
+                              <Ban className="h-4 w-4" />
+                              {isIgnored ? 'Unblock' : 'Block'}
+                            </button>
+                            {canModerate && myPowerLevel >= 100 && getPowerLevel(member.userId) < 100 && (
+                              <button
+                                onClick={async () => { await onSetPowerLevel(activeRoom.roomId, member.userId, 100); setMemberMenu(null) }}
+                                className="flex w-full items-center gap-3 px-4 py-2 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                              >
+                                <Shield className="h-4 w-4" />
+                                Make Admin
+                              </button>
+                            )}
+                            {canModerate && myPowerLevel >= 50 && getPowerLevel(member.userId) < 50 && (
+                              <button
+                                onClick={async () => { await onSetPowerLevel(activeRoom.roomId, member.userId, 50); setMemberMenu(null) }}
+                                className="flex w-full items-center gap-3 px-4 py-2 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                              >
+                                <Shield className="h-4 w-4" />
+                                Make Moderator
+                              </button>
+                            )}
+                            {canModerate && getPowerLevel(member.userId) > 0 && (
+                              <button
+                                onClick={async () => { await onSetPowerLevel(activeRoom.roomId, member.userId, 0); setMemberMenu(null) }}
+                                className="flex w-full items-center gap-3 px-4 py-2 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                              >
+                                <X className="h-4 w-4" />
+                                Remove role
+                              </button>
+                            )}
+                            {canModerate && (
+                              <>
+                                <div className="my-1 border-t border-m3-outline-variant dark:border-m3-outline-variant" />
+                                <button
+                                  onClick={async () => { if (confirm(`Remove ${member.displayName} from this room?`)) { await onKickMember(activeRoom.roomId, member.userId); setMemberMenu(null) } }}
+                                  className="flex w-full items-center gap-3 px-4 py-2 text-sm text-m3-error transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                                >
+                                  <LogOut className="h-4 w-4" />
+                                  Remove from room
+                                </button>
+                                <button
+                                  onClick={async () => { if (confirm(`Ban ${member.displayName} from this room?`)) { await onBanMember(activeRoom.roomId, member.userId); setMemberMenu(null) } }}
+                                  className="flex w-full items-center gap-3 px-4 py-2 text-sm text-m3-error transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
+                                >
+                                  <Ban className="h-4 w-4" />
+                                  Ban from room
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 

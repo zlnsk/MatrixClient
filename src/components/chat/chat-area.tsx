@@ -24,7 +24,8 @@ interface ChatAreaProps {
 
 export function ChatArea({ onBackClick }: ChatAreaProps) {
   const user = useAuthStore(s => s.user)
-  const { activeRoom, messages, isLoadingMessages, sendMessage, typingUsers, archiveRoom, unarchiveRoom, setActiveRoom, leaveRoom, setRoomName, setRoomTopic, inviteMember, enableEncryption } = useChatStore()
+  const { activeRoom, messages, isLoadingMessages, sendMessage, typingUsers, archiveRoom, unarchiveRoom, setActiveRoom, leaveRoom, setRoomName, setRoomTopic, inviteMember, enableEncryption, ignoreUser, unignoreUser, setRoomNotificationSetting, getRoomNotificationSetting, kickMember, banMember, setPowerLevel } = useChatStore()
+  const ignoredUsers = useChatStore(s => s.ignoredUsers)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [replyTo, setReplyTo] = useState<MatrixMessage | null>(null)
@@ -185,10 +186,17 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
   }
 
   const filteredMessages = useMemo(() => {
-    return chatSearch
-      ? messages.filter(m => m.content.toLowerCase().includes(chatSearch.toLowerCase()))
-      : messages
-  }, [messages, chatSearch])
+    let msgs = messages
+    // Filter out messages from ignored users
+    if (ignoredUsers.length > 0) {
+      const ignoredSet = new Set(ignoredUsers)
+      msgs = msgs.filter(m => !ignoredSet.has(m.senderId))
+    }
+    if (chatSearch) {
+      msgs = msgs.filter(m => m.content.toLowerCase().includes(chatSearch.toLowerCase()))
+    }
+    return msgs
+  }, [messages, chatSearch, ignoredUsers])
 
   const groupedMessages = useMemo(() => {
     const groups: { date: string; messages: MatrixMessage[] }[] = []
@@ -482,6 +490,14 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
           onInviteMember={inviteMember}
           onEnableEncryption={enableEncryption}
           onLeaveRoom={leaveRoom}
+          ignoredUsers={ignoredUsers}
+          onIgnoreUser={ignoreUser}
+          onUnignoreUser={unignoreUser}
+          notificationSetting={getRoomNotificationSetting(activeRoom.roomId)}
+          onSetNotificationSetting={setRoomNotificationSetting}
+          onKickMember={kickMember}
+          onBanMember={banMember}
+          onSetPowerLevel={setPowerLevel}
         />
       )}
     </div>

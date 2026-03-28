@@ -31,6 +31,92 @@ interface MessageInputProps {
   roomId: string
 }
 
+const EMOJI_MAP: Record<string, string> = {
+  // Smileys & Faces
+  smile: '😊', grin: '😀', grinning: '😃', smiley: '😄', laugh: '😆', sweat_smile: '😅',
+  rofl: '🤣', joy: '😂', slightly_smiling: '🙂', wink: '😉', blush: '😊', innocent: '😇',
+  heart_eyes: '😍', star_struck: '🤩', kissing: '😘', kissing_heart: '😘',
+  yum: '😋', stuck_out_tongue: '😛', stuck_out_tongue_winking: '😜', zany: '🤪',
+  stuck_out_tongue_closed_eyes: '😝', money_mouth: '🤑', hugs: '🤗', hand_over_mouth: '🤭',
+  shush: '🤫', thinking: '🤔', zipper_mouth: '🤐', raised_eyebrow: '🤨',
+  neutral: '😐', expressionless: '😑', no_mouth: '😶', smirk: '😏', unamused: '😒',
+  rolling_eyes: '🙄', grimace: '😬', exhale: '😮‍💨', lying: '🤥', relieved: '😌',
+  pensive: '😔', sleepy: '😪', drool: '🤤', sleeping: '😴', mask: '😷',
+  thermometer_face: '🤒', bandage_face: '🤕', nauseated: '🤢', vomit: '🤮',
+  hot: '🥵', cold: '🥶', woozy: '🥴', dizzy_face: '😵', exploding_head: '🤯',
+  cowboy: '🤠', partying: '🥳', smiling_tear: '🥲', sunglasses: '😎', nerd: '🤓',
+  monocle: '🧐', confused: '😕', worried: '😟', frown: '🙁', open_mouth: '😮',
+  hushed: '😯', astonished: '😲', flushed: '😳', pleading: '🥺', cry: '😢',
+  sob: '😭', scream: '😱', confounded: '😖', persevere: '😣', disappointed: '😞',
+  sweat: '😓', weary: '😩', tired: '😫', yawn: '🥱', angry: '😠', rage: '🤬',
+  devil: '😈', skull: '💀', poop: '💩', clown: '🤡', ghost: '👻',
+  alien: '👽', robot: '🤖', cat_smile: '😺', monkey_see: '🙈', monkey_hear: '🙉',
+  monkey_speak: '🙊',
+  // Gestures & Hands
+  thumbsup: '👍', thumbs_up: '👍', '+1': '👍', thumbsdown: '👎', thumbs_down: '👎', '-1': '👎',
+  fist: '👊', fist_raised: '✊', fist_left: '🤛', fist_right: '🤜',
+  crossed_fingers: '🤞', peace: '✌️', love_you: '🤟', rock_on: '🤘',
+  ok_hand: '👌', pinched_fingers: '🤌', pinching: '🤏',
+  point_left: '👈', point_right: '👉', point_up: '👆', point_down: '👇',
+  index_up: '☝️', wave: '👋', raised_back: '🤚', hand_splayed: '🖐️',
+  raised_hand: '✋', vulcan: '🖖', clap: '👏', raised_hands: '🙌',
+  open_hands: '🤲', handshake: '🤝', pray: '🙏', writing: '✍️',
+  nail_care: '💅', muscle: '💪', flexed_biceps: '💪',
+  // Hearts & Love
+  heart: '❤️', red_heart: '❤️', orange_heart: '🧡', yellow_heart: '💛',
+  green_heart: '💚', blue_heart: '💙', purple_heart: '💜', black_heart: '🖤',
+  white_heart: '🤍', brown_heart: '🤎', broken_heart: '💔', heart_exclamation: '❣️',
+  two_hearts: '💕', revolving_hearts: '💞', heartbeat: '💓', growing_heart: '💗',
+  sparkling_heart: '💖', cupid: '💘', gift_heart: '💝', heart_decoration: '💟',
+  love_letter: '💌', kiss_mark: '💋',
+  // Fire, Stars & Nature
+  fire: '🔥', flame: '🔥', sparkles: '✨', star: '⭐', star2: '🌟', dizzy: '💫',
+  boom: '💥', collision: '💥', droplets: '💦', dash: '💨',
+  sun: '☀️', moon: '🌙', rainbow: '🌈', cloud: '☁️', snowflake: '❄️',
+  zap: '⚡', lightning: '⚡', tornado: '🌪️', earth: '🌍',
+  flower: '🌸', cherry_blossom: '🌸', rose: '🌹', sunflower: '🌻',
+  tree: '🌳', cactus: '🌵', palm_tree: '🌴',
+  // Objects & Symbols
+  '100': '💯', check: '✅', white_check_mark: '✅', x: '❌', cross_mark: '❌',
+  warning: '⚠️', question: '❓', exclamation: '❗', bangbang: '‼️', interrobang: '⁉️',
+  rocket: '🚀', tada: '🎉', party: '🎉', party_popper: '🎉', confetti: '🎊',
+  trophy: '🏆', medal: '🥇', target: '🎯', gem: '💎', diamond: '💎',
+  bell: '🔔', pin: '📌', paperclip: '📎', pencil: '✏️', memo: '📝',
+  briefcase: '💼', folder: '📁', chart: '📊', chart_up: '📈', chart_down: '📉',
+  key: '🔑', lock: '🔒', unlock: '🔓', bulb: '💡', lightbulb: '💡',
+  speech_balloon: '💬', thought_balloon: '💭', megaphone: '📣', loudspeaker: '📢',
+  music: '🎵', notes: '🎶', headphones: '🎧', microphone: '🎤',
+  camera: '📷', video_camera: '📹', tv: '📺', computer: '💻', phone: '📱',
+  hourglass: '⏳', watch: '⌚', alarm_clock: '⏰', calendar: '📅',
+  battery: '🔋', electric_plug: '🔌', magnet: '🧲', gear: '⚙️', wrench: '🔧',
+  hammer: '🔨', toolbox: '🧰', shield: '🛡️', sword: '⚔️', bomb: '💣',
+  pill: '💊', adhesive_bandage: '🩹', dna: '🧬', microscope: '🔬', telescope: '🔭',
+  satellite: '🛰️', ufo: '🛸', airplane: '✈️', car: '🚗', bike: '🚲',
+  // Food & Drink
+  pizza: '🍕', hamburger: '🍔', fries: '🍟', hotdog: '🌭', taco: '🌮',
+  sushi: '🍣', ramen: '🍜', cookie: '🍪', cake: '🎂', ice_cream: '🍦',
+  donut: '🍩', chocolate: '🍫', popcorn: '🍿', coffee: '☕', tea: '🍵',
+  beer: '🍺', wine: '🍷', cocktail: '🍸', champagne: '🍾', apple: '🍎',
+  banana: '🍌', watermelon: '🍉', grapes: '🍇', strawberry: '🍓', peach: '🍑',
+  avocado: '🥑', eggplant: '🍆', corn: '🌽', carrot: '🥕', broccoli: '🥦',
+  // Animals
+  dog: '🐕', cat: '🐈', panda: '🐼', bear: '🐻', koala: '🐨',
+  tiger: '🐯', lion: '🦁', cow: '🐄', pig: '🐷', frog: '🐸',
+  monkey: '🐵', chicken: '🐔', penguin: '🐧', bird: '🐦', eagle: '🦅',
+  butterfly: '🦋', bug: '🐛', bee: '🐝', ant: '🐜', spider: '🕷️',
+  turtle: '🐢', snake: '🐍', whale: '🐳', dolphin: '🐬', fish: '🐟',
+  octopus: '🐙', shark: '🦈', crab: '🦀', unicorn: '🦄', dragon: '🐉',
+  // Misc
+  eyes: '👀', eye: '👁️', brain: '🧠', tongue: '👅', lips: '👄',
+  baby: '👶', person: '🧑', crown: '👑', hat: '🎩', glasses: '👓',
+  necktie: '👔', dress: '👗', running: '🏃', walking: '🚶', dancer: '💃',
+  sleep: '💤', zzz: '💤', infinity: '♾️', recycle: '♻️', trident: '🔱',
+  flag_white: '🏳️', flag_black: '🏴', checkered_flag: '🏁',
+  plus: '➕', minus: '➖', multiply: '✖️', divide: '➗',
+  a: '🅰️', b: '🅱️', o: '🅾️', sos: '🆘', new: '🆕', free: '🆓',
+  up: '🆙', cool: '🆒', ok: '🆗', ng: '🆖',
+}
+
 const EMOJI_CATEGORIES: Record<string, string[]> = {
   'Smileys': ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥲', '😎', '🤓', '🧐'],
   'Gestures': ['👍', '👎', '👊', '✊', '🤛', '🤜', '🤞', '✌️', '🤟', '🤘', '👌', '🤌', '🤏', '👈', '👉', '👆', '👇', '☝️', '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌', '🤲', '🤝', '🙏'],
@@ -54,6 +140,9 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const [mentionIndex, setMentionIndex] = useState(0)
   const [mentionStart, setMentionStart] = useState(0)
+  const [emojiQuery, setEmojiQuery] = useState<string | null>(null)
+  const [emojiIndex, setEmojiIndex] = useState(0)
+  const [emojiStart, setEmojiStart] = useState(0)
   const mentionRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
@@ -179,8 +268,19 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         setMentionQuery(mentionMatch[1].toLowerCase())
         setMentionStart(cursorPos - mentionMatch[1].length - 1) // -1 for '@'
         setMentionIndex(0)
+        setEmojiQuery(null)
       } else {
         setMentionQuery(null)
+        // Detect : emoji trigger (only when no mention is active)
+        const emojiMatch = textBeforeCursor.match(/(?:^|\s):([a-zA-Z0-9_+-]{2,})$/)
+        if (emojiMatch) {
+          setEmojiQuery(emojiMatch[1].toLowerCase())
+          setEmojiStart(cursorPos - emojiMatch[1].length - 1) // -1 for ':'
+          setEmojiIndex(0)
+          setShowEmoji(false)
+        } else {
+          setEmojiQuery(null)
+        }
       }
     }
 
@@ -201,6 +301,27 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
         m.userId.toLowerCase().includes(mentionQuery)
       ).slice(0, 8)
     : []
+
+  const filteredEmojis = useMemo(() => {
+    if (emojiQuery === null) return []
+    return Object.entries(EMOJI_MAP)
+      .filter(([key]) => key.includes(emojiQuery))
+      .slice(0, 8)
+      .map(([shortcode, emoji]) => ({ shortcode, emoji }))
+  }, [emojiQuery])
+
+  const insertEmoji = (item: { shortcode: string; emoji: string }) => {
+    const before = content.slice(0, emojiStart)
+    const after = content.slice(inputRef.current?.selectionStart ?? content.length)
+    const newContent = `${before}${item.emoji} ${after}`
+    setContent(newContent)
+    setEmojiQuery(null)
+    requestAnimationFrame(() => {
+      const pos = emojiStart + item.emoji.length + 1
+      inputRef.current?.focus()
+      inputRef.current?.setSelectionRange(pos, pos)
+    })
+  }
 
   const insertMention = (member: { userId: string; displayName: string }) => {
     const before = content.slice(0, mentionStart)
@@ -322,6 +443,29 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Handle emoji popup navigation
+    if (emojiQuery !== null && filteredEmojis.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setEmojiIndex(i => (i + 1) % filteredEmojis.length)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setEmojiIndex(i => (i - 1 + filteredEmojis.length) % filteredEmojis.length)
+        return
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        insertEmoji(filteredEmojis[emojiIndex])
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setEmojiQuery(null)
+        return
+      }
+    }
     // Handle mention popup navigation
     if (mentionQuery !== null && filteredMembers.length > 0) {
       if (e.key === 'ArrowDown') {
@@ -349,6 +493,24 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
       e.preventDefault()
       handleSubmit()
     }
+  }
+
+  const applyFormatting = (prefix: string, suffix: string) => {
+    const textarea = inputRef.current
+    if (!textarea) return
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const text = content
+    const selected = text.slice(start, end)
+    const newText = text.slice(0, start) + prefix + selected + suffix + text.slice(end)
+    setContent(newText)
+    requestAnimationFrame(() => {
+      textarea.focus()
+      textarea.setSelectionRange(
+        selected ? start + prefix.length : start + prefix.length,
+        selected ? end + prefix.length : start + prefix.length
+      )
+    })
   }
 
   const handleEmojiClick = (emoji: string) => {
@@ -539,6 +701,26 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
           </div>
         )}
 
+        {/* Emoji autocomplete popup */}
+        {emojiQuery !== null && filteredEmojis.length > 0 && (
+          <div className="absolute bottom-full left-0 right-0 mb-1 max-h-52 overflow-y-auto rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest shadow-lg dark:border-m3-outline-variant dark:bg-m3-surface-container-high z-30">
+            {filteredEmojis.map((item, i) => (
+              <button
+                key={item.shortcode}
+                onMouseDown={e => { e.preventDefault(); insertEmoji(item) }}
+                className={`flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors ${
+                  i === emojiIndex
+                    ? 'bg-m3-primary-container text-m3-on-primary-container dark:bg-m3-primary-container/30 dark:text-m3-primary'
+                    : 'text-m3-on-surface hover:bg-m3-surface-container-low dark:text-m3-on-surface-variant dark:hover:bg-m3-surface-container-highest/50'
+                }`}
+              >
+                <span className="text-2xl">{item.emoji}</span>
+                <span className="text-m3-on-surface-variant dark:text-m3-outline">:{item.shortcode}:</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Unified input bar — Google Messages style: pill contains input + action buttons */}
         {isRecording ? (
           <div className="flex flex-1 items-center gap-3 rounded-full border border-red-300 bg-m3-error-container px-5 py-2.5 dark:border-red-800 dark:bg-m3-error-container/20">
@@ -550,11 +732,56 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
             </button>
           </div>
         ) : (
-          <div className="flex flex-1 items-center rounded-full border border-m3-outline-variant/40 bg-white dark:border-m3-outline-variant/40 dark:bg-m3-surface-container-high">
+          <div className="flex flex-1 flex-col rounded-[24px] border border-m3-outline-variant/40 bg-white dark:border-m3-outline-variant/40 dark:bg-m3-surface-container-high">
+            {/* Formatting toolbar */}
+            <div className="flex items-center gap-0.5 border-b border-m3-outline-variant/20 px-3 py-1">
+              <button
+                type="button"
+                onMouseDown={e => { e.preventDefault(); applyFormatting('**', '**') }}
+                className="flex h-7 w-7 items-center justify-center rounded text-xs font-bold text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
+                title="Bold"
+              >
+                B
+              </button>
+              <button
+                type="button"
+                onMouseDown={e => { e.preventDefault(); applyFormatting('*', '*') }}
+                className="flex h-7 w-7 items-center justify-center rounded text-xs italic text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
+                title="Italic"
+              >
+                I
+              </button>
+              <button
+                type="button"
+                onMouseDown={e => { e.preventDefault(); applyFormatting('~~', '~~') }}
+                className="flex h-7 w-7 items-center justify-center rounded text-xs line-through text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
+                title="Strikethrough"
+              >
+                S
+              </button>
+              <button
+                type="button"
+                onMouseDown={e => { e.preventDefault(); applyFormatting('`', '`') }}
+                className="flex h-7 w-7 items-center justify-center rounded font-mono text-xs text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
+                title="Inline code"
+              >
+                {'</>'}
+              </button>
+              <button
+                type="button"
+                onMouseDown={e => { e.preventDefault(); applyFormatting('```\n', '\n```') }}
+                className="flex h-7 w-7 items-center justify-center rounded font-mono text-xs text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest"
+                title="Code block"
+              >
+                {'{ }'}
+              </button>
+            </div>
+            {/* Input row */}
+            <div className="flex items-center">
             {/* Emoji button — left side of input */}
             <div className="relative flex-shrink-0 pl-2" ref={emojiRef}>
               <button
-                onClick={() => setShowEmoji(!showEmoji)}
+                onClick={() => { setShowEmoji(!showEmoji); setEmojiQuery(null) }}
                 className="flex h-9 w-9 items-center justify-center rounded-full text-m3-outline transition-colors hover:bg-m3-surface-container-high hover:text-m3-on-surface dark:hover:bg-m3-surface-container-highest dark:hover:text-white"
                 aria-label="Emoji picker"
               >
@@ -635,6 +862,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, roomId }: Message
               >
                 <ImageIcon className="h-5 w-5" />
               </button>
+            </div>
             </div>
           </div>
         )}

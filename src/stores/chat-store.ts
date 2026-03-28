@@ -46,6 +46,7 @@ export interface MatrixRoom {
   encrypted: boolean
   isArchived: boolean
   isBridged: boolean
+  powerLevels: Record<string, number>
 }
 
 export interface MatrixRoomMember {
@@ -134,6 +135,16 @@ interface ChatState {
   unpinMessage: (roomId: string, eventId: string) => Promise<void>
   forwardMessage: (fromRoomId: string, eventId: string, toRoomId: string) => Promise<void>
   searchMessages: (query: string) => Promise<{roomId: string, roomName: string, eventId: string, sender: string, body: string, timestamp: number}[]>
+  setRoomNotificationSetting: (roomId: string, setting: 'all' | 'mentions' | 'mute') => Promise<void>
+  getRoomNotificationSetting: (roomId: string) => 'all' | 'mentions' | 'mute'
+  kickMember: (roomId: string, userId: string, reason?: string) => Promise<void>
+  banMember: (roomId: string, userId: string, reason?: string) => Promise<void>
+  unbanMember: (roomId: string, userId: string) => Promise<void>
+  setPowerLevel: (roomId: string, userId: string, level: number) => Promise<void>
+  ignoredUsers: string[]
+  loadIgnoredUsers: () => void
+  ignoreUser: (userId: string) => Promise<void>
+  unignoreUser: (userId: string) => Promise<void>
   /** Clear all state on logout to prevent cross-session data leakage */
   resetState: () => void
 }
@@ -247,6 +258,16 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     }
   }
 
+  // Extract power levels
+  const plEvent = room.currentState.getStateEvents('m.room.power_levels', '')
+  const plContent = plEvent?.getContent() || {}
+  const powerLevels: Record<string, number> = {}
+  if (plContent.users) {
+    for (const [uid, level] of Object.entries(plContent.users)) {
+      powerLevels[uid] = level as number
+    }
+  }
+
   return {
     roomId: room.roomId,
     name: displayName,
@@ -261,6 +282,7 @@ function roomToMatrixRoom(room: Room): MatrixRoom {
     encrypted: room.hasEncryptionStateEvent(),
     isArchived,
     isBridged: members.some(m => /^@(signal_|telegram_|whatsapp_|slack_|discord_|instagram_)/.test(m.userId)),
+    powerLevels,
   }
 }
 
@@ -1533,6 +1555,239 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
+  ignoredUsers: [],
+
+  loadIgnoredUsers: () => {
+    const client = getMatrixClient()
+    if (!client) return
+    const content = getAccountDataContent(client, 'm.ignored_user_list') as Record<string, any>
+    const ignored = content?.ignored_users ? Object.keys(content.ignored_users) : []
+    set({ ignoredUsers: ignored })
+  },
+
+  ignoreUser: async (userId) => {
+    const client = getMatrixClient()
+    if (!client) return
+    const content = getAccountDataContent(client, 'm.ignored_user_list') as Record<string, any> || {}
+    const ignoredUsers = { ...(content.ignored_users || {}), [userId]: {} }
+    await setAccountData(client, 'm.ignored_user_list', { ignored_users: ignoredUsers })
+    set({ ignoredUsers: Object.keys(ignoredUsers) })
+  },
+
+  unignoreUser: async (userId) => {
+    const client = getMatrixClient()
+    if (!client) return
+    const content = getAccountDataContent(client, 'm.ignored_user_list') as Record<string, any> || {}
+    const ignoredUsers = { ...(content.ignored_users || {}) }
+    delete ignoredUsers[userId]
+    await setAccountData(client, 'm.ignored_user_list', { ignored_users: ignoredUsers })
+    set({ ignoredUsers: Object.keys(ignoredUsers) })
+  },
+
+  setRoomNotificationSetting: async (roomId, setting) => {
+    const client = getMatrixClient()
+    if (!client) return
+    try {
+      // Remove existing override and room rules first
+      try { await (client as any).deletePushRule('global', 'override', roomId) } catch {}
+      try { await (client as any).deletePushRule('global', 'room', roomId) } catch {}
+
+      if (setting === 'mute') {
+        await (client as any).addPushRule('global', 'override', roomId, {
+          actions: ['dont_notify'],
+          conditions: [{ kind: 'event_match', key: 'room_id', pattern: roomId }],
+        })
+      } else if (setting === 'mentions') {
+        await (client as any).addPushRule('global', 'room', roomId, {
+          actions: ['dont_notify'],
+        })
+      }
+      // 'all' = default behavior, no rules needed
+    } catch (err) {
+      console.error('Failed to set notification setting:', err)
+    }
+  },
+
+  getRoomNotificationSetting: (roomId) => {
+    const client = getMatrixClient()
+    if (!client) return 'all'
+    try {
+      const pushRules = (client as any).pushRules
+      if (!pushRules?.global) return 'all'
+      // Check override rules for mute
+      const overrides = pushRules.global.override || []
+      for (const rule of overrides) {
+        if (rule.rule_id === roomId && rule.enabled) {
+          const hasDontNotify = rule.actions?.includes('dont_notify') || rule.actions?.length === 0
+          if (hasDontNotify) return 'mute'
+        }
+      }
+      // Check room rules for mentions only
+      const roomRules = pushRules.global.room || []
+      for (const rule of roomRules) {
+        if (rule.rule_id === roomId && rule.enabled) {
+          const hasDontNotify = rule.actions?.includes('dont_notify') || rule.actions?.length === 0
+          if (hasDontNotify) return 'mentions'
+        }
+      }
+    } catch {}
+    return 'all'
+  },
+
+  kickMember: async (roomId, userId, reason) => {
+    const client = getMatrixClient()
+    if (!client) return
+    await (client as any).kick(roomId, userId, reason)
+    get().refreshRoom(roomId)
+  },
+
+  banMember: async (roomId, userId, reason) => {
+    const client = getMatrixClient()
+    if (!client) return
+    await (client as any).ban(roomId, userId, reason)
+    get().refreshRoom(roomId)
+  },
+
+  unbanMember: async (roomId, userId) => {
+    const client = getMatrixClient()
+    if (!client) return
+    await (client as any).unban(roomId, userId)
+    get().refreshRoom(roomId)
+  },
+
+  setPowerLevel: async (roomId, userId, level) => {
+    const client = getMatrixClient()
+    if (!client) return
+    const room = client.getRoom(roomId)
+    if (!room) return
+    const plEvent = room.currentState.getStateEvents('m.room.power_levels', '')
+    if (!plEvent) return
+    const content = { ...plEvent.getContent() }
+    content.users = { ...content.users, [userId]: level }
+    await sendStateEvent(client, roomId, 'm.room.power_levels', content)
+    get().refreshRoom(roomId)
+  },
+
+  setRoomNotificationSetting: async (roomId: string, setting: 'all' | 'mentions' | 'mute') => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      // Clean up existing rules first
+      try { await (client as any).deletePushRule('global', 'override', roomId) } catch { /* may not exist */ }
+      try { await (client as any).deletePushRule('global', 'room', roomId) } catch { /* may not exist */ }
+
+      if (setting === 'mute') {
+        await (client as any).addPushRule('global', 'override', roomId, {
+          actions: ['dont_notify'],
+          conditions: [{ kind: 'event_match', key: 'room_id', pattern: roomId }],
+        })
+      } else if (setting === 'mentions') {
+        await (client as any).addPushRule('global', 'room', roomId, {
+          actions: ['dont_notify'],
+        })
+      }
+      // 'all' = default behavior, no rules needed (already deleted above)
+    } catch (err) {
+      console.error('Failed to set room notification setting:', err)
+      throw err
+    }
+  },
+
+  getRoomNotificationSetting: (roomId: string): 'all' | 'mentions' | 'mute' => {
+    const client = getMatrixClient()
+    if (!client) return 'all'
+
+    try {
+      const pushRules = (client as any).pushRules
+      if (!pushRules?.global) return 'all'
+
+      // Check override rules for mute
+      const overrideRules = pushRules.global.override || []
+      const overrideRule = overrideRules.find((r: any) => r.rule_id === roomId)
+      if (overrideRule?.enabled !== false) {
+        const actions = overrideRule?.actions || []
+        const isDontNotify = actions.length === 0 || actions.includes('dont_notify')
+        if (overrideRule && isDontNotify) return 'mute'
+      }
+
+      // Check room rules for mentions only
+      const roomRules = pushRules.global.room || []
+      const roomRule = roomRules.find((r: any) => r.rule_id === roomId)
+      if (roomRule?.enabled !== false) {
+        const actions = roomRule?.actions || []
+        const isDontNotify = actions.length === 0 || actions.includes('dont_notify')
+        if (roomRule && isDontNotify) return 'mentions'
+      }
+
+      return 'all'
+    } catch {
+      return 'all'
+    }
+  },
+
+  kickMember: async (roomId: string, userId: string, reason?: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await (client as any).kick(roomId, userId, reason)
+      get().loadRooms()
+      get().refreshRoom(roomId)
+    } catch (err) {
+      console.error('Failed to kick member:', err)
+      throw err
+    }
+  },
+
+  banMember: async (roomId: string, userId: string, reason?: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await (client as any).ban(roomId, userId, reason)
+      get().loadRooms()
+      get().refreshRoom(roomId)
+    } catch (err) {
+      console.error('Failed to ban member:', err)
+      throw err
+    }
+  },
+
+  unbanMember: async (roomId: string, userId: string) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      await (client as any).unban(roomId, userId)
+      get().loadRooms()
+      get().refreshRoom(roomId)
+    } catch (err) {
+      console.error('Failed to unban member:', err)
+      throw err
+    }
+  },
+
+  setPowerLevel: async (roomId: string, userId: string, level: number) => {
+    const client = getMatrixClient()
+    if (!client) return
+
+    try {
+      const room = client.getRoom(roomId)
+      if (!room) return
+      const plEvent = room.currentState.getStateEvents('m.room.power_levels', '')
+      if (!plEvent) return
+      const content = { ...plEvent.getContent() }
+      content.users = { ...(content.users as Record<string, number> || {}), [userId]: level }
+      await sendStateEvent(client, roomId, 'm.room.power_levels', content as Record<string, unknown>, '')
+      get().loadRooms()
+      get().refreshRoom(roomId)
+    } catch (err) {
+      console.error('Failed to set power level:', err)
+      throw err
+    }
+  },
+
   resetState: () => {
     clearProfileCache()
     set({
@@ -1543,6 +1798,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isLoadingMessages: false,
       typingUsers: [],
       searchQuery: '',
+      ignoredUsers: [],
     })
   },
 }))
