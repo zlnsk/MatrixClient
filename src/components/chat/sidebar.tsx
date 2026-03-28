@@ -29,7 +29,6 @@ import {
   Plus,
   ChevronRight,
   Pencil,
-  Home,
 } from 'lucide-react'
 import { getMatrixClient } from '@/lib/matrix/client'
 
@@ -178,6 +177,12 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   ), [spaceFilteredRooms, searchFilter])
   const unreadCount = useMemo(() => rooms.filter(r => !r.isArchived && r.unreadCount > 0).length, [rooms])
 
+  const searchHighlightRegex = useMemo(() => {
+    const escaped = searchFilter.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    if (escaped.length < 2) return null
+    return new RegExp(`(${escaped})`, 'gi')
+  }, [searchFilter])
+
   // Avatar: roomToMatrixRoom() already computes the correct avatar via
   // Element Web's algorithm. Just use room.avatarUrl, with SDK fallback.
   const getOtherMemberAvatar = useCallback((room: MatrixRoom) => {
@@ -229,49 +234,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
   }
 
   return (
-    <div className="flex flex-1 min-h-0">
-      {/* Space navigation strip */}
-      {spaces.length > 0 && (
-        <div className="flex flex-col items-center gap-1 border-r border-m3-outline-variant/30 bg-m3-surface-container-low py-2 px-1.5 overflow-y-auto dark:bg-m3-surface-container flex-shrink-0">
-          {/* Home (all rooms) */}
-          <button
-            onClick={() => setActiveSpace(null)}
-            className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
-              !activeSpaceId
-                ? 'bg-m3-primary text-white'
-                : 'text-m3-on-surface-variant hover:bg-m3-surface-container-high'
-            }`}
-            title="Home"
-          >
-            <Home className="h-5 w-5" />
-          </button>
-
-          <div className="my-1 h-px w-6 bg-m3-outline-variant/50" />
-
-          {/* Space icons */}
-          {spaces.map(space => (
-            <button
-              key={space.roomId}
-              onClick={() => setActiveSpace(space.roomId)}
-              className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
-                activeSpaceId === space.roomId
-                  ? 'bg-m3-primary-container text-m3-primary'
-                  : 'text-m3-on-surface-variant hover:bg-m3-surface-container-high'
-              }`}
-              title={space.name}
-            >
-              {space.avatarUrl ? (
-                <Avatar src={space.avatarUrl} name={space.name} size="sm" />
-              ) : (
-                <span className="text-sm font-medium">{space.name.charAt(0).toUpperCase()}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Main sidebar content */}
-      <div className="flex flex-1 flex-col min-w-0">
+    <div className="flex flex-1 flex-col min-h-0">
       {/* Header — Google Messages Web style */}
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="relative" ref={hamburgerRef}>
@@ -285,7 +248,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
 
           {/* Hamburger dropdown */}
           {showHamburger && (
-            <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-2xl border border-m3-outline-variant bg-white py-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+            <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest py-2 shadow-xl animate-slide-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
               {/* App title */}
               <div className="px-6 py-3 border-b border-m3-outline-variant">
                 <h2 className="text-lg font-normal text-m3-on-surface">Messages</h2>
@@ -333,7 +296,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
 
           {/* Profile popover */}
           {showProfilePopover && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-m3-outline-variant bg-white shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+            <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-m3-outline-variant bg-m3-surface-container-lowest shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
               {/* User info */}
               <div className="flex items-center gap-3 px-5 py-4">
                 <Avatar src={user?.avatarUrl} name={user?.displayName || 'U'} size="lg" status="online" />
@@ -644,9 +607,8 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
                       <p className="truncate text-xs text-m3-on-surface-variant">
                         <span className="text-m3-outline">{result.sender}: </span>
                         <span>{(() => {
-                          const escaped = searchFilter.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                          if (escaped.length < 2) return result.body
-                          const parts = result.body.split(new RegExp(`(${escaped})`, 'gi'))
+                          if (!searchHighlightRegex) return result.body
+                          const parts = result.body.split(searchHighlightRegex)
                           return parts.map((part, i) =>
                             i % 2 === 1
                               ? <mark key={i} className="rounded-sm bg-yellow-300/80 text-inherit dark:bg-yellow-500/40">{part}</mark>
@@ -679,7 +641,7 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
       {/* Delete confirmation dialog */}
       {confirmDeleteRoom && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setConfirmDeleteRoom(null)}>
-          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
+          <div className="mx-4 w-full max-w-sm rounded-2xl bg-m3-surface-container-lowest p-6 shadow-xl dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-medium text-m3-on-surface dark:text-m3-on-surface">Delete conversation?</h3>
             <p className="mt-2 text-sm text-m3-on-surface-variant dark:text-m3-outline">
               Leave and remove <strong>{confirmDeleteRoom.name}</strong>? This cannot be undone.
@@ -702,7 +664,6 @@ export function Sidebar({ onSettingsClick, onChatSelect, onProfileClick }: Sideb
         </div>
       )}
 
-    </div>
     </div>
   )
 }
@@ -804,7 +765,7 @@ const RoomListItem = memo(function RoomListItem({
       {contextMenu && (
         <div
           ref={menuRef}
-          className="fixed z-50 w-52 rounded-xl border border-m3-outline-variant bg-white py-1.5 shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container"
+          className="fixed z-50 w-52 rounded-xl border border-m3-outline-variant bg-m3-surface-container-lowest py-1.5 shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <button

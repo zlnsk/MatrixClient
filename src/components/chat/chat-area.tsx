@@ -77,7 +77,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
     if (!room) return []
     const pinEvent = room.currentState.getStateEvents('m.room.pinned_events', '')
     return (pinEvent?.getContent()?.pinned || []) as string[]
-  }, [activeRoom, messages])
+  }, [activeRoom?.roomId])
 
   const prevRoomIdRef = useRef<string | null>(null)
   const stickyRef = useRef(true)
@@ -365,7 +365,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
             {groupedMessages.map(group => (
               <div key={group.date}>
                 <div className="flex items-center justify-center py-4">
-                  <span className="rounded-full bg-m3-surface-container px-4 py-1 text-xs font-medium text-m3-on-surface-variant shadow-sm dark:bg-m3-surface-container-high dark:text-m3-outline">
+                  <span className="rounded-full bg-m3-surface-container px-4 py-1 text-xs font-medium tracking-wide text-m3-on-surface-variant shadow-sm dark:bg-m3-surface-container-high dark:text-m3-outline">
                     {group.date}
                   </span>
                 </div>
@@ -424,7 +424,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       {/* External link confirmation dialog */}
       {externalLinkConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in" onClick={() => setExternalLinkConfirm(null)}>
-          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl animate-scale-in dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
+          <div className="mx-4 w-full max-w-sm rounded-2xl bg-m3-surface-container-lowest p-6 shadow-xl animate-scale-in dark:bg-m3-surface-container" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-medium text-m3-on-surface">Open external link?</h3>
             <p className="mt-2 break-all text-sm text-m3-on-surface-variant">{externalLinkConfirm}</p>
             <div className="mt-5 flex items-center justify-between">
@@ -477,7 +477,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       {/* Drag-and-drop overlay */}
       {isDragging && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-m3-primary/10 backdrop-blur-sm animate-fade-in">
-          <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-m3-primary bg-white/80 px-12 py-8 dark:bg-m3-surface-container/80">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-m3-primary bg-m3-surface-container-lowest/80 px-12 py-8 dark:bg-m3-surface-container/80">
             <Upload className="h-12 w-12 text-m3-primary" />
             <p className="text-lg font-medium text-m3-primary">Drop files here</p>
             <p className="text-sm text-m3-on-surface-variant">Files will be uploaded to this conversation</p>
@@ -489,7 +489,7 @@ export function ChatArea({ onBackClick }: ChatAreaProps) {
       {newMessageCount > 0 && !stickyRef.current && (
         <button
           onClick={() => { scrollToBottom(); setNewMessageCount(0) }}
-          className="absolute bottom-24 left-1/2 z-30 -translate-x-1/2 animate-slide-in rounded-full bg-m3-primary px-4 py-2 text-sm font-medium text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+          className="absolute bottom-24 left-1/2 z-30 -translate-x-1/2 animate-slide-in rounded-full bg-m3-primary px-4 py-2 text-sm font-medium text-white shadow-xl transition-transform hover:scale-105 active:scale-95"
         >
           {newMessageCount} new {newMessageCount === 1 ? 'message' : 'messages'}
         </button>

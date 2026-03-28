@@ -18,7 +18,7 @@ export function MessageReactions({ message, isOwn, onReaction }: MessageReaction
         <div key={emoji} className="group/reaction relative">
           <button
             onClick={() => onReaction(emoji)}
-            className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs shadow-sm transition-all hover:scale-105 ${
+            className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs shadow-sm transition-all duration-150 hover:scale-105 ${
               data.includesMe
                 ? 'border-m3-primary/50 bg-m3-primary-container text-m3-primary dark:border-m3-primary/50 dark:bg-m3-primary-container/30 dark:text-m3-primary'
                 : 'border-m3-outline-variant bg-white text-m3-on-surface-variant hover:border-m3-outline hover:bg-m3-surface-container-low dark:border-m3-outline-variant dark:bg-m3-surface-container dark:text-m3-outline dark:hover:border-m3-outline'

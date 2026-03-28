@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, memo } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useChatStore, type MatrixMessage } from '@/stores/chat-store'
 import { Avatar } from '@/components/ui/avatar'
@@ -157,33 +157,33 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
     setShowForwardPicker(false)
   }, [])
 
-  const handleReaction = async (emoji: string) => {
+  const handleReaction = useCallback(async (emoji: string) => {
     await sendReaction(roomId, message.eventId, emoji)
     setShowEmojiPicker(false)
     setShowActions(false)
-  }
+  }, [sendReaction, roomId, message.eventId])
 
-  const handleEdit = async () => {
+  const handleEdit = useCallback(async () => {
     if (editContent.trim() && editContent !== message.content) {
       await editMessage(roomId, message.eventId, editContent.trim())
     }
     setIsEditing(false)
-  }
+  }, [editContent, message.content, editMessage, roomId, message.eventId])
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     await redactMessage(roomId, message.eventId)
     setShowContextMenu(false)
     setShowActions(false)
-  }
+  }, [redactMessage, roomId, message.eventId])
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(message.content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
     setShowContextMenu(false)
-  }
+  }, [message.content])
 
-  const handlePin = async () => {
+  const handlePin = useCallback(async () => {
     try {
       if (isPinned) {
         await unpinMessage(roomId, message.eventId)
@@ -195,9 +195,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
     }
     setShowContextMenu(false)
     setShowActions(false)
-  }
+  }, [isPinned, unpinMessage, pinMessage, roomId, message.eventId])
 
-  const handleForward = async (toRoomId: string) => {
+  const handleForward = useCallback(async (toRoomId: string) => {
     try {
       await forwardMessage(roomId, message.eventId, toRoomId)
     } catch (err) {
@@ -206,10 +206,10 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
     setShowForwardPicker(false)
     setShowContextMenu(false)
     setShowActions(false)
-  }
+  }, [forwardMessage, roomId, message.eventId])
 
   // Status icon for own messages
-  const StatusIcon = () => {
+  const statusIcon = useMemo(() => {
     if (!isOwn) return null
     const iconClass = 'h-3.5 w-3.5'
     switch (message.status) {
@@ -226,7 +226,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
       default:
         return <Send className={`${iconClass} text-m3-outline dark:text-m3-on-surface-variant`} />
     }
-  }
+  }, [isOwn, message.status])
 
   if (message.isStateEvent) {
     return (
@@ -306,7 +306,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 setEditContent(message.content)
               }
             }}
-            className={`rounded-[20px] overflow-hidden ${message.type === 'm.image' || message.type === 'm.video' ? 'w-fit border border-m3-outline-variant/30 dark:border-m3-outline-variant/20' : isEmojiOnly(message.content) && !message.replyToEvent ? 'px-1 py-0.5' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
+            className={`rounded-[20px] overflow-hidden transition-colors duration-150 ${message.type === 'm.image' || message.type === 'm.video' ? 'w-fit border border-m3-outline-variant/30 dark:border-m3-outline-variant/20' : isEmojiOnly(message.content) && !message.replyToEvent ? 'px-1 py-0.5' : 'px-4 py-2.5'} ${isOwn ? 'cursor-pointer ' : ''}${
               isEmojiOnly(message.content) && !message.replyToEvent
                 ? ''
                 : isOwn
@@ -315,7 +315,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                     : message.status === 'sending'
                       ? 'bg-m3-primary/85 text-white'
                       : 'bg-m3-primary text-white'
-                  : 'bg-white text-m3-on-surface shadow-[0_1px_2px_rgba(0,0,0,0.06)] dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:shadow-none'
+                  : 'bg-white text-m3-on-surface shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:bg-m3-surface-container-high dark:text-m3-on-surface dark:shadow-[0_1px_2px_rgba(0,0,0,0.2)]'
             }`}
           >
             {/* Inline reply quote */}
@@ -382,7 +382,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                       )}
                     </>
                   ) : (
-                    <div className="flex h-32 w-48 items-center justify-center rounded-xl bg-m3-surface-container dark:bg-m3-surface-container-highest">
+                    <div className="flex h-32 w-48 items-center justify-center rounded-[20px] bg-m3-surface-container dark:bg-m3-surface-container-highest">
                       <Loader2 className="h-6 w-6 animate-spin text-m3-outline" />
                     </div>
                   )
@@ -392,7 +392,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                       <source src={effectiveMediaUrl} type={message.mediaInfo?.mimetype} />
                     </video>
                   ) : (
-                    <div className="flex h-32 w-48 items-center justify-center rounded-xl bg-m3-surface-container dark:bg-m3-surface-container-highest">
+                    <div className="flex h-32 w-48 items-center justify-center rounded-[20px] bg-m3-surface-container dark:bg-m3-surface-container-highest">
                       <Loader2 className="h-6 w-6 animate-spin text-m3-outline" />
                     </div>
                   )
@@ -552,7 +552,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isOwn, showA
                 (edited)
               </span>
             )}
-            <StatusIcon />
+            {statusIcon}
             {/* Reactions — inline next to timestamp */}
             <MessageReactions message={message} isOwn={isOwn} onReaction={handleReaction} />
           </div>

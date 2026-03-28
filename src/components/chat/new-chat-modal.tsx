@@ -115,7 +115,7 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 pt-16 animate-fade-in sm:justify-start sm:pl-4 sm:pt-14">
       <div
         ref={panelRef}
-        className="w-full max-w-sm rounded-2xl bg-white shadow-xl dark:bg-m3-surface-container sm:ml-0"
+        className="w-full max-w-sm rounded-2xl bg-m3-surface-container-lowest shadow-xl dark:bg-m3-surface-container sm:ml-0"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-m3-outline-variant px-4 py-3 dark:border-m3-outline-variant">
@@ -237,12 +237,12 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
               <button
                 type="button"
                 onClick={() => setEnableEncryption(!enableEncryption)}
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-all duration-200 ${
                   enableEncryption ? 'bg-m3-primary' : 'bg-m3-outline-variant dark:bg-m3-outline'
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-transform ${
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-all duration-200 ${
                     enableEncryption ? 'translate-x-[18px]' : 'translate-x-0.5'
                   } mt-0.5`}
                 />
@@ -257,12 +257,12 @@ export function NewChatModal({ onClose, onRoomCreated }: NewChatModalProps) {
               <button
                 type="button"
                 onClick={() => setIsPublic(!isPublic)}
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-all duration-200 ${
                   isPublic ? 'bg-m3-primary' : 'bg-m3-outline-variant dark:bg-m3-outline'
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-transform ${
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-all duration-200 ${
                     isPublic ? 'translate-x-[18px]' : 'translate-x-0.5'
                   } mt-0.5`}
                 />

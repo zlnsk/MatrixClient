@@ -58,7 +58,7 @@ export function ChatHeader({
   }, [showMenu, showLeaveConfirm])
 
   return (
-    <div className="flex items-center border-b border-m3-outline-variant/50 bg-white px-2 py-2.5 dark:border-m3-outline-variant/50 dark:bg-m3-surface md:px-4">
+    <div className="flex items-center border-b border-m3-outline-variant/50 bg-m3-surface-container-lowest px-2 py-2.5 dark:border-m3-outline-variant/50 dark:bg-m3-surface md:px-4">
       <button
         onClick={onBackClick}
         className="flex-shrink-0 rounded-full p-2 text-m3-on-surface-variant transition-colors hover:bg-m3-surface-container active:bg-m3-surface-container-high md:hidden"
@@ -112,7 +112,7 @@ export function ChatHeader({
             <MoreVertical className="h-5 w-5" />
           </button>
           {showMenu && !showLeaveConfirm && (
-            <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-m3-outline-variant bg-white py-1.5 shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+            <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-m3-outline-variant/50 bg-m3-surface-container-lowest py-1.5 shadow-lg animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
               <button
                 onClick={() => { onToggleRoomInfo(); setShowMenu(false) }}
                 className="flex w-full items-center px-4 py-2.5 text-sm text-m3-on-surface transition-colors hover:bg-m3-surface-container dark:hover:bg-m3-surface-container-high"
@@ -156,7 +156,7 @@ export function ChatHeader({
             </div>
           )}
           {showLeaveConfirm && (
-            <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-m3-outline-variant bg-white py-1.5 shadow-xl animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
+            <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-m3-outline-variant/50 bg-m3-surface-container-lowest py-1.5 shadow-lg animate-scale-in dark:border-m3-outline-variant dark:bg-m3-surface-container">
               <p className="px-4 py-2 text-xs text-m3-on-surface-variant">Leave this room?</p>
               <button
                 onClick={() => { onLeave(); setShowLeaveConfirm(false) }}

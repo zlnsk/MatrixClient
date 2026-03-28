@@ -169,7 +169,7 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
         <img
           src={displayUrl}
           alt={name}
-          className={`${sizeMap[size]} rounded-full object-cover transition-opacity duration-300`}
+          className={`${sizeMap[size]} rounded-full object-cover transition-opacity duration-150`}
           onLoad={handleLoad}
           onError={() => setImgError(true)}
         />
@@ -178,7 +178,7 @@ export function Avatar({ src, name, size = 'md', status }: AvatarProps) {
       )}
       {status && (
         <span
-          className={`absolute ${statusSizeMap[size]} ${statusColorMap[status]} rounded-full border-2 border-m3-surface-container-lowest animate-scale-in dark:border-m3-surface-container`}
+          className={`absolute ${statusSizeMap[size]} ${statusColorMap[status]} rounded-full border-2 border-white animate-scale-in dark:border-m3-surface`}
         />
       )}
     </div>
